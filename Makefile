@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/03/19 20:37:35 by upolat           ###   ########.fr        #
+#    Updated: 2025/03/20 13:35:51 by upolat           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,7 @@ CC := c++
 CFLAGS := -Wall -Wextra -Werror -std=c++20 # -MMD -MP
 NAME := webserv
 
-src_files := main.cpp parser.cpp
+src_files := main.cpp Configuration.cpp
 
 src = $(addprefix ./src/, $(src_files))
 obj := $(addprefix ./obj/, $(src:%.cpp=%.o))

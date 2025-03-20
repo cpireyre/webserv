@@ -6,12 +6,12 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/19 20:34:56 by upolat           ###   ########.fr       */
+/*   Updated: 2025/03/20 13:35:36 by upolat           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
-#include "parser.hpp"
+#include "Configuration.hpp"
 
 int	main(int argc, char **argv)
 {
