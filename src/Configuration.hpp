@@ -14,7 +14,7 @@ class Configuration {
 		// std::map<int, std::string>				_defaultErrorPages;	
 		std::vector<std::string>				m_rawBlock;				
 		std::string 							_host;	
-		std::string 							m_port;			
+		std::string 							_port;			
 		std::string								m_names;
 		std::string								_index;	
 		unsigned int 							_maxClientBodySize;

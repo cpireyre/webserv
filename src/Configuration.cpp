@@ -98,6 +98,28 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	std::regex cgiPathRegexPHP(R"(^cgi_path_php (\/[^/][^;]*[^/])?/?\s*;$)");
 	std::regex cgiPathRegexPython(R"(^cgi_path_python (\/[^/][^;]*[^/])?/?\s*;$)");
 
+	for (const auto& line : servBlck) {
+		std::smatch match;
+		if (std::regex_search(line, match, listenRegex))
+			_port = match[1];
+		else if (std::regex_search(line, match, hostRegex))
+			_host = match[1];
+		else if (std::regex_search(line, match, serverNameRegex))
+			_names = match[1];
+		else if (std::regex_search(line, match, maxClientBodyRegex))
+			_maxClientBodySize = std::stoi(match[1]);
+		else if (std::regex_search(line, match, errorPageRegex))
+			_errorPages.emplace(std::stoi(match[1]), match[2]);
+		else if (std::regex_search(line, match, indexRegex))
+			_index = match[1];
+		else if (std::regex_search(line, match, methodsRegex))
+			m_globalMethods = match[1];
+		else if (std::regex_search(line, match, cgiPathRegexPHP))
+			m_globalCgiPathPHP = match[1];
+		else if (std::regex_search(line, match, cgiPathRegexPython))
+			m_globalCgiPathPython = match[1];
+	}
+
 }
 
 void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<std::string, Configuration> serverMap)
