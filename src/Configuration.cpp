@@ -85,7 +85,7 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 
 	std::regex listenRegex(R"(^listen (\d+)\s*;$)");
 	std::regex hostRegex(R"(^host ([^\s]+)\s*;$)");
-	std::regex serverNameRegex(R"(^server_name ([^\s;]+(?: [^\s;]+)*)\s*;$)");
+	std::regex serverNamesRegex(R"(^server_name ([^\s;]+(?: [^\s;]+)*)\s*;$)");
 	std::regex maxClientBodyRegex(R"(^max_client_body_size (\d+)\s*;$)");
 	std::regex errorPageRegex(R"(^error_page (400|403|404|405|408|409|411|413|414|431|500|501|503|505) (/home/\S+\.html)\s*;$)");
 	std::regex indexRegex(R"(^index ([^\s]+)\s*;$)");
@@ -100,24 +100,31 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 
 	for (const auto& line : servBlck) {
 		std::smatch match;
-		if (std::regex_search(line, match, listenRegex))
+
+		if (std::regex_search(line, match, maxClientBodyRegex)) {
+			try {
+				_maxClientBodySize = std::stoi(match[1]);
+			}
+			catch (const std::invalid_argument& e) {
+				std::cerr << "Invalid max_client_body_size value: " << match[1] << " Using default value." << std::endl;
+			}
+		}
+		else if (std::regex_search(line, match, listenRegex))
 			_port = match[1];
 		else if (std::regex_search(line, match, hostRegex))
 			_host = match[1];
-		else if (std::regex_search(line, match, serverNameRegex))
-			_names = match[1];
-		else if (std::regex_search(line, match, maxClientBodyRegex))
-			_maxClientBodySize = std::stoi(match[1]);
+		else if (std::regex_search(line, match, serverNamesRegex))
+			_serverNames = match[1];
 		else if (std::regex_search(line, match, errorPageRegex))
 			_errorPages.emplace(std::stoi(match[1]), match[2]);
 		else if (std::regex_search(line, match, indexRegex))
 			_index = match[1];
-		else if (std::regex_search(line, match, methodsRegex))
-			m_globalMethods = match[1];
-		else if (std::regex_search(line, match, cgiPathRegexPHP))
-			m_globalCgiPathPHP = match[1];
-		else if (std::regex_search(line, match, cgiPathRegexPython))
-			m_globalCgiPathPython = match[1];
+		// else if (std::regex_search(line, match, methodsRegex))
+		// 	m_globalMethods = match[1];
+		// else if (std::regex_search(line, match, cgiPathRegexPHP))
+		// 	m_globalCgiPathPHP = match[1];
+		// else if (std::regex_search(line, match, cgiPathRegexPython))
+		// 	m_globalCgiPathPython = match[1];
 	}
 
 }

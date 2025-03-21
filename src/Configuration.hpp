@@ -15,7 +15,7 @@ class Configuration {
 		std::vector<std::string>				m_rawBlock;				
 		std::string 							_host;	
 		std::string 							_port;			
-		std::string								m_names;
+		std::string								_serverNames;
 		std::string								_index;	
 		unsigned int 							_maxClientBodySize;
 		//std::map<std::string, locationBlock>	m_routes;
