@@ -10,14 +10,48 @@
 
 Configuration::Configuration() {}
 
-Configuration::Configuration(const Configuration &other) {
-	(void)other;
-}
+Configuration::Configuration(const Configuration &other)
+	: _globalMethods(other._globalMethods),
+	  _globalCgiPathPHP(other._globalCgiPathPHP),
+	  _globalCgiPathPython(other._globalCgiPathPython),
+	  _errorPages(other._errorPages),
+	  _rawBlock(other._rawBlock),
+	  _host(other._host),
+	  _port(other._port),
+	  _serverNames(other._serverNames),
+	  _index(other._index),
+	  _maxClientBodySize(other._maxClientBodySize),
+	  _rawServerBlock(other._rawServerBlock)
+{}
 
 Configuration &Configuration::operator=(const Configuration &other) {
-	(void)other;
+	if (this != &other) {
+		_globalMethods = other._globalMethods;
+		_globalCgiPathPHP = other._globalCgiPathPHP;
+		_globalCgiPathPython = other._globalCgiPathPython;
+		_errorPages = other._errorPages;
+		_rawBlock = other._rawBlock;
+		_host = other._host;
+		_port = other._port;
+		_serverNames = other._serverNames;
+		_index = other._index;
+		_maxClientBodySize = other._maxClientBodySize;
+		_rawServerBlock = other._rawServerBlock;
+	}
 	return *this;
+}
 
+
+void Configuration::printServerBlock() const {
+	std::cout << "Server Block:" << std::endl;
+	std::cout << "Port: " << _port << std::endl;
+	std::cout << "Host: " << _host << std::endl;
+	std::cout << "Server Names: " << _serverNames << std::endl;
+	std::cout << "Max Client Body Size: " << _maxClientBodySize << std::endl;
+	std::cout << "Index: " << _index << std::endl;
+	for (const auto& errorPage : _errorPages) {
+		std::cout << "Error Page [" << errorPage.first << "]: " << errorPage.second << std::endl;
+	}
 }
 
 Configuration::~Configuration() {}
@@ -80,6 +114,11 @@ void Configuration::createBarebonesBlock() {
 	_errorPages.emplace(505, "/default-error-pages/505.html");
 }
 
+void Configuration::handleLocationBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>& servBlck) {
+	(void)it;
+	(void)servBlck;
+}
+
 Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBlock(servBlck) {
 	createBarebonesBlock();
 
@@ -98,15 +137,17 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	std::regex cgiPathRegexPHP(R"(^cgi_path_php (\/[^/][^;]*[^/])?/?\s*;$)");
 	std::regex cgiPathRegexPython(R"(^cgi_path_python (\/[^/][^;]*[^/])?/?\s*;$)");
 
-	for (const auto& line : servBlck) {
+	// for (const auto& line : servBlck)
+	for (std::vector<std::string>::iterator it = servBlck.begin(); it != servBlck.end(); ++it) {
+		std::string line = *it;
 		std::smatch match;
 
 		if (std::regex_search(line, match, maxClientBodyRegex)) {
 			try {
-				_maxClientBodySize = std::stoi(match[1]);
+				_maxClientBodySize = std::stoul(match[1]);
 			}
 			catch (const std::invalid_argument& e) {
-				std::cerr << "Invalid max_client_body_size value: " << match[1] << " Using default value." << std::endl;
+				std::cerr << "Invalid max_client_body_size value: " << match[1] << ". Using default value." << std::endl;
 			}
 		}
 		else if (std::regex_search(line, match, listenRegex))
@@ -119,6 +160,8 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 			_errorPages.emplace(std::stoi(match[1]), match[2]);
 		else if (std::regex_search(line, match, indexRegex))
 			_index = match[1];
+		else if (std::regex_search(line, match, locationRegex))
+			handleLocationBlock(it, servBlck);
 		// else if (std::regex_search(line, match, methodsRegex))
 		// 	m_globalMethods = match[1];
 		// else if (std::regex_search(line, match, cgiPathRegexPHP))
@@ -126,10 +169,9 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 		// else if (std::regex_search(line, match, cgiPathRegexPython))
 		// 	m_globalCgiPathPython = match[1];
 	}
-
 }
 
-void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<std::string, Configuration> serverMap)
+void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<std::string, Configuration>& serverMap)
 {
 
 	std::vector<std::string> serverBlock;
@@ -140,6 +182,7 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 	std::multimap<std::string, int> serverCount;
 
 	std::regex regex(R"((\w+)\s*:\s*(.+);)");
+
 	for (const auto& line : rawFile) {
 		std::smatch match;
 		if (regex_search(line, match, std::regex("^server$"))) {
@@ -150,7 +193,7 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 			port = match[1];
 		if (line.find('{') != line.npos)
 			brace++;
-		if (line.find('}') != line.npos)
+		else if (line.find('}') != line.npos)
 			brace--;
 		if (!brace) {
 			serverBlock.push_back(line);
@@ -162,13 +205,18 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 		if (!serverBlock.empty())
 			serverBlock.push_back(line);
 	}
+
+
+	for (const auto& server : serverMap) {
+		server.second.printServerBlock();
+	}
 	for (const auto& server : serverCount) {
 		std::cout << "Server #" << server.second << " on port " << server.first << std::endl;
 	}
 }
 
 int parser(void) {
-	std::string fileName = "complete.conf";
+	std::string fileName = "web.conf";
 	std::vector<std::string> rawFile;
 
 	if (getRawFile(fileName, rawFile) != 0) {
@@ -176,8 +224,8 @@ int parser(void) {
 		return 1;
 	}
 
-	for (const auto& line : rawFile)
-		std::cout << line << std::endl;
+	// for (const auto& line : rawFile)
+	// 	std::cout << line << std::endl;
 
 	std::multimap<std::string, Configuration> serverMap;
 
