@@ -5,8 +5,7 @@
 #include <regex>
 #include <map>
 #include "Configuration.hpp"
-
-// std::regex	listenRegex(R"(^listen (\d+)\s*;$)");
+#include <sstream>
 
 Configuration::Configuration() {}
 
@@ -21,6 +20,7 @@ Configuration::Configuration(const Configuration &other)
 	  _serverNames(other._serverNames),
 	  _index(other._index),
 	  _maxClientBodySize(other._maxClientBodySize),
+	  _locationBlocks(other._locationBlocks),
 	  _rawServerBlock(other._rawServerBlock)
 {}
 
@@ -36,11 +36,11 @@ Configuration &Configuration::operator=(const Configuration &other) {
 		_serverNames = other._serverNames;
 		_index = other._index;
 		_maxClientBodySize = other._maxClientBodySize;
+		_locationBlocks = other._locationBlocks;
 		_rawServerBlock = other._rawServerBlock;
 	}
 	return *this;
 }
-
 
 void Configuration::printServerBlock() const {
 	std::cout << "Server Block:" << std::endl;
@@ -98,6 +98,8 @@ void Configuration::createBarebonesBlock() {
 	_index = "index.html";
 	_host = "0.0.0.0"; // In case no host is specified, defaulting to all interfaces. Nginx default I think.
 	_maxClientBodySize = 1048576; // 1MB, nginx default
+	_globalCgiPathPHP = G_CGI_PATH_PHP;
+	_globalCgiPathPython = G_CGI_PATH_PYTHON;
 	_errorPages.emplace(400, "/default-error-pages/400.html");
 	_errorPages.emplace(403, "/default-error-pages/403.html");
 	_errorPages.emplace(404, "/default-error-pages/404.html");
@@ -114,10 +116,94 @@ void Configuration::createBarebonesBlock() {
 	_errorPages.emplace(505, "/default-error-pages/505.html");
 }
 
-void Configuration::handleLocationBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>& servBlck) {
-	(void)it;
-	(void)servBlck;
+std::vector<std::string> Configuration::generateLocationBlock(std::vector<std::string>::iterator& it, std::vector<std::string>::iterator end) {
+
+	std::vector<std::string> locationBlock;
+	std::string line;
+	int brace = 0;
+	while (it != end) {
+		line = *it;
+		if (line.find('{') != line.npos)
+			brace++;
+		else if (line.find('}') != line.npos) {
+			brace--;
+			if (!brace) {
+				locationBlock.push_back(line);
+				//++it;
+				break;
+			}
+		}
+		locationBlock.push_back(line);
+		++it;
+	}
+	return locationBlock;
 }
+
+LocationBlock Configuration::handleLocationBlock(std::vector<std::string>& locationBlock) {
+    LocationBlock loc;
+	std::regex locationRegex(R"(^location ([^\s]+)\s*$)");
+	std::regex rootRegex(R"(^root /?([^/][^;]*[^/])?/?\s*;$)");
+
+	std::smatch match;
+	int brace = 0;
+	std::vector<std::string>::iterator it_begin = locationBlock.begin();
+	std::vector<std::string>::iterator it_end = locationBlock.end();
+
+	std::regex_search(*it_begin, match, locationRegex);
+	loc.path = match[1];
+	++it_begin;
+
+	while (it_begin != it_end) {
+		std::string line = *it_begin;
+
+		if (line.find('{') != line.npos)
+			brace++;
+		else if (line.find('}') != line.npos) {
+			brace--;
+			if (!brace)
+				break;
+		}
+		else if (std::regex_search(line, match, locationRegex)) {
+			// std::cout << "Nested location block found: " << match[1] << std::endl;
+			std::vector<std::string> locationBlockRaw = generateLocationBlock(it_begin, it_end);
+			LocationBlock nestedLoc = handleLocationBlock(locationBlockRaw);
+			loc.nestedLocations.push_back(nestedLoc);
+		}
+		else if (std::regex_search(line, match, rootRegex)) {
+			loc.root = match[1];
+		}
+		else if (std::regex_search(line, match, std::regex(R"(^methods ([^\s;]+(?: [^\s;]+)*)\s*;$)"))) {
+			std::string methodsStr = match[1];
+			std::istringstream iss(methodsStr);
+			std::string method;
+			while (iss >> method) {
+				loc.methods.push_back(method);
+			}
+		}
+		else if (std::regex_search(line, match, std::regex(R"(^cgi_path_php (\/[^/][^;]*[^/])?/?\s*;$)"))) {
+			loc.cgiPathPHP = match[1];
+		}
+		else if (std::regex_search(line, match, std::regex(R"(^cgi_path_python (\/[^/][^;]*[^/])?/?\s*;$)"))) {
+			loc.cgiPathPython = match[1];
+		}
+		else if (std::regex_search(line, match, std::regex(R"(^upload_dir (home/\S+/)\s*;$)"))) {
+			loc.uploadDir = match[1];
+		}
+		else if (std::regex_search(line, match, std::regex(R"(^return 307 (\S+)\s*;$)"))) {
+			loc.returnCode = 307;
+			loc.returnURL = match[1];
+		}
+		else if (std::regex_search(line, match, std::regex(R"(^dir_listing (on|off)\s*;$)"))) {
+			loc.dirListing = (match[1] == "on");
+		}
+		else if (std::regex_search(line, match, std::regex(R"(^cgi_path (\/[^/][^;]*[^/])?/?\s*;$)"))) {
+			loc.cgiPath = match[1];
+		}
+		it_begin++;
+	}
+    return loc;
+}
+
 
 Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBlock(servBlck) {
 	createBarebonesBlock();
@@ -129,7 +215,7 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	std::regex errorPageRegex(R"(^error_page (400|403|404|405|408|409|411|413|414|431|500|501|503|505) (/home/\S+\.html)\s*;$)");
 	std::regex indexRegex(R"(^index ([^\s]+)\s*;$)");
 	std::regex locationRegex(R"(^location ([^\s]+)\s*$)");
-	std::regex rootRegex(R"(^root /?([^/][^;]*[^/])?/?\s*;$)");
+
 	std::regex returnRegex(R"(^return 307 (\S+)\s*;$)");
 	std::regex methodsRegex(R"(^methods ([^\s;]+(?: [^\s;]+)*)\s*;$)");
 	std::regex uploadDirRegex(R"(^upload_dir (home/\S+/)\s*;$)");
@@ -160,14 +246,29 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 			_errorPages.emplace(std::stoi(match[1]), match[2]);
 		else if (std::regex_search(line, match, indexRegex))
 			_index = match[1];
-		else if (std::regex_search(line, match, locationRegex))
-			handleLocationBlock(it, servBlck);
-		// else if (std::regex_search(line, match, methodsRegex))
-		// 	m_globalMethods = match[1];
-		// else if (std::regex_search(line, match, cgiPathRegexPHP))
-		// 	m_globalCgiPathPHP = match[1];
-		// else if (std::regex_search(line, match, cgiPathRegexPython))
-		// 	m_globalCgiPathPython = match[1];
+		else if (std::regex_search(line, match, locationRegex)) {
+
+			std::vector<std::string> locationBlock = generateLocationBlock(it, servBlck.end());
+			// int brace = 0;
+			// while (it != servBlck.end()) {
+			// 	line = *it;
+			// 	if (line.find('{') != line.npos)
+			// 		brace++;
+			// 	else if (line.find('}') != line.npos) {
+			// 		brace--;
+			// 		if (!brace) {
+			// 			locationBlock.push_back(line);
+			// 			++it;
+			// 			break;
+			// 		}
+			// 	}
+			// 	locationBlock.push_back(line);
+			// 	++it;
+			// }
+
+			LocationBlock loc = handleLocationBlock(locationBlock);
+			_locationBlocks.push_back(loc);
+		}
 	}
 }
 
@@ -216,7 +317,7 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 }
 
 int parser(void) {
-	std::string fileName = "web.conf";
+	std::string fileName = "complete.conf";
 	std::vector<std::string> rawFile;
 
 	if (getRawFile(fileName, rawFile) != 0) {
