@@ -42,6 +42,32 @@ Configuration &Configuration::operator=(const Configuration &other) {
 	return *this;
 }
 
+// Prints location blocks recursively. Level denotes nestedness, and used for indentation.
+void Configuration::printLocationBlock(LocationBlock loc, int level) const {
+	std::string indent(level + 2, ' ');
+
+	std::cout << indent << "Path: " << GREEN << loc.path << DEFAULT_COLOR << std::endl;
+	std::cout << indent << "Root: " << loc.root << std::endl;
+	std::cout << indent << "Methods: ";
+	for (const auto& method : loc.methods) {
+		std::cout << method << " ";
+	}
+	std::cout << std::endl;
+	std::cout << indent << "CGI Path PHP: " << loc.cgiPathPHP << std::endl;
+	std::cout << indent << "CGI Path Python: " << loc.cgiPathPython << std::endl;
+	std::cout << indent << "CGI Path (default): " << loc.cgiPathPython << std::endl;
+	std::cout << indent << "Upload Directory: " << loc.uploadDir << std::endl;
+	std::cout << indent << "Return Code: " << loc.returnCode << std::endl;
+	std::cout << indent << "Return URL: " << loc.returnURL << std::endl;
+	std::cout << indent << "Directory Listing: " << (loc.dirListing ? "on" : "off") << std::endl;
+	if (!loc.nestedLocations.empty()) {
+		for (const auto& nestedLoc : loc.nestedLocations) {
+			std::cout << indent << BLUE << "  Nested Location Block:" << DEFAULT_COLOR << std::endl;
+			printLocationBlock(nestedLoc, level + 2);
+		}
+	}
+}
+
 void Configuration::printServerBlock() const {
 	std::cout << "Server Block:" << std::endl;
 	std::cout << "Port: " << _port << std::endl;
@@ -51,6 +77,10 @@ void Configuration::printServerBlock() const {
 	std::cout << "Index: " << _index << std::endl;
 	for (const auto& errorPage : _errorPages) {
 		std::cout << "Error Page [" << errorPage.first << "]: " << errorPage.second << std::endl;
+	}
+	std::cout << "Location Blocks:" << std::endl;
+	for (const auto& loc : _locationBlocks) {
+		printLocationBlock(loc, 0);
 	}
 }
 
@@ -143,9 +173,18 @@ LocationBlock Configuration::handleLocationBlock(std::vector<std::string>& locat
     LocationBlock loc;
 	std::regex locationRegex(R"(^location ([^\s]+)\s*$)");
 	std::regex rootRegex(R"(^root /?([^/][^;]*[^/])?/?\s*;$)");
+	std::regex returnRegex(R"(^return 307 (\S+)\s*;$)");
+	std::regex methodsRegex(R"(^methods ([^\s;]+(?: [^\s;]+)*)\s*;$)");
+	std::regex uploadDirRegex(R"(^upload_dir (home/\S+/)\s*;$)");
+	std::regex dirListingRegex(R"(^dir_listing (on|off)\s*;$)");
+	std::regex cgiPathRegexPHP(R"(^cgi_path_php (\/[^/][^;]*[^/])?/?\s*;$)");
+	std::regex cgiPathRegexPython(R"(^cgi_path_python (\/[^/][^;]*[^/])?/?\s*;$)");
 
 	std::smatch match;
 	int brace = 0;
+	loc.returnCode = -1; // Default value for return code
+	loc.returnURL = ""; // Default value for return URL
+	loc.dirListing = false; // Default value for directory listing
 	std::vector<std::string>::iterator it_begin = locationBlock.begin();
 	std::vector<std::string>::iterator it_end = locationBlock.end();
 
@@ -169,10 +208,9 @@ LocationBlock Configuration::handleLocationBlock(std::vector<std::string>& locat
 			LocationBlock nestedLoc = handleLocationBlock(locationBlockRaw);
 			loc.nestedLocations.push_back(nestedLoc);
 		}
-		else if (std::regex_search(line, match, rootRegex)) {
+		else if (std::regex_search(line, match, rootRegex))
 			loc.root = match[1];
-		}
-		else if (std::regex_search(line, match, std::regex(R"(^methods ([^\s;]+(?: [^\s;]+)*)\s*;$)"))) {
+		else if (std::regex_search(line, match, methodsRegex)) {
 			std::string methodsStr = match[1];
 			std::istringstream iss(methodsStr);
 			std::string method;
@@ -180,25 +218,18 @@ LocationBlock Configuration::handleLocationBlock(std::vector<std::string>& locat
 				loc.methods.push_back(method);
 			}
 		}
-		else if (std::regex_search(line, match, std::regex(R"(^cgi_path_php (\/[^/][^;]*[^/])?/?\s*;$)"))) {
+		else if (std::regex_search(line, match, cgiPathRegexPHP))
 			loc.cgiPathPHP = match[1];
-		}
-		else if (std::regex_search(line, match, std::regex(R"(^cgi_path_python (\/[^/][^;]*[^/])?/?\s*;$)"))) {
+		else if (std::regex_search(line, match, cgiPathRegexPython))
 			loc.cgiPathPython = match[1];
-		}
-		else if (std::regex_search(line, match, std::regex(R"(^upload_dir (home/\S+/)\s*;$)"))) {
+		else if (std::regex_search(line, match, uploadDirRegex))
 			loc.uploadDir = match[1];
-		}
-		else if (std::regex_search(line, match, std::regex(R"(^return 307 (\S+)\s*;$)"))) {
+		else if (std::regex_search(line, match, returnRegex)) {
 			loc.returnCode = 307;
 			loc.returnURL = match[1];
 		}
-		else if (std::regex_search(line, match, std::regex(R"(^dir_listing (on|off)\s*;$)"))) {
+		else if (std::regex_search(line, match, dirListingRegex))
 			loc.dirListing = (match[1] == "on");
-		}
-		else if (std::regex_search(line, match, std::regex(R"(^cgi_path (\/[^/][^;]*[^/])?/?\s*;$)"))) {
-			loc.cgiPath = match[1];
-		}
 		it_begin++;
 	}
     return loc;
@@ -216,14 +247,6 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	std::regex indexRegex(R"(^index ([^\s]+)\s*;$)");
 	std::regex locationRegex(R"(^location ([^\s]+)\s*$)");
 
-	std::regex returnRegex(R"(^return 307 (\S+)\s*;$)");
-	std::regex methodsRegex(R"(^methods ([^\s;]+(?: [^\s;]+)*)\s*;$)");
-	std::regex uploadDirRegex(R"(^upload_dir (home/\S+/)\s*;$)");
-	std::regex dirListingRegex(R"(^dir_listing (on|off)\s*;$)");
-	std::regex cgiPathRegexPHP(R"(^cgi_path_php (\/[^/][^;]*[^/])?/?\s*;$)");
-	std::regex cgiPathRegexPython(R"(^cgi_path_python (\/[^/][^;]*[^/])?/?\s*;$)");
-
-	// for (const auto& line : servBlck)
 	for (std::vector<std::string>::iterator it = servBlck.begin(); it != servBlck.end(); ++it) {
 		std::string line = *it;
 		std::smatch match;
@@ -249,22 +272,6 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 		else if (std::regex_search(line, match, locationRegex)) {
 
 			std::vector<std::string> locationBlock = generateLocationBlock(it, servBlck.end());
-			// int brace = 0;
-			// while (it != servBlck.end()) {
-			// 	line = *it;
-			// 	if (line.find('{') != line.npos)
-			// 		brace++;
-			// 	else if (line.find('}') != line.npos) {
-			// 		brace--;
-			// 		if (!brace) {
-			// 			locationBlock.push_back(line);
-			// 			++it;
-			// 			break;
-			// 		}
-			// 	}
-			// 	locationBlock.push_back(line);
-			// 	++it;
-			// }
 
 			LocationBlock loc = handleLocationBlock(locationBlock);
 			_locationBlocks.push_back(loc);
@@ -316,8 +323,7 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 	}
 }
 
-int parser(void) {
-	std::string fileName = "complete.conf";
+int parser(std::string fileName) {
 	std::vector<std::string> rawFile;
 
 	if (getRawFile(fileName, rawFile) != 0) {

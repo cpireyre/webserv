@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/20 13:35:36 by upolat           ###   ########.fr       */
+/*   Updated: 2025/03/23 22:22:22 by upolat           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,15 +15,11 @@
 
 int	main(int argc, char **argv)
 {
-	// if (argc != 2)
-	// {
-	// 	std::cout << "./webserv [configuration file]\n";
-	// 	return (1);
-	// }
-	// std::cout << "Hello from webserv\n";
-	// std::cout << "We'll want to parse " << argv[1] << "\n";
-	(void)argc;
-	(void)argv;
-	parser();
+	if (argc != 2)
+	{
+		std::cout << "./webserv [configuration file]\n";
+		return (1);
+	}
+	parser(argv[1]);
 	return (0);
 }

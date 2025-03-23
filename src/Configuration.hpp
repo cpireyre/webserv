@@ -5,6 +5,9 @@
 
 #define G_CGI_PATH_PHP		"/usr/bin"
 #define G_CGI_PATH_PYTHON	"/usr/bin"
+#define GREEN				"\033[32m"
+#define BLUE				"\033[34m"
+#define DEFAULT_COLOR		"\033[0m"
 
 struct LocationBlock {
     std::string path;                   // The location path (e.g. "/images/")
@@ -12,7 +15,6 @@ struct LocationBlock {
     std::vector<std::string> methods;   // Allowed methods, e.g. {"GET", "POST", "DELETE"}
     std::string cgiPathPHP;             // Path for the PHP CGI interpreter (if provided)
     std::string cgiPathPython;          // Path for the Python CGI interpreter (if provided)
-    std::string cgiPath;                // Generic CGI path (optional, for cases using "cgi_path")
     std::string uploadDir;              // Upload directory (optional)
     int returnCode;                     // HTTP status code for redirection (e.g. 307), default could be -1 or 0 if not set
     std::string returnURL;              // URL to redirect to if a return directive is present
@@ -49,8 +51,8 @@ class Configuration {
 		Configuration& operator=(const Configuration& other);
 
 		Configuration(std::vector<std::string> servBlck);
-
 		void printServerBlock() const;
+		void printLocationBlock(LocationBlock loc, int level) const;
 };
 
-int parser(void);
+int parser(std::string fileName);
