@@ -3,19 +3,20 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: copireyr <copireyr@student.hive.fi>        +#+  +:+       +#+         #
+#    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/03/19 10:18:59 by copireyr         ###   ########.fr        #
+#    Updated: 2025/03/20 13:35:51 by upolat           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
 CC := c++
-CFLAGS := -Wall -Wextra -Werror -MMD -MP
+CFLAGS := -Wall -Wextra -Werror -std=c++20 # -MMD -MP
 NAME := webserv
 
-src_files := main.cpp a/test.cpp
+src_files := main.cpp Configuration.cpp
+
 src = $(addprefix ./src/, $(src_files))
 obj := $(addprefix ./obj/, $(src:%.cpp=%.o))
 
