@@ -6,12 +6,12 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/23 22:22:22 by upolat           ###   ########.fr       */
+/*   Updated: 2025/03/24 02:05:59 by upolat           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
-#include "Configuration.hpp"
+#include "../include/Configuration.hpp"
 
 int	main(int argc, char **argv)
 {

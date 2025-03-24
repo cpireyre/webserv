@@ -4,7 +4,7 @@
 #include <vector>
 #include <regex>
 #include <map>
-#include "Configuration.hpp"
+#include "../include/Configuration.hpp"
 #include <sstream>
 
 Configuration::Configuration() {}
