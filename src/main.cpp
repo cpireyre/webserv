@@ -6,12 +6,14 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/24 02:05:59 by upolat           ###   ########.fr       */
+/*   Updated: 2025/03/25 13:46:50 by upolat           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
-#include "../include/Configuration.hpp"
+#include "../include/Parser.hpp"
+
+int parser(std::string fileName);
 
 int	main(int argc, char **argv)
 {
