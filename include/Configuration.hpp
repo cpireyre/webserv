@@ -17,16 +17,16 @@
 const std::vector<std::string> GLOBAL_METHODS = {"GET"};
 
 struct LocationBlock {
-    std::string path;                   // The location path (e.g. "/images/")
-    std::string root;                   // The file system root for this location
-    std::vector<std::string> methods;   // Allowed methods, e.g. {"GET", "POST", "DELETE"}
-    std::string cgiPathPHP;             // Path for the PHP CGI interpreter (if provided)
-    std::string cgiPathPython;          // Path for the Python CGI interpreter (if provided)
-    std::string uploadDir;              // Upload directory (optional)
-    int returnCode;                     // HTTP status code for redirection (e.g. 307), default could be -1 or 0 if not set
-    std::string returnURL;              // URL to redirect to if a return directive is present
-    bool dirListing;                    // Directory listing flag (true for "on", false for "off")
-    std::vector<LocationBlock> nestedLocations; // For any nested location blocks
+    std::string path;                   		// The location path (e.g. "/images/")
+    std::string root;                   		// The file system root for this location
+    std::vector<std::string> methods;   		// Allowed methods, e.g. {"GET", "POST", "DELETE"}
+    std::string cgiPathPHP;             		// Path for the PHP CGI interpreter (if provided)
+    std::string cgiPathPython;          		// Path for the Python CGI interpreter (if provided)
+    std::string uploadDir;              		// Upload directory (optional)
+    int returnCode;                     		// HTTP status code for redirection (e.g. 307), default could be -1 or 0 if not set
+    std::string returnURL;              		// URL to redirect to if a return directive is present
+    bool dirListing;                    		// Directory listing flag (true for "on", false for "off")
+    std::vector<LocationBlock> nestedLocations;	// For any nested location blocks
 };
 
 class Configuration {
