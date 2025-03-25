@@ -9,6 +9,8 @@
 #define BLUE				"\033[34m"
 #define DEFAULT_COLOR		"\033[0m"
 
+const std::vector<std::string> GLOBAL_METHODS = {"GET"};
+
 struct LocationBlock {
     std::string path;                   // The location path (e.g. "/images/")
     std::string root;                   // The file system root for this location
@@ -22,10 +24,9 @@ struct LocationBlock {
     std::vector<LocationBlock> nestedLocations; // For any nested location blocks
 };
 
-
 class Configuration {
 	private:
-		std::string								_globalMethods;		
+		std::vector<std::string>				_globalMethods;		
 		std::string								_globalCgiPathPHP;	
 		std::string								_globalCgiPathPython;	
 		std::map<int, std::string>				_errorPages;
@@ -49,6 +50,8 @@ class Configuration {
 		~Configuration();
 		Configuration(const Configuration& other);
 		Configuration& operator=(const Configuration& other);
+
+		std::vector<std::string> getMethods() const;
 
 		Configuration(std::vector<std::string> servBlck);
 		void printServerBlock() const;

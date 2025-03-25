@@ -86,6 +86,10 @@ void Configuration::printServerBlock() const {
 
 Configuration::~Configuration() {}
 
+std::vector<std::string> Configuration::getMethods() const {
+	return _globalMethods;
+}
+
 int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	int brace = 0;
 	
@@ -279,6 +283,12 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	}
 }
 
+void populateMethods(Configuration& server, std::vector<std::string> inheritedMethods) {
+	if (server.getMethods().empty())
+	methods.insert(methods.end(), locationMethods.begin(), locationMethods.end());
+
+}
+
 void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<std::string, Configuration>& serverMap)
 {
 
@@ -313,6 +323,9 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 		if (!serverBlock.empty())
 			serverBlock.push_back(line);
 	}
+
+	for (auto& server : serverMap)
+		populateMethods(server.second, GLOBAL_METHODS);
 
 
 	for (const auto& server : serverMap) {
