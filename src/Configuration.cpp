@@ -50,7 +50,6 @@ void Configuration::printLocationBlock(LocationBlock loc, int level) const {
 	std::cout << std::endl;
 	std::cout << indent << "CGI Path PHP: " << loc.cgiPathPHP << std::endl;
 	std::cout << indent << "CGI Path Python: " << loc.cgiPathPython << std::endl;
-	std::cout << indent << "CGI Path (default): " << loc.cgiPathPython << std::endl;
 	std::cout << indent << "Upload Directory: " << loc.uploadDir << std::endl;
 	std::cout << indent << "Return Code: " << loc.returnCode << std::endl;
 	std::cout << indent << "Return URL: " << loc.returnURL << std::endl;
@@ -85,7 +84,7 @@ Configuration::~Configuration() {}
 // 	return ;
 // }
 
-std::vector<LocationBlock> Configuration::getLocationBlocks() {
+std::vector<LocationBlock>& Configuration::getLocationBlocks() {
 	return _locationBlocks;
 }
 

@@ -56,9 +56,7 @@ class Configuration {
 		Configuration(const Configuration& other);
 		Configuration& operator=(const Configuration& other);
 
-		// std::vector<std::string> getLocationMethods() const;
-		void setLocationMethods();
-		std::vector<LocationBlock> getLocationBlocks();
+		std::vector<LocationBlock>& getLocationBlocks();
 
 		Configuration(std::vector<std::string> servBlck);
 		void printServerBlock() const;

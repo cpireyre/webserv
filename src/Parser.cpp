@@ -2,12 +2,15 @@
 
 void populateMethods(Configuration &server, LocationBlock& locationBlock, std::vector<std::string> inheritedMethods) {
 
-	if (locationBlock.methods.empty()) {
-		(void)server;
-		(void)inheritedMethods;
-	}
-	// 	methods.insert(methods.end(), locationMethods.begin(), locationMethods.end());
+	if (locationBlock.methods.empty())
+		locationBlock.methods.insert(locationBlock.methods.end(), inheritedMethods.begin(), inheritedMethods.end());
+	else
+		inheritedMethods = locationBlock.methods;
+	
+	std::vector<LocationBlock> &nestedLocations = locationBlock.nestedLocations;
 
+	for (auto& nestedLocation : nestedLocations)
+		populateMethods(server, nestedLocation, inheritedMethods);
 }
 
 
@@ -85,7 +88,7 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 	}
 
 	for (auto& server : serverMap) {
-		std::vector<LocationBlock> locationBlocks = server.second.getLocationBlocks();
+		std::vector<LocationBlock>& locationBlocks = server.second.getLocationBlocks();
 		for (auto& locationBlock : locationBlocks)
 			populateMethods(server.second, locationBlock, GLOBAL_METHODS);
 	}
