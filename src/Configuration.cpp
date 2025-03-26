@@ -92,6 +92,7 @@ void Configuration::createBarebonesBlock() {
 	_maxClientBodySize = 1048576; // 1MB, nginx default
 	_globalCgiPathPHP = G_CGI_PATH_PHP;
 	_globalCgiPathPython = G_CGI_PATH_PYTHON;
+	// dont do multimap for error pages
 	_errorPages.emplace(400, "/default-error-pages/400.html");
 	_errorPages.emplace(403, "/default-error-pages/403.html");
 	_errorPages.emplace(404, "/default-error-pages/404.html");
@@ -217,12 +218,18 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 			try {
 				_maxClientBodySize = std::stoul(match[1]);
 			}
-			catch (const std::invalid_argument& e) {
+			catch (const std::exception& e) {
 				std::cerr << "Invalid max_client_body_size value: " << match[1] << ". Using default value." << std::endl;
 			}
 		}
-		else if (std::regex_search(line, match, listenRegex))
-			_port = match[1];
+		else if (std::regex_search(line, match, listenRegex)) {
+			try {
+				_port = std::stoi(match[1]);
+			}
+			catch (const std::exception& e) {
+				std::cout << "Invalid port value: " << match[1] << ". Using default value." << std::endl;
+			}
+		}
 		else if (std::regex_search(line, match, hostRegex))
 			_host = match[1];
 		else if (std::regex_search(line, match, serverNamesRegex))
