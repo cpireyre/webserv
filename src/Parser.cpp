@@ -98,20 +98,16 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Conf
 	}
 }
 
-int parser(std::string fileName) {
+std::vector<Configuration> parser(std::string fileName) {
 	std::vector<std::string> rawFile;
+	std::vector<Configuration> serverMap;
 
 	if (getRawFile(fileName, rawFile) != 0) {
 		std::cerr << "Error parsing file" << std::endl;
-		return 1;
+		return serverMap; // Handle better.
 	}
-
-	// for (const auto& line : rawFile)
-	// 	std::cout << line << std::endl;
-
-	std::vector<Configuration> serverMap;
 
 	populateConfigMap(rawFile, serverMap);
 
-	return 0;
+	return serverMap;
 }

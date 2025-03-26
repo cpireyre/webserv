@@ -38,7 +38,7 @@ class Configuration {
 		std::map<int, std::string>				_errorPages;
 		std::vector<std::string>				_rawBlock;				
 		std::string 							_host;	
-		unsigned int 							_port;		// Return a non-negative int to Colin
+		unsigned int 							_port;
 		std::string								_serverNames;
 		std::string								_index;	
 		unsigned int 							_maxClientBodySize;
