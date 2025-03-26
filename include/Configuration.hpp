@@ -15,6 +15,7 @@
 # define DEFAULT_COLOR		"\033[0m"
 
 const std::vector<std::string> GLOBAL_METHODS = {"GET"};
+const std::string DEFAULT_LISTEN = "80";
 
 struct LocationBlock {
     std::string path;                   		// The location path (e.g. "/images/")

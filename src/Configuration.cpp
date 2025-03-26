@@ -39,7 +39,7 @@ Configuration &Configuration::operator=(const Configuration &other) {
 
 // Prints location blocks recursively. Level denotes nestedness, and used for indentation.
 void Configuration::printLocationBlock(LocationBlock loc, int level) const {
-	std::string indent(level + 2, ' ');
+	std::string indent(level, ' ');
 
 	std::cout << indent << "Path: " << GREEN << loc.path << DEFAULT_COLOR << std::endl;
 	std::cout << indent << "Root: " << loc.root << std::endl;
@@ -80,10 +80,6 @@ void Configuration::printServerBlock() const {
 
 Configuration::~Configuration() {}
 
-// std::vector<std::string> Configuration::getLocationMethods() const {
-// 	return ;
-// }
-
 std::vector<LocationBlock>& Configuration::getLocationBlocks() {
 	return _locationBlocks;
 }
@@ -92,6 +88,7 @@ std::vector<LocationBlock>& Configuration::getLocationBlocks() {
 void Configuration::createBarebonesBlock() {
 	_index = "index.html";
 	_host = "0.0.0.0"; // In case no host is specified, defaulting to all interfaces. Nginx default I think.
+	_port = DEFAULT_LISTEN;
 	_maxClientBodySize = 1048576; // 1MB, nginx default
 	_globalCgiPathPHP = G_CGI_PATH_PHP;
 	_globalCgiPathPython = G_CGI_PATH_PYTHON;

@@ -78,6 +78,8 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 			brace--;
 		if (!brace) {
 			serverBlock.push_back(line);
+			if (port.empty())
+				port = DEFAULT_LISTEN;
 			serverMap.emplace(port, Configuration(serverBlock));
 			serverCount.emplace(port, ++serverCountForTestPurposes);
 			serverBlock.clear();
