@@ -52,15 +52,13 @@ int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	return 0;
 }
 
-void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<std::string, Configuration>& serverMap)
+void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Configuration>& serverMap)
 {
 
 	std::vector<std::string> serverBlock;
 	std::string port;
 	int brace = 0;
 	std::regex	listenRegex(R"(^listen (\d+)\s*;$)");
-	int serverCountForTestPurposes = 0;
-	std::multimap<std::string, int> serverCount;
 
 	std::regex regex(R"((\w+)\s*:\s*(.+);)");
 
@@ -78,8 +76,9 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 			brace--;
 		if (!brace) {
 			serverBlock.push_back(line);
-			serverMap.emplace(port, Configuration(serverBlock));
-			serverCount.emplace(port, ++serverCountForTestPurposes);
+			if (port.empty())
+				port = DEFAULT_LISTEN;
+			serverMap.push_back(Configuration(serverBlock));
 			serverBlock.clear();
 			port.clear();
 		}
@@ -88,17 +87,14 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::multimap<st
 	}
 
 	for (auto& server : serverMap) {
-		std::vector<LocationBlock>& locationBlocks = server.second.getLocationBlocks();
+		std::vector<LocationBlock>& locationBlocks = server.getLocationBlocks();
 		for (auto& locationBlock : locationBlocks)
-			populateMethods(server.second, locationBlock, GLOBAL_METHODS);
+			populateMethods(server, locationBlock, DEFAULT_METHODS);
 	}
 
 
 	for (const auto& server : serverMap) {
-		server.second.printServerBlock();
-	}
-	for (const auto& server : serverCount) {
-		std::cout << "Server #" << server.second << " on port " << server.first << std::endl;
+		server.printServerBlock();
 	}
 }
 
@@ -113,7 +109,7 @@ int parser(std::string fileName) {
 	// for (const auto& line : rawFile)
 	// 	std::cout << line << std::endl;
 
-	std::multimap<std::string, Configuration> serverMap;
+	std::vector<Configuration> serverMap;
 
 	populateConfigMap(rawFile, serverMap);
 

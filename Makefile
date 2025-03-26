@@ -6,13 +6,13 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/03/25 13:46:58 by upolat           ###   ########.fr        #
+#    Updated: 2025/03/26 15:11:20 by upolat           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
 CC := c++
-CFLAGS := -Wall -Wextra -Werror -std=c++20 # -MMD -MP
+CFLAGS := -Wall -Wextra -Werror -std=c++20 -MMD -MP
 NAME := webserv
 
 src_files := main.cpp Configuration.cpp Parser.cpp
