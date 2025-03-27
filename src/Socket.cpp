@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 14:28:31 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/27 10:22:56 by upolat           ###   ########.fr       */
+/*   Updated: 2025/03/27 11:10:49 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,8 +41,8 @@ int	Socket::make_listening_socket(int port)
 	struct sockaddr_in address = {
 		.sin_family = AF_INET,
 		.sin_port = htons(port),
-		.sin_addr = (in_addr_t)0,
-		.sin_zero = 0,
+		.sin_addr = {(in_addr_t)0},
+		.sin_zero = {0},
 	};
 	address.sin_addr.s_addr = INADDR_ANY;
 	err = bind(insock, (sockaddr*)&address, sizeof(address));

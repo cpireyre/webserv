@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/03/27 08:57:39 by copireyr         ###   ########.fr        #
+#    Updated: 2025/03/27 11:09:25 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -42,7 +42,8 @@ fclean: clean
 	$(RM) $(NAME)
 
 .PHONY: re
-re: fclean all
+re: fclean
+	make -j
 
 .PHONY: test
 test: all
