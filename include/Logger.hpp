@@ -2,6 +2,7 @@
 
 # include <iostream>
 # include <cstring>
+# include <cstdarg>
 
 class Logger final
 {
