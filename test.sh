@@ -1,5 +1,5 @@
 #!/bin/bash
-./webserv config.txt &
+./webserv web.conf &
 until nc -z localhost 4242 2>/dev/null; do
   sleep 0.1
 done

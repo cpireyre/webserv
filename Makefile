@@ -3,21 +3,23 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: copireyr <copireyr@student.hive.fi>        +#+  +:+       +#+         #
+#    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/03/19 15:38:55 by copireyr         ###   ########.fr        #
+#    Updated: 2025/03/27 08:57:39 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
 CC := c++
-CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++11
+CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
 debug := -DDEBUG
 CPPFLAGS := -I./include/ $(debug)
 NAME := webserv
 
-src_files := main.cpp Logger.cpp Socket.cpp Connection.cpp
+src_files := main.cpp Logger.cpp Socket.cpp Connection.cpp Configuration.cpp Parser.cpp Server.cpp
+NAME := webserv
+
 src = $(addprefix ./src/, $(src_files))
 obj := $(addprefix ./obj/, $(src:%.cpp=%.o))
 
