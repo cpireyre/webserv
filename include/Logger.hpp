@@ -1,6 +1,7 @@
 #pragma once
 
 # include <iostream>
+# include <cstring>
 
 class Logger final
 {
