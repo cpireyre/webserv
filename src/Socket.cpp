@@ -1,55 +1,116 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Socket.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/03/19 14:28:31 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/27 11:10:49 by copireyr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+#include <netdb.h>
+#include <cassert>
+#include <cstdio>
+#include <cerrno>
+#include <cstring>
+#include <unistd.h>
+#include <fcntl.h>
 
-#include "Socket.hpp"
+int		make_server_socket(const char *host, const char *port);
+int		socket_set_nonblocking(int sock);
+void	test_server_socket(int server);
 
-int Socket::set_nonblocking(int fd)
+void	test_server_socket(int server)
 {
-    if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+	assert(server >= 0);
+	struct sockaddr	address_server;
+	memset(&address_server, 0, sizeof(address_server));
+	socklen_t		address_server_len = sizeof(address_server);
+	int status = getsockname(server, &address_server, &address_server_len);
+	assert(status == 0);
+
+	const int clients_count = SOMAXCONN;
+	int clients[clients_count];
+	for (int i = 0; i < clients_count; i++)
 	{
-        Logger::warn("fcntl SETFL:");
-        return (1);
-    }
-    if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
-	{
-        Logger::warn("fcntl CLOEXEC:");
-        return (1);
-    }
-    return (0);
+		clients[i] = socket(AF_INET, SOCK_STREAM, 0);
+		assert(clients[i] >= 0);
+		status = connect(clients[i], &address_server, address_server_len);
+		if (status != 0)
+		{
+			perror(NULL);
+			dprintf(2, "errno: %d\n", errno);
+		}
+		assert(status == 0);
+	}
+	for (int i = 0; i < clients_count; i++)
+		assert(close(clients[i]) == 0);
+	close(server);
 }
 
-int	Socket::make_listening_socket(int port)
+int	socket_set_nonblocking(int sock)
 {
-	int	err;
-	int insock = socket(AF_INET, SOCK_STREAM, 0);
-	if (insock == -1)
-		Logger::die("socket:");
-	int opt = 1;
-	if (setsockopt(insock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-		Logger::die("setsockopt:");
-	if (Socket::set_nonblocking(insock))
-		exit(1);
-	struct sockaddr_in address = {
-		.sin_family = AF_INET,
-		.sin_port = htons(port),
-		.sin_addr = {(in_addr_t)0},
-		.sin_zero = {0},
+	assert(sock >= 0);
+	int	error;
+
+	error = fcntl(sock, F_SETFL, O_NONBLOCK);
+	if (error)
+		return (-1);
+	error = fcntl(sock, F_SETFD, FD_CLOEXEC);
+	if (error)
+		return (-1);
+	return (0);
+}
+
+int	make_server_socket(const char *host, const char *port)
+{
+	assert(host != NULL);
+	assert(port != NULL);
+
+	const struct addrinfo	hints = {
+		.ai_flags = AI_NUMERICSERV,
+		.ai_family = AF_UNSPEC,
+		.ai_protocol = 0,
+		.ai_socktype = SOCK_STREAM,
 	};
-	address.sin_addr.s_addr = INADDR_ANY;
-	err = bind(insock, (sockaddr*)&address, sizeof(address));
-	if (err)
-		Logger::die("bind:");
-	err = listen(insock, INCOMING_QUEUE_LIMIT);
-	if (err)
-		Logger::die("listen:");
+
+	struct addrinfo *addr = NULL;
+	int error = getaddrinfo(host, port, &hints, &addr);
+	if (error)
+	{
+		dprintf(2, "die: getaddrinfo: %s\n", gai_strerror(error));
+		return (-1);
+	}
+
+	int insock = -1;
+	struct addrinfo *p = NULL;
+	const int enable = 1;
+	for (p = addr; p; p = p->ai_next)
+	{
+		insock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (insock < 0)
+			continue ;
+		if (setsockopt(insock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+		{
+			dprintf(2, "die: setsockopt\n");
+			freeaddrinfo(addr);
+			return (-1);
+		}
+		if (bind(insock, p->ai_addr, p->ai_addrlen) < 0)
+		{
+			close(insock);
+			continue ;
+		}
+		break ;
+	}
+	freeaddrinfo(addr);
+	if (!p)
+	{
+		dprintf(2, "die: bind\n");
+		return (-1);
+	}
+	if (socket_set_nonblocking(insock) < 0)
+	{
+		close(insock);
+		dprintf(2, "die: fcntl\n");
+		return (-1);
+	}
+	if (listen(insock, SOMAXCONN) < 0)
+	{
+		close(insock);
+		dprintf(2, "die: listen\n");
+		return (-1);
+	}
+	assert(insock >= 0);
 	return (insock);
 }

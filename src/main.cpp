@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/27 08:57:47 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/03/28 15:45:09 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,6 @@
 #include <unistd.h>
 
 std::vector<Configuration> parser(std::string fileName);
-void	run_echo_server(void);
 
 int	main(int argc, char **argv)
 {
@@ -29,6 +28,4 @@ int	main(int argc, char **argv)
 	}
 
 	std::vector<Configuration> servers = parser(argv[1]);
-	run_echo_server();
-
 }
