@@ -7,8 +7,8 @@
 #include <fcntl.h>
 
 int		make_server_socket(const char *host, const char *port);
-int		socket_set_nonblocking(int sock);
 void	test_server_socket(int server);
+int		socket_set_nonblocking(int sock);
 
 void	test_server_socket(int server)
 {
@@ -35,7 +35,6 @@ void	test_server_socket(int server)
 	}
 	for (int i = 0; i < clients_count; i++)
 		assert(close(clients[i]) == 0);
-	close(server);
 }
 
 int	socket_set_nonblocking(int sock)

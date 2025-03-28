@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/28 15:45:09 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/03/28 15:55:27 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@
 #include <unistd.h>
 
 std::vector<Configuration> parser(std::string fileName);
+int		make_server_socket(const char *host, const char *port);
+void	test_server_socket(int server);
 
 int	main(int argc, char **argv)
 {
@@ -28,4 +30,12 @@ int	main(int argc, char **argv)
 	}
 
 	std::vector<Configuration> servers = parser(argv[1]);
+	for (const auto& server : servers)
+	{
+		std::cout << server._host << ":" << server._port << "\n";
+		int server_fd = make_server_socket(server._host.data(), std::to_string(server._port).data());
+		test_server_socket(server_fd);
+		close(server_fd);
+		std::cout << "OK\n";
+	}
 }
