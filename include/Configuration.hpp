@@ -15,7 +15,7 @@
 # define DEFAULT_COLOR		"\033[0m"
 
 const std::vector<std::string> DEFAULT_METHODS = {"GET"};
-const unsigned int DEFAULT_LISTEN = 80;
+const std::string DEFAULT_LISTEN = "80";
 
 struct LocationBlock {
     std::string path;                   		// The location path (e.g. "/images/")
@@ -38,7 +38,7 @@ class Configuration {
 		std::map<int, std::string>				_errorPages;
 		std::vector<std::string>				_rawBlock;				
 		std::string 							_host;	
-		unsigned int 							_port;
+		std::string 							_port;
 		std::string								_serverNames;
 		std::string								_index;	
 		unsigned int 							_maxClientBodySize;
