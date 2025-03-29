@@ -9,13 +9,13 @@ Configuration::Configuration(const Configuration &other)
 	  _globalCgiPathPHP(other._globalCgiPathPHP),
 	  _globalCgiPathPython(other._globalCgiPathPython),
 	  _errorPages(other._errorPages),
-	  _rawBlock(other._rawBlock),
 	  _host(other._host),
 	  _port(other._port),
 	  _serverNames(other._serverNames),
 	  _index(other._index),
 	  _maxClientBodySize(other._maxClientBodySize),
 	  _locationBlocks(other._locationBlocks),
+	  _rawBlock(other._rawBlock),
 	  _rawServerBlock(other._rawServerBlock)
 {}
 
@@ -25,13 +25,13 @@ Configuration &Configuration::operator=(const Configuration &other) {
 		_globalCgiPathPHP = other._globalCgiPathPHP;
 		_globalCgiPathPython = other._globalCgiPathPython;
 		_errorPages = other._errorPages;
-		_rawBlock = other._rawBlock;
 		_host = other._host;
 		_port = other._port;
 		_serverNames = other._serverNames;
 		_index = other._index;
 		_maxClientBodySize = other._maxClientBodySize;
 		_locationBlocks = other._locationBlocks;
+		_rawBlock = other._rawBlock;
 		_rawServerBlock = other._rawServerBlock;
 	}
 	return *this;
@@ -79,11 +79,6 @@ void Configuration::printServerBlock() const {
 }
 
 Configuration::~Configuration() {}
-
-std::vector<LocationBlock>& Configuration::getLocationBlocks() {
-	return _locationBlocks;
-}
-
 
 void Configuration::createBarebonesBlock() {
 	_index = "index.html";
@@ -241,3 +236,42 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	}
 }
 
+std::vector<LocationBlock>& Configuration::getLocationBlocks() {
+	return _locationBlocks;
+}
+
+std::vector<std::string> Configuration::getGlobalMethods() const {
+	return _globalMethods;
+}
+
+std::string	Configuration::getGlobalCgiPathPHP() const {
+	return _globalCgiPathPHP;
+}
+
+std::string	Configuration::getGlobalCgiPathPython() const {
+	return _globalCgiPathPython;
+}
+
+std::map<int, std::string>	Configuration::getErrorPages() const {
+	return _errorPages;
+}
+
+std::string	Configuration::getHost() const {
+	return _host;
+}
+
+std::string	Configuration::getPort() const {
+	return _port;
+}
+
+std::string	Configuration::getServerNames() const {
+	return _serverNames;
+}
+
+std::string	Configuration::getIndex() const {
+	return _index;
+}
+
+unsigned int	Configuration::getMaxClientBodySize() const {
+	return _maxClientBodySize;
+}

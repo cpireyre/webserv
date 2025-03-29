@@ -35,16 +35,15 @@ class Configuration {
 		std::vector<std::string>				_globalMethods;		
 		std::string								_globalCgiPathPHP;	
 		std::string								_globalCgiPathPython;	
-		std::map<int, std::string>				_errorPages;
-		std::vector<std::string>				_rawBlock;				
+		std::map<int, std::string>				_errorPages;				
 		std::string 							_host;	
 		std::string 							_port;
 		std::string								_serverNames;
 		std::string								_index;	
 		unsigned int 							_maxClientBodySize;
-		
 		std::vector<LocationBlock>				_locationBlocks;
 
+		std::vector<std::string>				_rawBlock;
 		std::vector<std::string>				_rawServerBlock;
 
 		LocationBlock handleLocationBlock(std::vector<std::string>& locationBlock);
@@ -57,11 +56,18 @@ class Configuration {
 		Configuration(const Configuration& other);
 		Configuration& operator=(const Configuration& other);
 
-		std::vector<LocationBlock>& getLocationBlocks();
-
 		Configuration(std::vector<std::string> servBlck);
 		void printServerBlock() const;
 		void printLocationBlock(LocationBlock loc, int level) const;
-};
 
-
+		std::vector<std::string> getGlobalMethods() const;
+		std::string getGlobalCgiPathPHP() const;
+		std::string getGlobalCgiPathPython() const;
+		std::map<int, std::string> getErrorPages() const;
+		std::string getHost() const;
+		std::string getPort() const;
+		std::string getServerNames() const;
+		std::string getIndex() const;
+		unsigned int getMaxClientBodySize() const;
+		std::vector<LocationBlock>& getLocationBlocks();
+	};
