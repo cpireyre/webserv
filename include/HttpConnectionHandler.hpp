@@ -3,10 +3,12 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <regex>
 #include <map>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <ctime>
 
 class HttpConnectionHandler
 {
@@ -48,4 +50,21 @@ class HttpConnectionHandler
 
 		// Setters
 		void setClientSocket(int socket) { clientSocket = socket; }
+
+		//loggers
+		static void logError(const std::string& message)
+		{
+			std::time_t now = std::time(nullptr);
+			char timeBuf[20];
+			strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+			std::cerr << "[" << timeBuf << "] ERROR: " << message << std::endl;
+		}
+
+		static void logInfo(const std::string& message)
+		{
+			std::time_t now = std::time(nullptr);
+			char timeBuf[20];
+			strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+			std::cout << "[" << timeBuf << "] INFO: " << message << std::endl;
+		}
 };

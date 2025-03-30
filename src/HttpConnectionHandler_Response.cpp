@@ -122,7 +122,7 @@ void	HttpConnectionHandler::handleGetRequest()
 	headerStream << "HTTP/1.1 200 OK\r\n";
 	headerStream << "Content-Length: " << fileSize << "\r\n";
     	headerStream << "Content-Type: " << contentType << "\r\n";
-    	headerStream << "Connection: close\r\n";   //closing cnnectin for testing
+    	headerStream << "Connection: close\r\n";
     	headerStream << "\r\n";
 
     	std::string headerStr = headerStream.str();
@@ -326,15 +326,64 @@ void	HttpConnectionHandler::handlePostRequest()
 	send(clientSocket, response.c_str(), response.size(), 0);
 }
 
+/* handles the HTTP DELETE
+ *
+ * checks if the file exists, verifies if it is a regular file (not a directory),
+ * and attempts to delete the file. If an error occurs (such as the file not being found
+ * or permission issues), an appropriate HTTP response is returned.
+ *
+ * Example of DELETE request handled by this:
+ *
+ * DELETE /data/example.txt HTTP/1.1
+ * Host: example.com
+ */
 void	HttpConnectionHandler::handleDeleteRequest()
 {
-	// for testing make it only work for /uploads
-	// check if file exists
-	// check we have access and that its a file, not directory!
-	// delete file
-	// send response
-	return;
+	std::string filePath = "." + path;
+
+	//only allow testing in /uploads/ for now
+	if (filePath.compare(0, 10, "./uploads/") != 0) {
+        logError("DELETE only works for /uploads/ for now");
+		std::string response = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
+        send(clientSocket, response.c_str(), response.size(), 0);
+        return;
+	}
+
+	std::error_code ec;
+
+    // file exists
+    if (!std::filesystem::exists(filePath, ec)) {
+        logError("DELETE requested but file not found: " + filePath);
+        std::string response = createHttpResponse(404, "<h1>404 Not Found</h1>", "text/html");
+        send(clientSocket, response.c_str(), response.size(), 0);
+        return;
+    }
+	//its regular file
+    if (!std::filesystem::is_regular_file(filePath, ec)) {
+        logError("DELETE requested on non-regular file: " + filePath);
+        std::string response = createHttpResponse(403, "<h1>403 Forbidden - Cannot delete directory</h1>", "text/html");
+        send(clientSocket, response.c_str(), response.size(), 0);
+        return;
+    }
+
+	// try to delete
+	if (!std::filesystem::remove(filePath, ec)) {
+		logError("Failed to delete file: " + (ec ? ec.message() : "Unknown error"));
+		std::string response;
+		if (ec == std::errc::permission_denied) {
+			response = createHttpResponse(403, "<h1>403 Permission Denied</h1>", "text/html");
+        }
+		else {
+			response = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
+		}
+		send(clientSocket, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    std::string response = createHttpResponse(200, "<h1>File Deleted Successfully</h1>", "text/html");
+    send(clientSocket, response.c_str(), response.size(), 0);
 }
+
 
 /* handles the incoming HTTP request based on its method (GET, POST atm).
  *
@@ -352,8 +401,6 @@ void	HttpConnectionHandler::handleRequest()
     }
     else if (method == "DELETE") {
 		handleDeleteRequest();
-		std::cout << "DELETE WIP, exiting\n";
-		exit(42);
     }
     else {
 	    std::string response = createHttpResponse(405, "<h1>405 Method Not Allowed</h1>", "text/html");
