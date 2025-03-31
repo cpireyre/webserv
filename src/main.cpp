@@ -6,12 +6,13 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/31 13:29:29 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/03/31 14:40:41 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Configuration.hpp"
 #include "Server.hpp"
+#include "Queue.hpp"
 #include "Logger.hpp"
 #include <signal.h>
 
@@ -45,6 +46,12 @@ int	main(int argc, char **argv)
 		return (1);
 	}
 	handlesignals(sigcleanup);
+	int qfd = queue_create();
+	if (qfd < 0)
+	{
+		cleanup_servers(endpoints, endpoints_count);
+		return (1);
+	}
 	while (!ServerShouldClose)
 	{
 	}

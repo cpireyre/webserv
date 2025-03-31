@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/03/31 13:02:13 by copireyr         ###   ########.fr        #
+#    Updated: 2025/03/31 14:38:16 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,7 @@ debug := -DDEBUG
 CPPFLAGS := -I./include/ $(debug)
 NAME := webserv
 
-src_files := main.cpp Logger.cpp Socket.cpp Configuration.cpp Parser.cpp Server.cpp
+src_files := main.cpp Logger.cpp Socket.cpp Configuration.cpp Parser.cpp Server.cpp Queue.cpp
 NAME := webserv
 
 src = $(addprefix ./src/, $(src_files))
