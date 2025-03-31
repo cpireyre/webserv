@@ -1,2 +1,2 @@
-#include "../include/CgiHandler.hpp"
+#include "CgiHandler.hpp"
 

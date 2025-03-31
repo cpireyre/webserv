@@ -2,6 +2,13 @@
 
 # include <string>
 
+enum CgiTypes
+{
+	PYTHON,
+	ENUM,
+	NONE
+};
+
 class CgiHandler
 {
 	private:
@@ -16,4 +23,5 @@ class CgiHandler
 		std::string	_serverName;
 		std::string	_serverPort;
 		std::string _serverProtocol;
-}
+
+};
