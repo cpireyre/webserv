@@ -9,13 +9,13 @@ Configuration::Configuration(const Configuration &other)
 	  _globalCgiPathPHP(other._globalCgiPathPHP),
 	  _globalCgiPathPython(other._globalCgiPathPython),
 	  _errorPages(other._errorPages),
-	  _rawBlock(other._rawBlock),
 	  _host(other._host),
 	  _port(other._port),
 	  _serverNames(other._serverNames),
 	  _index(other._index),
 	  _maxClientBodySize(other._maxClientBodySize),
 	  _locationBlocks(other._locationBlocks),
+	  _rawBlock(other._rawBlock),
 	  _rawServerBlock(other._rawServerBlock)
 {}
 
@@ -25,13 +25,13 @@ Configuration &Configuration::operator=(const Configuration &other) {
 		_globalCgiPathPHP = other._globalCgiPathPHP;
 		_globalCgiPathPython = other._globalCgiPathPython;
 		_errorPages = other._errorPages;
-		_rawBlock = other._rawBlock;
 		_host = other._host;
 		_port = other._port;
 		_serverNames = other._serverNames;
 		_index = other._index;
 		_maxClientBodySize = other._maxClientBodySize;
 		_locationBlocks = other._locationBlocks;
+		_rawBlock = other._rawBlock;
 		_rawServerBlock = other._rawServerBlock;
 	}
 	return *this;
@@ -80,11 +80,6 @@ void Configuration::printServerBlock() const {
 
 Configuration::~Configuration() {}
 
-std::vector<LocationBlock>& Configuration::getLocationBlocks() {
-	return _locationBlocks;
-}
-
-
 void Configuration::createBarebonesBlock() {
 	_index = "index.html";
 	_host = "0.0.0.0"; // In case no host is specified, defaulting to all interfaces. Nginx default I think.
@@ -92,7 +87,6 @@ void Configuration::createBarebonesBlock() {
 	_maxClientBodySize = 1048576; // 1MB, nginx default
 	_globalCgiPathPHP = G_CGI_PATH_PHP;
 	_globalCgiPathPython = G_CGI_PATH_PYTHON;
-	// dont do multimap for error pages
 	_errorPages.emplace(400, "/default-error-pages/400.html");
 	_errorPages.emplace(403, "/default-error-pages/403.html");
 	_errorPages.emplace(404, "/default-error-pages/404.html");
@@ -222,14 +216,8 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 				std::cerr << "Invalid max_client_body_size value: " << match[1] << ". Using default value." << std::endl;
 			}
 		}
-		else if (std::regex_search(line, match, listenRegex)) {
-			try {
-				_port = std::stoi(match[1]);
-			}
-			catch (const std::exception& e) {
-				std::cout << "Invalid port value: " << match[1] << ". Using default value." << std::endl;
-			}
-		}
+		else if (std::regex_search(line, match, listenRegex))
+			_port = match[1];
 		else if (std::regex_search(line, match, hostRegex))
 			_host = match[1];
 		else if (std::regex_search(line, match, serverNamesRegex))
@@ -248,3 +236,42 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	}
 }
 
+std::vector<LocationBlock>& Configuration::getLocationBlocks() {
+	return _locationBlocks;
+}
+
+std::vector<std::string> Configuration::getGlobalMethods() const {
+	return _globalMethods;
+}
+
+std::string	Configuration::getGlobalCgiPathPHP() const {
+	return _globalCgiPathPHP;
+}
+
+std::string	Configuration::getGlobalCgiPathPython() const {
+	return _globalCgiPathPython;
+}
+
+std::map<int, std::string>	Configuration::getErrorPages() const {
+	return _errorPages;
+}
+
+std::string	Configuration::getHost() const {
+	return _host;
+}
+
+std::string	Configuration::getPort() const {
+	return _port;
+}
+
+std::string	Configuration::getServerNames() const {
+	return _serverNames;
+}
+
+std::string	Configuration::getIndex() const {
+	return _index;
+}
+
+unsigned int	Configuration::getMaxClientBodySize() const {
+	return _maxClientBodySize;
+}
