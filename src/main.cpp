@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/31 14:40:41 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/03/31 14:58:10 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 #include "Queue.hpp"
 #include "Logger.hpp"
 #include <signal.h>
+
+std::vector<Configuration> serverMap;
 
 std::vector<Configuration> parser(std::string fileName);
 volatile sig_atomic_t ServerShouldClose = false;
