@@ -1,55 +1,5 @@
-#include <netdb.h>
-#include <cassert>
-#include <cstdio>
-#include <cerrno>
-#include <cstring>
-#include <unistd.h>
-#include <fcntl.h>
-
-int		make_server_socket(const char *host, const char *port);
-void	test_server_socket(int server);
-int		socket_set_nonblocking(int sock);
-
-void	test_server_socket(int server)
-{
-	assert(server >= 0);
-	struct sockaddr	address_server;
-	memset(&address_server, 0, sizeof(address_server));
-	socklen_t		address_server_len = sizeof(address_server);
-	int status = getsockname(server, &address_server, &address_server_len);
-	assert(status == 0);
-
-	const int clients_count = SOMAXCONN;
-	int clients[clients_count];
-	for (int i = 0; i < clients_count; i++)
-	{
-		clients[i] = socket(AF_INET, SOCK_STREAM, 0);
-		assert(clients[i] >= 0);
-		status = connect(clients[i], &address_server, address_server_len);
-		if (status != 0)
-		{
-			perror(NULL);
-			dprintf(2, "errno: %d\n", errno);
-		}
-		assert(status == 0);
-	}
-	for (int i = 0; i < clients_count; i++)
-		assert(close(clients[i]) == 0);
-}
-
-int	socket_set_nonblocking(int sock)
-{
-	assert(sock >= 0);
-	int	error;
-
-	error = fcntl(sock, F_SETFL, O_NONBLOCK);
-	if (error)
-		return (-1);
-	error = fcntl(sock, F_SETFD, FD_CLOEXEC);
-	if (error)
-		return (-1);
-	return (0);
-}
+#include "Socket.hpp"
+#include "Logger.hpp"
 
 int	make_server_socket(const char *host, const char *port)
 {
@@ -95,7 +45,7 @@ int	make_server_socket(const char *host, const char *port)
 	freeaddrinfo(addr);
 	if (!p)
 	{
-		dprintf(2, "die: bind\n");
+		Logger::warn("Error binding to %s:%s", host, port);
 		return (-1);
 	}
 	if (socket_set_nonblocking(insock) < 0)
@@ -112,4 +62,45 @@ int	make_server_socket(const char *host, const char *port)
 	}
 	assert(insock >= 0);
 	return (insock);
+}
+
+void	test_server_socket(int server)
+{
+	assert(server >= 0);
+	struct sockaddr	address_server;
+	memset(&address_server, 0, sizeof(address_server));
+	socklen_t		address_server_len = sizeof(address_server);
+	int status = getsockname(server, &address_server, &address_server_len);
+	assert(status == 0);
+
+	const int clients_count = SOMAXCONN;
+	int clients[clients_count];
+	for (int i = 0; i < clients_count; i++)
+	{
+		clients[i] = socket(AF_INET, SOCK_STREAM, 0);
+		assert(clients[i] >= 0);
+		status = connect(clients[i], &address_server, address_server_len);
+		if (status != 0)
+		{
+			perror(NULL);
+			dprintf(2, "errno: %d\n", errno);
+		}
+		assert(status == 0);
+	}
+	for (int i = 0; i < clients_count; i++)
+		assert(close(clients[i]) == 0);
+}
+
+int	socket_set_nonblocking(int sock)
+{
+	assert(sock >= 0);
+	int	error;
+
+	error = fcntl(sock, F_SETFL, O_NONBLOCK);
+	if (error)
+		return (-1);
+	error = fcntl(sock, F_SETFD, FD_CLOEXEC);
+	if (error)
+		return (-1);
+	return (0);
 }

@@ -6,20 +6,15 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/28 15:55:27 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/03/31 13:02:55 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "Configuration.hpp"
+#include "Server.hpp"
 #include "Logger.hpp"
-#include "Socket.hpp"
-#include "Parser.hpp"
-#include "Connection.hpp"
-#include <sys/select.h>
-#include <unistd.h>
 
 std::vector<Configuration> parser(std::string fileName);
-int		make_server_socket(const char *host, const char *port);
-void	test_server_socket(int server);
 
 int	main(int argc, char **argv)
 {
@@ -28,14 +23,21 @@ int	main(int argc, char **argv)
 		std::cout << "./webserv [configuration file]\n";
 		return (1);
 	}
-
 	std::vector<Configuration> servers = parser(argv[1]);
-	for (const auto& server : servers)
+	if (servers.size() < 1)
+		return (1);
+	const int	endpoints_count_max = servers.size();
+	IPAndPort_t	*endpoints = new(std::nothrow) IPAndPort_t[endpoints_count_max];
+	if (endpoints == NULL)
+		Logger::die("Couldn't allocate memory for vhosts");
+	int	endpoints_count;
+	int error = start_servers(servers, endpoints, endpoints_count_max, &endpoints_count);
+	if (error != 0)
 	{
-		std::cout << server._host << ":" << server._port << "\n";
-		int server_fd = make_server_socket(server._host.data(), std::to_string(server._port).data());
-		test_server_socket(server_fd);
-		close(server_fd);
-		std::cout << "OK\n";
+		std::cerr << "Error starting server\n";
+		cleanup_servers(endpoints, endpoints_count);
+		return (1);
 	}
+	cleanup_servers(endpoints, endpoints_count);
+	return (0);
 }
