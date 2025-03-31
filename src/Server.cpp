@@ -18,10 +18,9 @@ int	start_servers(std::vector<Configuration> servers, IPAndPort_t *endpoints, in
 		if (sockfd <= 0)
 			return (-1);
 		initEndpoint(sockfd, host, port, &endpoints[*endpoints_count]);
+		Logger::debug("Opened socket IP: %s, port: %s", endpoints[*endpoints_count].IP, endpoints[*endpoints_count].port);
 		*endpoints_count += 1;
 	}
-	for (int i = 0; i < *endpoints_count; i++)
-		printf("Current server IP: %s, port: %s\n", endpoints[i].IP, endpoints[i].port);
 	assert(*endpoints_count > 0);
 	return (0);
 }

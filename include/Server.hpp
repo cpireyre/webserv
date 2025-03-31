@@ -5,6 +5,7 @@
 # include "Logger.hpp"
 
 # define PORT_STRLEN 12
+
 typedef struct IPAndPort {
 	int		sockfd;
 	char	IP[INET6_ADDRSTRLEN];
