@@ -31,7 +31,7 @@ struct LocationBlock {
 };
 
 class Configuration {
-	public:
+	private:
 		std::vector<std::string>				_globalMethods;		
 		std::string								_globalCgiPathPHP;	
 		std::string								_globalCgiPathPython;	
