@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/27 08:57:47 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/03/31 14:23:46 by upolat           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@
 #include "Connection.hpp"
 #include <sys/select.h>
 #include <unistd.h>
+
+std::vector<Configuration> serverMap;
 
 std::vector<Configuration> parser(std::string fileName);
 void	run_echo_server(void);
