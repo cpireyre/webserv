@@ -13,4 +13,4 @@ typedef struct IPAndPort {
 } IPAndPort_t;
 
 int	start_servers(std::vector<Configuration> servers, IPAndPort_t *endpoints, int endpoints_count_max, int *endpoints_count);
-void	cleanup_servers(IPAndPort_t *endpoints, int endpoints_count);
+void	cleanup(IPAndPort_t *endpoints, int endpoints_count, int qfd);

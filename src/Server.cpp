@@ -58,13 +58,17 @@ static bool endpointAlreadyBound(IPAndPort_t *endpoints, int count_to_check, std
 	return (false);
 }
 
-void	cleanup_servers(IPAndPort_t *endpoints, int endpoints_count)
+void	cleanup(IPAndPort_t *endpoints, int endpoints_count, int qfd)
 {
-	for (int i = 0; i < endpoints_count; i++)
+	if (endpoints)
 	{
-		Logger::debug("Closing socket %s:%s", endpoints[i].IP, endpoints[i].port);
-		close(endpoints[i].sockfd);
+		for (int i = 0; i < endpoints_count; i++)
+		{
+			Logger::debug("Closing socket %s:%s", endpoints[i].IP, endpoints[i].port);
+			close(endpoints[i].sockfd);
+		}
+		Logger::debug("Deleting endpoints array");
+		delete[] endpoints;
 	}
-	Logger::debug("Deleting endpoints array");
-	delete[] endpoints;
+	close(qfd);
 }
