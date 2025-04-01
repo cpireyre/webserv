@@ -156,6 +156,9 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 		HttpConnectionHandler::logError("Missing Host header");
 		return false;
 	}
+	else {
+		conf = &serverMap[0];
+	}
 	return true;
 }
 

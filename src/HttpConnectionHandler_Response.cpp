@@ -73,6 +73,18 @@ std::string HttpConnectionHandler::getContentType(const std::string &path)
     return "application/octet-stream";
 }
 
+LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current)
+{
+	for (LocationBlock &block : blocks) {
+		if (path.compare(0, block.path.size(), block.path) == 0)
+		{
+			current = &block;
+			return (findLocationBlock(block.nestedLocations, current));
+		}
+	}
+	return current;
+}
+
 /* handles an HTTP GET request by serving the requested file
  *
  * attempts to open the requested file and send it back to the client
@@ -91,6 +103,12 @@ void	HttpConnectionHandler::handleGetRequest()
 		filePath = "./index.html";
 	}
 
+	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
+	if (block)
+	{
+		std::cout << block->path << std::endl;
+	}
+
 	if (access(filePath.c_str(), F_OK) != 0) {
 		std::string errorResponse = createHttpResponse(404, "<h1>Not found</h1>", "text/html");
 		send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
@@ -101,7 +119,6 @@ void	HttpConnectionHandler::handleGetRequest()
 		send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
 		return;
 	}
-
 
 	std::ifstream file(filePath, std::ios::binary);
 	if (!file.is_open()) {
