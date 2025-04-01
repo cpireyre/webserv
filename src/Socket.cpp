@@ -9,8 +9,8 @@ int	make_server_socket(const char *host, const char *port)
 	const struct addrinfo	hints = {
 		.ai_flags = AI_NUMERICSERV,
 		.ai_family = AF_UNSPEC,
-		.ai_protocol = 0,
 		.ai_socktype = SOCK_STREAM,
+		.ai_protocol = 0,
 	};
 
 	struct addrinfo *addr = NULL;
