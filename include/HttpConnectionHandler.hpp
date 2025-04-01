@@ -9,6 +9,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <ctime>
+#include "CgiHandler.hpp"
+#include "Configuration.hpp"
+
+extern std::vector<Configuration> serverMap;
 
 class HttpConnectionHandler
 {
@@ -33,6 +37,14 @@ class HttpConnectionHandler
 				std::string &responseBody);
 
 	public:
+		// Additions to Jere's work
+		bool					isCgi;
+		CgiTypes				type;
+		std::string				pathToInterpreter;
+		Configuration			serverInQuestion;
+		LocationBlock			locInQuestion;
+		// End of additions
+
 		//Parse Http request
 		bool	parseRequest();
 

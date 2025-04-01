@@ -6,7 +6,7 @@
 enum CgiTypes
 {
 	PYTHON,
-	ENUM,
+	PHP,
 	NONE
 };
 

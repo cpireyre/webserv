@@ -1,4 +1,5 @@
 #include "HttpConnectionHandler.hpp"
+#include "Configuration.hpp"
 
 /* creates an HTTP response string with the given status code, body content, and content type
  *
@@ -393,7 +394,19 @@ void	HttpConnectionHandler::handleDeleteRequest()
  */
 void	HttpConnectionHandler::handleRequest() 
 {
-    if (method == "GET") {
+	// Note from Uygar:
+	// Hardcoding the server block from the global variable for now,
+	// Getting the server found in the zero index position of the global variable:
+	// std::vector<Configuration> serverMap;
+	serverInQuestion = serverMap[0];
+	// Hardcoding the location blocks as well for now:
+	std::vector<LocationBlock> locsInQuestion = serverInQuestion.getLocationBlocks();
+	// Getting the location /images/ from complete.conf
+	locInQuestion = locsInQuestion[0].nestedLocations[2];
+
+	if (isCgi)
+		CgiHandler cgiHandler(*this);
+    else if (method == "GET") {
 	    handleGetRequest();
     }
     else if (method == "POST") {

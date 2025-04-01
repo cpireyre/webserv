@@ -1,5 +1,9 @@
 #include "CgiHandler.hpp"
 
-CgiHandler::CgiHandler(HttpConnectionHandler) {
-	
+CgiHandler::CgiHandler(HttpConnectionHandler conn) {
+	if (conn.type == PYTHON)
+		
+	if (conn.type == PHP)
+		
+
 }
