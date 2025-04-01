@@ -25,7 +25,11 @@ class CgiHandler
 		std::string	_serverPort;
 		std::string _serverProtocol;
 
-		std::string _interpreterPath;
+		std::string _pathToInterpreter;
+		std::string _pathToScript;
+
+		char 	*_execveArgs[3] = {};
+		char 	*_execveEnv[16] = {};
 	public:
 		CgiHandler(HttpConnectionHandler);
 };

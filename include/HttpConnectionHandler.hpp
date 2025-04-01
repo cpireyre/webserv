@@ -38,11 +38,16 @@ class HttpConnectionHandler
 
 	public:
 		// Additions to Jere's work
-		bool					isCgi;
-		CgiTypes				type;
-		std::string				pathToInterpreter;
-		Configuration			serverInQuestion;
-		LocationBlock			locInQuestion;
+		bool					isCgi; // Should be true if the request is for a CGI script
+		CgiTypes				CgiType; // Type of CGI script (PHP or Python or none)
+		Configuration			serverInQuestion; // Server configuration for the current request
+		LocationBlock			locInQuestion; // Location block for the current request
+
+		std::string 			filePath; //  Requested path (differs from Jere's "path" because it will be pruned)
+		std::string				extension; // .php or .py
+		std::string				queryString; // Everything from the URI after '?' character
+
+		const std::string getFilePath() const { return filePath; }
 		// End of additions
 
 		//Parse Http request
