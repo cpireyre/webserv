@@ -46,6 +46,7 @@ int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	e.data.ptr = (void*) data;
 	if (epoll_ctl(qfd, EPOLL_CTL_ADD, fd, &e) < 0)
 	{
+		perror("epoll");
 		Logger::warn("Error adding epoll event");
 		return (-1);
 	}

@@ -41,7 +41,7 @@ class HttpConnectionHandler
 		std::string	createHttpResponse(int statusCode, const std::string &body, const std::string &contentType);
 
 		// Getters
-		const int getClientSocket() const { return clientSocket; }
+		int getClientSocket() const { return clientSocket; }
 		const std::string getMethod() const { return method; }
 		const std::string getPath() const { return path; }
 		const std::string getHttpVersion() const { return httpVersion; }

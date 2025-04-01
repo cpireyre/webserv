@@ -75,7 +75,7 @@ void	cleanup(Endpoint_t *endpoints, int endpoints_count, int qfd)
 	close(qfd);
 }
 
-Connection	connectNewClient(Connection *conns, const Endpoint_t *endp)
+Connection	*connectNewClient(Connection *conns, const Endpoint_t *endp)
 {
 	assert(conns != NULL);
 	assert(endp->sockfd > 0);
@@ -86,7 +86,7 @@ Connection	connectNewClient(Connection *conns, const Endpoint_t *endp)
 	if (clientSocket < 0)
 	{
 		perror(NULL);
-		return *conns;
+		return NULL;
 	}
 	assert(clientSocket > 0); //TODO(colin): Error manage here
 	int i = 0;
@@ -96,5 +96,5 @@ Connection	connectNewClient(Connection *conns, const Endpoint_t *endp)
 	conns[i].endpoint = *endp;
 	conns[i].endpoint.type = ENDPOINT_CLIENT;
 	Logger::debug("Connected client, socket: %d", clientSocket);
-	return (conns[i]);
+	return (&conns[i]);
 }

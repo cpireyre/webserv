@@ -262,6 +262,7 @@ bool	HttpConnectionHandler::handleFileUpload()
 		std::string fileResponse;
 
 		bool success = processMultipartPart(part, fileResponse);
+		(void)success;
 
 		if (!firstFile) {
 			jsonResponse << ",";

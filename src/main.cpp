@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/01 15:18:37 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/01 15:52:14 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include "Server.hpp"
 #include "Queue.hpp"
 #include "Logger.hpp"
+#include "HttpConnectionHandler.hpp"
 #include <signal.h>
 
 std::vector<Configuration> serverMap;
@@ -82,11 +83,22 @@ int	main(int argc, char **argv)
 			Endpoint_t *endp = (Endpoint_t *)queue_event_get_data(&events[i]);
 			if (endp->type == ENDPOINT_SERVER)
 			{
-				Connection client = connectNewClient(conns, endp);
-				(void)client;
+				Connection *client = connectNewClient(conns, endp);
+				queue_add_fd(qfd, client->endpoint.sockfd, QUEUE_EVENT_READ, client);
 			}
-			else
-				puts("Client socket event");
+			else if (endp->type == ENDPOINT_CLIENT)
+			{
+				int clientSocket = endp->sockfd;
+				assert(clientSocket > 0);
+				HttpConnectionHandler handler;
+				handler.setClientSocket(clientSocket);
+				if (handler.parseRequest()) {
+					handler.handleRequest();
+				} else {
+					std::string errorResponse = handler.createHttpResponse(400, "<h1>400 Bad Request</h1>", "text/html");
+					send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+				}
+			}
 		}
 	}
 

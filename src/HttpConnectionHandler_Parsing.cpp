@@ -195,7 +195,7 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 	}
 
 	// check if there is already part of body in rawReq and where body starts
-	int		bodyStart = rawRequest.find("\r\n\r\n");
+	unsigned long		bodyStart = rawRequest.find("\r\n\r\n");
 	if (bodyStart == std::string::npos) {
 		HttpConnectionHandler::logError("Failed to find the end of the headers!");
 		return false;
@@ -206,7 +206,7 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 	}
 
 	//read until full body is received
-	while (body.size() < contentLength)
+	while (body.size() < (unsigned long)contentLength)
 	{
 		int readSize = std::min(sizeof(buffer) - 1, contentLength - body.size());
 		bRead = recv(clientSocket, buffer, readSize, 0);

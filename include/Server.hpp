@@ -31,4 +31,4 @@ typedef struct Connection {
 	bool		alive;
 } Connection;
 
-Connection	connectNewClient(Connection *conns, const Endpoint_t *endp);
+Connection	*connectNewClient(Connection *conns, const Endpoint_t *endp);
