@@ -1,6 +1,7 @@
 #pragma once
 
 # include <string>
+# include "HttpConnectionHandler.hpp"
 
 enum CgiTypes
 {
@@ -23,5 +24,6 @@ class CgiHandler
 		std::string	_serverName;
 		std::string	_serverPort;
 		std::string _serverProtocol;
-
+	public:
+		CgiHandler(HttpConnectionHandler);
 };
