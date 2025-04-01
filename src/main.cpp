@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/31 17:02:55 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/01 11:09:09 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,8 +34,8 @@ int	main(int argc, char **argv)
 		return (1);
 	}
 
-	std::vector<Configuration> servers = parser(argv[1]);
-	if (servers.size() < 1)
+	serverMap = parser(argv[1]);
+	if (serverMap.size() < 1)
 		return (1);
 
 	handlesignals(sigcleanup);
@@ -43,12 +43,12 @@ int	main(int argc, char **argv)
 	if (qfd < 0)
 		return (1);
 
-	const int	endpoints_count_max = servers.size();
+	const int	endpoints_count_max = serverMap.size();
 	int	endpoints_count = 0;
 	IPAndPort_t	*endpoints = new(std::nothrow) IPAndPort_t[endpoints_count_max];
 	if (endpoints == NULL)
 		goto cleanup;
-	error = start_servers(servers, endpoints,
+	error = start_servers(serverMap, endpoints,
 			endpoints_count_max, &endpoints_count);
 	if (error)
 		goto cleanup;
@@ -99,10 +99,10 @@ static void sigcleanup(int sig)
 
 static void handlesignals(void(*hdl)(int))
 {
-	struct sigaction sa = {
-		.sa_handler = hdl,
-	};
+	struct sigaction sa;
 
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = hdl;
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGHUP, &sa, NULL);
