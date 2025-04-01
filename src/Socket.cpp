@@ -11,6 +11,10 @@ int	make_server_socket(const char *host, const char *port)
 		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM,
 		.ai_protocol = 0,
+		.ai_addrlen = 0,
+		.ai_addr = 0,
+		.ai_canonname = 0,
+		.ai_next = 0,
 	};
 
 	struct addrinfo *addr = NULL;
