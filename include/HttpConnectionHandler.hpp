@@ -10,6 +10,10 @@
 #include <unistd.h>
 #include <ctime>
 
+#include "../include/Configuration.hpp"
+
+extern std::vector<Configuration> serverMap;
+
 class HttpConnectionHandler
 {
 	private:
@@ -19,6 +23,8 @@ class HttpConnectionHandler
 		std::string				body;
 		std::map<std::string, std::string>	headers;
 		int					clientSocket;
+
+		Configuration				*conf;
 
 		bool	getMethodPathVersion(std::istringstream &requestStream);
 		bool	getHeaders(std::istringstream &requestStream);
@@ -39,6 +45,9 @@ class HttpConnectionHandler
 		//create Http response
 		void	handleRequest();
 		std::string	createHttpResponse(int statusCode, const std::string &body, const std::string &contentType);
+
+		//find longest location block
+		LocationBlock *findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
 		// Getters
 		const int getClientSocket() const { return clientSocket; }
