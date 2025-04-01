@@ -1,0 +1,64 @@
+#include <iostream>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include "HttpConnectionHandler.hpp"
+
+#define PORT 8080
+
+void startServer(int port) {
+    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket == -1) {
+        std::cerr << "Error: Failed to create socket\n";
+        return;
+    }
+
+    sockaddr_in serverAddr{};
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    serverAddr.sin_port = htons(port);
+
+    if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
+        std::cerr << "Error: Binding failed\n";
+        close(serverSocket);
+        return;
+    }
+
+    if (listen(serverSocket, 10) < 0) {
+        std::cerr << "Error: Listening failed\n";
+        close(serverSocket);
+        return;
+    }
+
+    std::cout << "Server is running on port " << port << "...\n";
+
+    while (true) {
+        int clientSocket = accept(serverSocket, nullptr, nullptr);
+        if (clientSocket < 0) {
+            std::cerr << "Error: Failed to accept connection\n";
+            continue;
+        }
+
+        std::cout << "Client connected\n";
+
+        HttpConnectionHandler handler;
+        handler.setClientSocket(clientSocket);
+        if (handler.parseRequest()) {
+            handler.handleRequest();
+        } else {
+            std::string errorResponse = handler.createHttpResponse(400, "<h1>400 Bad Request</h1>", "text/html");
+            send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+        }
+
+        close(clientSocket);
+        std::cout << "Client disconnected\n";
+    }
+
+    close(serverSocket);
+}
+
+int main() {
+    startServer(PORT);
+    return 0;
+}
+
