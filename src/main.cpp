@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/01 11:09:09 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/01 15:18:37 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,7 +45,7 @@ int	main(int argc, char **argv)
 
 	const int	endpoints_count_max = serverMap.size();
 	int	endpoints_count = 0;
-	IPAndPort_t	*endpoints = new(std::nothrow) IPAndPort_t[endpoints_count_max];
+	Endpoint_t	*endpoints = new(std::nothrow) Endpoint_t[endpoints_count_max];
 	if (endpoints == NULL)
 		goto cleanup;
 	error = start_servers(serverMap, endpoints,
@@ -54,7 +54,7 @@ int	main(int argc, char **argv)
 		goto cleanup;
 	for (int i = 0; i < endpoints_count; i++)
 	{
-		error = queue_add_fd(qfd, endpoints[i].sockfd, QUEUE_EVENT_READ, NULL);
+		error = queue_add_fd(qfd, endpoints[i].sockfd, QUEUE_EVENT_READ, &endpoints[i]);
 		if (error)
 		{
 			Logger::warn("Error registering server socket events, "
@@ -63,25 +63,31 @@ int	main(int argc, char **argv)
 		}
 	}
 
-	// queue_event events[QUEUE_MAX_EVENTS];
+	queue_event events[QUEUE_MAX_EVENTS];
+	memset(events, 0, sizeof(events));
+	Connection	conns[MAXCONNS];
+	memset(conns, 0, sizeof(conns));
 	while (!g_ServerShoudClose)
 	{
 		assert(g_ServerShoudClose == false);
-		// TODO(colin)
-		// int nready = kevent(qfd, NULL, 0, events, 64, NULL);
-		// if (nready < 0 && !g_ServerShoudClose)
-		// {
-		// 	Logger::warn("Error getting events from kernel");
-		// 	error = 1;
-		// 	break;
-		// }
-		// for (int i = 0; i < nready; i++)
-		// {
-		// 	void *data = events[i].udata;
-		// 	if (data == NULL)
-		// 		puts("Server socket event");
-		// 	int clientsock = accept();
-		// }
+		int nready = queue_wait(qfd, events, QUEUE_MAX_EVENTS);
+		if (nready < 0 && !g_ServerShoudClose)
+		{
+			Logger::warn("Error getting events from kernel");
+			error = 1;
+			break;
+		}
+		for (int i = 0; i < nready; i++)
+		{
+			Endpoint_t *endp = (Endpoint_t *)queue_event_get_data(&events[i]);
+			if (endp->type == ENDPOINT_SERVER)
+			{
+				Connection client = connectNewClient(conns, endp);
+				(void)client;
+			}
+			else
+				puts("Client socket event");
+		}
 	}
 
 cleanup:
