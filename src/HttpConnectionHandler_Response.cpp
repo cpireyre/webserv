@@ -73,16 +73,71 @@ std::string HttpConnectionHandler::getContentType(const std::string &path)
     return "application/octet-stream";
 }
 
+/* recursively finds the longest matching location block for path in object
+ *
+ * starts by checking the top level location blocks and, if it finds a match, recurses into
+ * the nested locations and  tries to find a longer
+ *
+ * @param blocks  The vector of LocationBlock objects to search in.
+ * @param current Pointer to the currently longest matched LocationBlock (initialized as nullptr).
+ *
+ * @return pointer to the longest matching location block struct, null if nothing found(shouldnt happen)
+ *
+ * Example usage:
+ *   LocationBlock *longestBlock = findLocationBlock(conf.getLocationBlocks(), nullptr);
+ *   if (!matchedBlock) {
+ *       // some error if  needed
+ *   }
+ */
 LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current)
 {
 	for (LocationBlock &block : blocks) {
-		if (path.compare(0, block.path.size(), block.path) == 0)
+		if (path.compare(0, block.path.length(), block.path) == 0)
 		{
 			current = &block;
 			return (findLocationBlock(block.nestedLocations, current));
 		}
 	}
 	return current;
+}
+
+/* check location block for allowed method and return true if it is allowed
+ * and false if is not
+ */
+bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &method)
+{
+	if (std::find(block->methods.begin(), block->methods.end(), method) != block->methods.end()) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+/* checks location block and expands the path accordingly
+ */
+bool	HttpConnectionHandler::checkLocation()
+{
+	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
+	if (!block)
+	{
+		logError("No locaton block matched (should't happen?)");
+		std::string response = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return false;
+	}
+
+	if (!isMethodAllowed(block, method)) {
+		logError("Method " + method + " not allowed in location " + block->path);
+		std::string response = createHttpResponse(405, "<h1>405 Method not Allowed</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return false;
+	}
+
+	std::string relativePath = path.substr(block->path.length());
+	path =  "./" + block->root + "/" + relativePath;
+	return true;
+
 }
 
 /* handles an HTTP GET request by serving the requested file
@@ -95,19 +150,12 @@ LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBloc
  * 2. if the file is found, it reads the file's size, sends the headers, and sends
  *    the file's content in chunks to the client
  * 3. If the file is not found, a 404 Not Found error page is sent
+
+ * need to block /.. in path !!!!!
  */
 void	HttpConnectionHandler::handleGetRequest()
 {
-	std::string filePath = "." + path;
-	if (filePath == "./") {
-		filePath = "./index.html";
-	}
-
-	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
-	if (block)
-	{
-		std::cout << block->path << std::endl;
-	}
+	std::string filePath = path;
 
 	if (access(filePath.c_str(), F_OK) != 0) {
 		std::string errorResponse = createHttpResponse(404, "<h1>Not found</h1>", "text/html");
@@ -356,16 +404,7 @@ void	HttpConnectionHandler::handlePostRequest()
  */
 void	HttpConnectionHandler::handleDeleteRequest()
 {
-	std::string filePath = "." + path;
-
-	//only allow testing in /uploads/ for now
-	if (filePath.compare(0, 10, "./uploads/") != 0) {
-		logError("DELETE only works for /uploads/ for now");
-		std::string response = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
-		return;
-	}
-
+	std::string filePath = path;
 	std::error_code ec;
 
 	// file exists
@@ -410,17 +449,21 @@ void	HttpConnectionHandler::handleDeleteRequest()
  */
 void	HttpConnectionHandler::handleRequest() 
 {
-    if (method == "GET") {
-	    handleGetRequest();
-    }
-    else if (method == "POST") {
-	    handlePostRequest();
-    }
-    else if (method == "DELETE") {
+	if (!checkLocation()) {
+		return;
+	}
+
+	if (method == "GET") {
+		handleGetRequest();
+	}
+	else if (method == "POST") {
+		handlePostRequest();
+	}
+	else if (method == "DELETE") {
 		handleDeleteRequest();
-    }
-    else {
-	    std::string response = createHttpResponse(405, "<h1>405 Method Not Allowed</h1>", "text/html");
-	    send(clientSocket, response.c_str(), response.size(), 0);
-    }
+	}
+	else {
+		std::string response = createHttpResponse(405, "<h1>405 Method Not Allowed</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+	}
 }

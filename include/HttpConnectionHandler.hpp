@@ -26,17 +26,20 @@ class HttpConnectionHandler
 
 		Configuration				*conf;
 
-		bool	getMethodPathVersion(std::istringstream &requestStream);
-		bool	getHeaders(std::istringstream &requestStream);
-		bool	getBody(std::string &rawRequest);
+		bool		getMethodPathVersion(std::istringstream &requestStream);
+		bool		getHeaders(std::istringstream &requestStream);
+		bool		getBody(std::string &rawRequest);
+		std::string	getContentType(const std::string &path);
 
-		std::string getContentType(const std::string &path);
-		void	handleGetRequest();
-		void	handlePostRequest();
-		void	handleDeleteRequest();
-		bool	handleFileUpload();
-		bool	processMultipartPart(const std::string& part,
-				std::string &responseBody);
+		void		handleGetRequest();
+		void		handlePostRequest();
+		void		handleDeleteRequest();
+		bool		handleFileUpload();
+		bool		processMultipartPart(const std::string& part, std::string &responseBody);
+
+		bool		checkLocation();
+		bool		isMethodAllowed(LocationBlock *block, std::string &method);
+		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
 	public:
 		//Parse Http request
@@ -47,7 +50,6 @@ class HttpConnectionHandler
 		std::string	createHttpResponse(int statusCode, const std::string &body, const std::string &contentType);
 
 		//find longest location block
-		LocationBlock *findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
 		// Getters
 		const int getClientSocket() const { return clientSocket; }
