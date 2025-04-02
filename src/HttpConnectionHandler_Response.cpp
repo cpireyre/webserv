@@ -164,6 +164,26 @@ bool	HttpConnectionHandler::checkLocation()
 
 }
 
+/* function to handle GET method on directory. two options:
+ * 1. if directory contains one of index files, serve that
+ * 2. check if auto index is on on locaton block, return auto-index of directory
+ * 	else 403
+ */
+bool	HttpConnectionHandler::handleGetDirectory()
+{
+	// checks that the directory exists
+
+	// permission?
+
+	// if conf.index contains file in this directory, serve it (first match order)
+
+	// check block.dirListing -> off -> 403
+
+	// serve directory listing
+	logError("Directory handing with GET WIP, no idea whats gonna happen :)");
+	return false;
+}
+
 /* handles an HTTP GET request by serving the requested file
  *
  * attempts to open the requested file and send it back to the client
@@ -175,11 +195,15 @@ bool	HttpConnectionHandler::checkLocation()
  *    the file's content in chunks to the client
  * 3. If the file is not found, a 404 Not Found error page is sent
 
- * need to block /.. in path !!!!!
+ * need to check if request targets directory /directory -> 301
  */
 void	HttpConnectionHandler::handleGetRequest()
 {
 	std::string filePath = path;
+
+	if (path.back() == '/') {
+		handleGetDirectory();
+	}
 
 	if (access(filePath.c_str(), F_OK) != 0) {
 		std::string errorResponse = createHttpResponse(404, "<h1>Not found</h1>", "text/html");
@@ -350,7 +374,7 @@ bool	HttpConnectionHandler::handleFileUpload()
 		// process each part
 		std::string fileResponse;
 
-		bool success = processMultipartPart(part, fileResponse);
+		processMultipartPart(part, fileResponse);
 
 		if (!firstFile) {
 			jsonResponse << ",";

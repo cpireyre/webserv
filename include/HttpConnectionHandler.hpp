@@ -38,6 +38,7 @@ class HttpConnectionHandler
 		bool		handleFileUpload();
 		bool		processMultipartPart(const std::string& part, std::string &responseBody);
 
+		bool		handleGetDirectory();
 		bool		checkLocation();
 		bool		isMethodAllowed(LocationBlock *block, std::string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
@@ -53,11 +54,11 @@ class HttpConnectionHandler
 		//find longest location block
 
 		// Getters
-		const int getClientSocket() const { return clientSocket; }
-		const std::string getMethod() const { return method; }
-		const std::string getPath() const { return path; }
-		const std::string getHttpVersion() const { return httpVersion; }
-		const std::string getBody() const { return body; }
+		int getClientSocket() const { return clientSocket; }
+		const std::string &getMethod() const { return method; }
+		const std::string &getPath() const { return path; }
+		const std::string &getHttpVersion() const { return httpVersion; }
+		const std::string &getBody() const { return body; }
 		const std::map<std::string, std::string> &getHeaders() const { return headers; }
 
 		// Setters
