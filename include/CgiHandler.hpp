@@ -20,7 +20,9 @@ class CgiHandler
 		std::string _queryString;
 		std::string _remoteAddr;
 		std::string _requestMethod;
+		std::string _scriptFileName;
 		std::string	_scriptName;
+		std::string _redirectStatus;
 		std::string	_serverName;
 		std::string	_serverPort;
 		std::string _serverProtocol;
