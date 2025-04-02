@@ -20,4 +20,10 @@ CgiHandler::CgiHandler(HttpConnectionHandler conn) {
 	if (headerMap.find("Content-Length") != headerMap.end())
 		_contentLength += headerMap.at("Content-Length");
 
+	
+	_contentType = "CONTENT_TYPE=";
+	if (headerMap.find("Content-Type") != headerMap.end())
+		_contentType += headerMap.at("Content-Type");
+	
+
 }
