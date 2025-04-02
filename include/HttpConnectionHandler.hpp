@@ -25,6 +25,7 @@ class HttpConnectionHandler
 		int					clientSocket;
 
 		Configuration				*conf;
+		LocationBlock				*locBlock;
 
 		bool		getMethodPathVersion(std::istringstream &requestStream);
 		bool		getHeaders(std::istringstream &requestStream);

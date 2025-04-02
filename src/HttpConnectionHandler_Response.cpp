@@ -101,8 +101,13 @@ LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBloc
 	return current;
 }
 
-/* check location block for allowed method and return true if it is allowed
- * and false if is not
+/* Takes location blocks allowed methods vector and cross references the
+ *method currently being executed
+ *
+ * @param block	 LocationBlock associated to the current path
+ * @param method Current method beng executed
+ *
+ * return true if method allowed,  flase otherwise
  */
 bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &method)
 {
@@ -114,7 +119,18 @@ bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &m
 	}
 }
 
-/* checks location block and expands the path accordingly
+/* checks that the location block allows the current method to be executed
+ * 
+ * first finds longest matching location block form conf file with findLocationBlock()
+ * checks that the current method is allowed  withing that blocks allowed methods
+ * remaps the path according to the root path found  in the block
+ * makes sure the true path doesnt try to traverse down with /../ for example
+ * currently only checking /.. might need better protection
+ *
+ * example of true path
+ * request GET /kapouet/pouic/toto/pouet HTTP/1.1 --> Path = /kapouet/pouic/toto/pouet
+ * longest matching location block /kapouet that is rooted to /tmp/www
+ * True path will become /tmp/www + /pouic/toto/pouet
  */
 bool	HttpConnectionHandler::checkLocation()
 {
@@ -126,6 +142,7 @@ bool	HttpConnectionHandler::checkLocation()
 		send(clientSocket, response.c_str(), response.size(), 0);
 		return false;
 	}
+	locBlock = block;
 
 	if (!isMethodAllowed(block, method)) {
 		logError("Method " + method + " not allowed in location " + block->path);
@@ -136,6 +153,13 @@ bool	HttpConnectionHandler::checkLocation()
 
 	std::string relativePath = path.substr(block->path.length());
 	path =  "./" + block->root + "/" + relativePath;
+
+	if (path.find("/..") != std::string::npos) {
+		logError("Path: " + path + "contains escape sequence /..");
+		std::string response = createHttpResponse(403, "<h1>403 Forbidden</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return false;
+	}
 	return true;
 
 }
@@ -463,7 +487,7 @@ void	HttpConnectionHandler::handleRequest()
 		handleDeleteRequest();
 	}
 	else {
-		std::string response = createHttpResponse(405, "<h1>405 Method Not Allowed</h1>", "text/html");
+		std::string response = createHttpResponse(501, "<h1>501 Method: " + method + "Not Implemented </h1>", "text/html");
 		send(clientSocket, response.c_str(), response.size(), 0);
 	}
 }
