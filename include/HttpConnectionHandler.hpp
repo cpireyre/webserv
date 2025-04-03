@@ -19,6 +19,7 @@ class HttpConnectionHandler
 	private:
 		std::string				method;
 		std::string				path;
+		std::string				originalPath;
 		std::string				httpVersion;
 		std::string				body;
 		std::map<std::string, std::string>	headers;
@@ -38,7 +39,7 @@ class HttpConnectionHandler
 		bool		handleFileUpload();
 		bool		processMultipartPart(const std::string& part, std::string &responseBody);
 
-		bool		handleGetDirectory();
+		void		handleGetDirectory();
 		bool		checkLocation();
 		bool		isMethodAllowed(LocationBlock *block, std::string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);

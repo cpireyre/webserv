@@ -161,27 +161,70 @@ bool	HttpConnectionHandler::checkLocation()
 		return false;
 	}
 	return true;
-
 }
 
 /* function to handle GET method on directory. two options:
  * 1. if directory contains one of index files, serve that
  * 2. check if auto index is on on locaton block, return auto-index of directory
  * 	else 403
- */
-bool	HttpConnectionHandler::handleGetDirectory()
-{
-	// checks that the directory exists
 
-	// permission?
+ * need to catch filesystem errors?
+ */
+void	HttpConnectionHandler::handleGetDirectory()
+{
+	std::stringstream indexStream(conf->getIndex());
 
 	// if conf.index contains file in this directory, serve it (first match order)
+	std::string token;
+	while (indexStream >> token) {
+		std::string current = path + token;
+		logInfo("Checking: " + current);
+		if (std::filesystem::exists(current) && std::filesystem::is_regular_file(current)) {
+			std::cout << "FOUND: " + current << std::endl;
+			//serve index file
+			return ;
+		}
+	}
 
 	// check block.dirListing -> off -> 403
+	if (!locBlock->dirListing) {
+		logError("Get request for directory " + path + ", but file serving not allowed");
+		std::string response = createHttpResponse(403, "<h1>Permission denied.</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
 
 	// serve directory listing
-	logError("Directory handing with GET WIP, no idea whats gonna happen :)");
-	return false;
+	std::vector<std::string> dirListing;
+	try {
+		for (const auto &entry : std::filesystem::directory_iterator(path)) {
+			// entry.path() gives the full path
+			// entry.path().filename() gives just the name part
+			dirListing.push_back(entry.path().filename().string());
+		}
+	}
+	catch (const std::filesystem::filesystem_error& e)
+	{
+		logError("Get request for directory " + path + ", filesystem error");
+		std::string response = createHttpResponse(403, "<h1>Permission denied.</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
+
+	std::string htmlListing = "<html>\r\n<head><title>Index of " + path +
+		"</title><head>\r\n<body>\r\n<h1>Index of " + path + "</h1><hr>\r\n<ul>\r\n";
+	if (locBlock->path != "/") {
+		htmlListing += "<li><a href=\"../\">../</a></li>\n";
+	}
+	for (const auto &file : dirListing) {
+		std::string filePath = path + file;
+		std::string fileLink = (std::filesystem::is_directory(filePath)) ? file + "/" : file;
+		htmlListing += "<li><a href=\"" + fileLink + "\">" + file + "</a></li>\n";
+	}
+	htmlListing += "</ul>\r\n<hr>\r\n</body>\r\n</html>\r\n";
+
+	std::string response = createHttpResponse(200, htmlListing, "text/html");
+	send(clientSocket, response.c_str(), response.size(), 0);
 }
 
 /* handles an HTTP GET request by serving the requested file
@@ -201,18 +244,27 @@ void	HttpConnectionHandler::handleGetRequest()
 {
 	std::string filePath = path;
 
-	if (path.back() == '/') {
-		handleGetDirectory();
-	}
-
 	if (access(filePath.c_str(), F_OK) != 0) {
-		std::string errorResponse = createHttpResponse(404, "<h1>Not found</h1>", "text/html");
-		send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+		std::string response = createHttpResponse(404, "<h1>Not found</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}
 	else if (access(filePath.c_str(), R_OK) != 0) {
-		std::string errorResponse = createHttpResponse(403, "<h1>Permission denied.</h1>", "text/html");
-		send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+		std::string response = createHttpResponse(403, "<h1>Permission denied.</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
+	
+	if (path.back() == '/') {
+		handleGetDirectory();
+		return ;
+	}
+
+
+	if (std::filesystem::is_directory(filePath)) { //if request /directory was actually directory without trailing / WIP
+		logInfo("301 moved permanently, not handled yet. sending generic response");
+		std::string response = createHttpResponse(301, "<h1>301 Moved permanently.</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}
 
@@ -497,6 +549,7 @@ void	HttpConnectionHandler::handleDeleteRequest()
  */
 void	HttpConnectionHandler::handleRequest() 
 {
+	originalPath = path;
 	if (!checkLocation()) {
 		return;
 	}
