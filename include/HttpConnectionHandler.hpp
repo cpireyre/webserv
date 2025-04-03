@@ -54,12 +54,14 @@ class HttpConnectionHandler
 		//find longest location block
 
 		// Getters
-		int getClientSocket() const { return clientSocket; }
-		const std::string &getMethod() const { return method; }
-		const std::string &getPath() const { return path; }
-		const std::string &getHttpVersion() const { return httpVersion; }
-		const std::string &getBody() const { return body; }
-		const std::map<std::string, std::string> &getHeaders() const { return headers; }
+		int						getClientSocket() const { return clientSocket; }
+		const std::string				&getMethod() const { return method; }
+		const std::string				&getPath() const { return path; }
+		const std::string				&getHttpVersion() const { return httpVersion; }
+		const std::string				&getBody() const { return body; }
+		const std::map<std::string, std::string>	&getHeaders() const { return headers; }
+		const Configuration 				*getConf() const { return conf; }
+		const LocationBlock				*getLocationBlock() const { return locBlock;}
 
 		// Setters
 		void setClientSocket(int socket) { clientSocket = socket; }
