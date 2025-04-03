@@ -40,6 +40,7 @@ class HttpConnectionHandler
 		bool		processMultipartPart(const std::string& part, std::string &responseBody);
 
 		void		handleGetDirectory();
+		void		serveFile(std::string &filePath);
 		bool		checkLocation();
 		bool		isMethodAllowed(LocationBlock *block, std::string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);

@@ -135,8 +135,7 @@ bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &m
 bool	HttpConnectionHandler::checkLocation()
 {
 	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
-	if (!block)
-	{
+	if (!block) {
 		logError("No locaton block matched (should't happen?)");
 		std::string response = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
 		send(clientSocket, response.c_str(), response.size(), 0);
@@ -163,6 +162,44 @@ bool	HttpConnectionHandler::checkLocation()
 	return true;
 }
 
+/* function to serve file in GET requested
+ */
+void	HttpConnectionHandler::serveFile(std::string &filePath)
+{
+	std::ifstream file(filePath, std::ios::binary);
+	if (!file.is_open()) {
+		std::string errorResponse = createHttpResponse(404, "<h1>404 Not Found</h1>", "text/html");
+		send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+		return;
+	}
+
+	// Determine file size
+	file.seekg(0, std::ios::end);
+	std::streampos fileSize = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	// Get content type
+	std::string contentType = getContentType(filePath);
+
+	// Send HTTP headers
+	std::ostringstream headerStream;
+	headerStream << "HTTP/1.1 200 OK\r\n";
+	headerStream << "Content-Length: " << fileSize << "\r\n";
+	headerStream << "Content-Type: " << contentType << "\r\n";
+	headerStream << "Connection: close\r\n";
+	headerStream << "\r\n";
+
+	std::string headerStr = headerStream.str();
+	send(clientSocket, headerStr.c_str(), headerStr.size(), 0); // Send headers
+
+	// Send file content in chunks
+	char buffer[8192];
+	while (file.read(buffer, sizeof(buffer)) || file.gcount() > 0) {
+		send(clientSocket, buffer, file.gcount(), 0);
+	}
+	file.close();
+}
+
 /* function to handle GET method on directory. two options:
  * 1. if directory contains one of index files, serve that
  * 2. check if auto index is on on locaton block, return auto-index of directory
@@ -178,10 +215,8 @@ void	HttpConnectionHandler::handleGetDirectory()
 	std::string token;
 	while (indexStream >> token) {
 		std::string current = path + token;
-		logInfo("Checking: " + current);
 		if (std::filesystem::exists(current) && std::filesystem::is_regular_file(current)) {
-			std::cout << "FOUND: " + current << std::endl;
-			//serve index file
+			serveFile(current);
 			return ;
 		}
 	}
@@ -268,37 +303,7 @@ void	HttpConnectionHandler::handleGetRequest()
 		return;
 	}
 
-	std::ifstream file(filePath, std::ios::binary);
-	if (!file.is_open()) {
-		std::string errorResponse = createHttpResponse(404, "<h1>404 Not Found</h1>", "text/html");
-		send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
-		return;
-	}
-
-	// need to change from seek, doesnt work for compelx files?
-	file.seekg(0, std::ios::end);
-	std::streampos fileSize = file.tellg();
-	file.seekg(0, std::ios::beg);
-
-	std::string contentType = getContentType(filePath);
-
-	// send HTTP headers
-	std::ostringstream headerStream;
-	headerStream << "HTTP/1.1 200 OK\r\n";
-	headerStream << "Content-Length: " << fileSize << "\r\n";
-    	headerStream << "Content-Type: " << contentType << "\r\n";
-    	headerStream << "Connection: close\r\n";
-    	headerStream << "\r\n";
-
-    	std::string headerStr = headerStream.str();
-    	send(clientSocket, headerStr.c_str(), headerStr.size(), 0); // send headers
-
-    	// send file content in chunks?
-    	char buffer[8192];
-    	while (file.read(buffer, sizeof(buffer)) || file.gcount() > 0) {
-        	send(clientSocket, buffer, file.gcount(), 0);
-    	}
-	file.close();
+	serveFile(filePath);
 }
 
 /* processes a single part of a multipart/form-data body, typically used for file uploads
