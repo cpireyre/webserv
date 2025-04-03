@@ -1,5 +1,15 @@
 #include "CgiHandler.hpp"
 
+bool checkCgi(std::string originalPath) {
+	if (originalPath.find_first_of('?') == originalPath.npos)
+		filePath = originalPath;
+	else
+	{
+		filePath = originalPath.substr(0, originalPath.find_first_of('?'));
+		queryString = originalPath.substr(originalPath.find_first_of('?') + 1);
+	}
+}
+
 CgiHandler::CgiHandler(HttpConnectionHandler conn) {
 	if (conn.CgiType == PYTHON)
 		_pathToInterpreter = conn.locInQuestion.cgiPathPython + "/python3";

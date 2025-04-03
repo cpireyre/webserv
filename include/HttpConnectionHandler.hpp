@@ -19,6 +19,7 @@ class HttpConnectionHandler
 	private:
 		std::string				method;
 		std::string				path;
+		std::string				originalPath;
 		std::string				httpVersion;
 		std::string				body;
 		std::map<std::string, std::string>	headers;
@@ -61,6 +62,7 @@ class HttpConnectionHandler
 		const int getClientSocket() const { return clientSocket; }
 		const std::string getMethod() const { return method; }
 		const std::string getPath() const { return path; }
+		const std::string getOriginalPath() const { return originalPath; }
 		const std::string getHttpVersion() const { return httpVersion; }
 		const std::string getBody() const { return body; }
 		const std::map<std::string, std::string> &getHeaders() const { return headers; }

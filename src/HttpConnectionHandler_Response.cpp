@@ -1,5 +1,6 @@
 #include "HttpConnectionHandler.hpp"
 #include "Configuration.hpp"
+#include "CgiHandler.hpp"
 
 /* creates an HTTP response string with the given status code, body content, and content type
  *
@@ -404,8 +405,11 @@ void	HttpConnectionHandler::handleRequest()
 	// Getting the location /images/ from complete.conf
 	locInQuestion = locsInQuestion[0].nestedLocations[2];
 
-	if (isCgi)
+
+
+	if (checkCgi(originalPath)) {
 		CgiHandler cgiHandler(*this);
+	}
     else if (method == "GET") {
 	    handleGetRequest();
     }
