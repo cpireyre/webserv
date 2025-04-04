@@ -2,11 +2,25 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include "HttpConnectionHandler.hpp"
+#include "../include/Parser.hpp"
+#include "../include/HttpConnectionHandler.hpp"
 
 #define PORT 8080
 
-void startServer(int port) {
+std::vector<Configuration> serverMap;
+
+void startServer(int port, int ac, char **av) {
+    if (ac != 2)
+	{
+		std::cout << "./webserv [configuration file]\n";
+		return;
+	}
+
+	serverMap = parser(av[1]);
+	if (serverMap.size() < 1)
+		return ;
+
+
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == -1) {
         std::cerr << "Error: Failed to create socket\n";
@@ -57,8 +71,9 @@ void startServer(int port) {
     close(serverSocket);
 }
 
-int main() {
-    startServer(PORT);
+int main(int ac, char **av)
+{
+    startServer(PORT, ac, av);
     return 0;
 }
 
