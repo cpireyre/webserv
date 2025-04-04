@@ -634,7 +634,11 @@ void	HttpConnectionHandler::handleRequest()
 	if (!checkLocation()) {
 		return;
 	}
-	//cgi here probably
+	if (checkCgi() != NONE) {
+		CgiHandler cgiHandler(*this);
+		cgiHandler.executeCgi();
+		return;
+	}
 	if (method == "GET") {
 		handleGetRequest();
 	}

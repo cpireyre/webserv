@@ -1,7 +1,9 @@
 #pragma once
 
-# include <string>
-# include "HttpConnectionHandler.hpp"
+#include <string>
+// #include "HttpConnectionHandler.hpp"
+
+class HttpConnectionHandler;
 
 enum CgiTypes
 {
@@ -33,5 +35,6 @@ class CgiHandler
 		char 	*_execveArgs[3] = {};
 		char 	*_execveEnv[16] = {};
 	public:
-		CgiHandler(HttpConnectionHandler);
+		CgiHandler(HttpConnectionHandler conn);
+		void executeCgi();
 };
