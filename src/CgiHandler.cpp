@@ -10,7 +10,7 @@ CgiHandler::CgiHandler(HttpConnectionHandler conn) {
 
 	std::string currentPath = std::filesystem::current_path();
 	std::string root = conn.getConf()->getRootViaLocation("/");
-	_pathToScript = currentPath + "/" + root + conn.getFilePath();
+	_pathToScript = currentPath + root + conn.getFilePath();
 
 	_execveArgs[0] = (char * )_pathToInterpreter.c_str();
 	_execveArgs[1] = (char * )_pathToScript.c_str();
@@ -50,6 +50,15 @@ CgiHandler::CgiHandler(HttpConnectionHandler conn) {
 	_execveEnv[11] = (char *) _serverName.c_str();
 	_execveEnv[12] = (char *) _serverPort.c_str();
 	_execveEnv[13] = NULL;
+}
+
+void CgiHandler::printCgiInfo() {
+	std::cout << GREEN << "Execve Args: " << DEFAULT_COLOR << std::endl;
+	for (int i = 0; _execveArgs[i] != NULL; i++)
+		std::cout << _execveArgs[i] << std::endl;
+	std::cout << GREEN << "Execve Env: " << DEFAULT_COLOR << std::endl;
+	for (int i = 0; _execveEnv[i] != NULL; i++)
+		std::cout << _execveEnv[i] << std::endl;
 }
 
 void CgiHandler::executeCgi() {

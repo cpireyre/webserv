@@ -636,7 +636,8 @@ void	HttpConnectionHandler::handleRequest()
 	}
 	if (checkCgi() != NONE) {
 		CgiHandler cgiHandler(*this);
-		cgiHandler.executeCgi();
+		cgiHandler.printCgiInfo(); // Comment out when not needed
+		cgiHandler.executeCgi(); // For now does nothing
 		return;
 	}
 	if (method == "GET") {
