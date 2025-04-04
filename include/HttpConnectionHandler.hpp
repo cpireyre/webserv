@@ -34,13 +34,16 @@ class HttpConnectionHandler
 		std::string	getContentType(const std::string &path);
 
 		void		handleGetRequest();
-		void		handlePostRequest();
+		void		handleGetDirectory();
+		void		serveFile(std::string &filePath);
+
 		void		handleDeleteRequest();
+		void		deleteDirectory();
+
+		void		handlePostRequest();
 		bool		handleFileUpload();
 		bool		processMultipartPart(const std::string& part, std::string &responseBody);
 
-		void		handleGetDirectory();
-		void		serveFile(std::string &filePath);
 		bool		checkLocation();
 		bool		isMethodAllowed(LocationBlock *block, std::string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
@@ -52,6 +55,8 @@ class HttpConnectionHandler
 		//create Http response
 		void	handleRequest();
 		std::string	createHttpResponse(int statusCode, const std::string &body, const std::string &contentType);
+		std::string	createHttpRedirectResponse(int statusCode, const std::string &location);
+
 
 		//find longest location block
 

@@ -31,6 +31,21 @@ std::string	HttpConnectionHandler::createHttpResponse(int statusCode, const std:
 	return response.str();
 }
 
+/* handles creating HTTP response when DELETE or GET request gets 301 for example
+ * when trying to access directory with no trailing /, example DELETE /directory HTTP/1.1
+ */
+std::string	HttpConnectionHandler::createHttpRedirectResponse(int statusCode, const std::string &location)
+{
+    std::string response = "HTTP/1.1 " + std::to_string(statusCode) + " Moved Permanently\r\n";
+    response += "Location: " + location + "/\r\n";
+    response += "Content-Type: text/html\r\n";
+    std::string body = "<h1>301 Moved Permanently</h1><p>Try " + path + "/</p>";
+    response += "Content-Length: " + std::to_string(body.length()) + "\r\n\r\n";
+    response += body;
+
+    return response;
+}
+
 /* determines the content type based on the file extension
  *
  * checks the file extension (from the given file path) to the corresponding MIME content type
@@ -46,31 +61,31 @@ std::string	HttpConnectionHandler::createHttpResponse(int statusCode, const std:
  */
 std::string HttpConnectionHandler::getContentType(const std::string &path)
 {
-    size_t dotPos = path.find_last_of(".");
-    if (dotPos == std::string::npos) {
+	size_t dotPos = path.find_last_of(".");
+	if (dotPos == std::string::npos) {
 		return "application/octet-stream";
-    }
+	}
 
-    std::string extension = path.substr(dotPos);
+	std::string extension = path.substr(dotPos);
 
-    if (extension == ".html") return "text/html";
-    if (extension == ".css") return "text/css";
-    if (extension == ".js") return "application/javascript";
-    if (extension == ".png") return "image/png";
-    if (extension == ".jpg" || extension == ".jpeg") return "image/jpeg";
-    if (extension == ".gif") return "image/gif";
-    if (extension == ".svg") return "image/svg+xml";
-    if (extension == ".ico") return "image/x-icon";
-    if (extension == ".json") return "application/json";
-    if (extension == ".xml") return "application/xml";
-    if (extension == ".pdf") return "application/pdf";
-    if (extension == ".zip") return "application/zip";
-    if (extension == ".txt") return "text/plain";
-    if (extension == ".mp3") return "audio/mpeg";
-    if (extension == ".mp4") return "video/mp4";
-    if (extension == ".webp") return "image/webp";
+	if (extension == ".html") return "text/html";
+	if (extension == ".css") return "text/css";
+	if (extension == ".js") return "application/javascript";
+	if (extension == ".png") return "image/png";
+	if (extension == ".jpg" || extension == ".jpeg") return "image/jpeg";
+	if (extension == ".gif") return "image/gif";
+	if (extension == ".svg") return "image/svg+xml";
+	if (extension == ".ico") return "image/x-icon";
+if (extension == ".json") return "application/json";
+	if (extension == ".xml") return "application/xml";
+	if (extension == ".pdf") return "application/pdf";
+	if (extension == ".zip") return "application/zip";
+	if (extension == ".txt") return "text/plain";
+	if (extension == ".mp3") return "audio/mpeg";
+	if (extension == ".mp4") return "video/mp4";
+	if (extension == ".webp") return "image/webp";
 
-    return "application/octet-stream";
+	return "application/octet-stream";
 }
 
 /* recursively finds the longest matching location block for path in object
@@ -163,6 +178,11 @@ bool	HttpConnectionHandler::checkLocation()
 }
 
 /* function to serve file in GET requested
+ *
+ * if file is ok to be served, this fucntion is called.
+ * checking if it exists and we have permissions if done before this.
+ * opens file, checks size for content len, and sends appropriate http response with
+ * the file content. sens headers first and then file content in chunks of 8kb
  */
 void	HttpConnectionHandler::serveFile(std::string &filePath)
 {
@@ -268,12 +288,8 @@ void	HttpConnectionHandler::handleGetDirectory()
  * with appropriate HTTP headers (Content-Length, Content-Type, etc)
  * if the file does not exist, a 404 Not Found response is sent.
  *
- * 1. tries to find the requested file based on the path
- * 2. if the file is found, it reads the file's size, sends the headers, and sends
- *    the file's content in chunks to the client
- * 3. If the file is not found, a 404 Not Found error page is sent
-
- * need to check if request targets directory /directory -> 301
+ * also supports index serving and directory auto indexing if  allowed
+ *
  */
 void	HttpConnectionHandler::handleGetRequest()
 {
@@ -496,6 +512,52 @@ void	HttpConnectionHandler::handlePostRequest()
 	send(clientSocket, response.c_str(), response.size(), 0);
 }
 
+/* handles DELETE request on /diretory or /directory/
+
+ * summary on diff cases: server receives DELETE /uploads/images/
+ * If path does NOT exist                     -> 404 Not Found
+ * If path exists but is NOT a directory      -> 409 Conflict or 400 Bad Request
+ * If URL doesn’t end in `/`                  -> 409 Conflict
+ * If directory is NOT empty                  -> 409 Conflict
+ * If no write/delete permission              -> 403 Forbidden
+ * If all checks pass (and dir is empty)      -> 204 No Content
+ */
+void	HttpConnectionHandler::deleteDirectory()
+{
+	std::error_code ec;
+
+	if (path.empty() || path.back() != '/') {
+		logError("DELETE directory requested but path doesn't end with '/': " + path);
+		std::string response = createHttpRedirectResponse(301, path);
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
+	
+	if (access(path.c_str(), W_OK) != 0) {
+		logError("Permission denied to delete directory: " + path);
+		std::string response = createHttpResponse(403, "<h1>403 Forbidden: No write access</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
+
+	if (!std::filesystem::is_empty(path, ec)) {
+		logError("Cannot delete non-empty directory: " + path);
+		std::string response = createHttpResponse(409, "<h1>409 Conflict: Directory not empty</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
+
+	if (!std::filesystem::remove(path, ec)) {
+		logError("Failed to delete directory: " + (ec ? ec.message() : "Unknown error"));
+		std::string response = createHttpResponse(500, "<h1>500 Internal Server Error: Cannot delete directory</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
+
+	std::string response = createHttpResponse(204, "", "text/html");
+	send(clientSocket, response.c_str(), response.size(), 0);
+}
+
 /* handles the HTTP DELETE
  *
  * checks if the file exists, verifies if it is a regular file (not a directory),
@@ -506,6 +568,8 @@ void	HttpConnectionHandler::handlePostRequest()
  *
  * DELETE /data/example.txt HTTP/1.1
  * Host: example.com
+ *
+ * is handling auto redirection expected? /directory -> /directory/ 301
  */
 void	HttpConnectionHandler::handleDeleteRequest()
 {
@@ -519,15 +583,25 @@ void	HttpConnectionHandler::handleDeleteRequest()
         	send(clientSocket, response.c_str(), response.size(), 0);
         	return;
 	}
-	//its regular file
-	if (!std::filesystem::is_regular_file(filePath, ec)) {
-        	logError("DELETE requested on non-regular file: " + filePath);
-        	std::string response = createHttpResponse(403, "<h1>403 Forbidden - Cannot delete directory</h1>", "text/html");
+	//its directory or somethung unsupported
+	if (std::filesystem::is_directory(filePath, ec)) {
+		deleteDirectory();
+		return;
+	}
+	else if (!std::filesystem::is_regular_file(filePath, ec)) {
+        	logError("DELETE request but file is not directory or regular file: " + filePath);
+        	std::string response = createHttpResponse(409, "<h1>409 Delete request on unknown file type</h1>", "text/html");
         	send(clientSocket, response.c_str(), response.size(), 0);
         	return;
 	}
 
-	// try to delete
+	//handle regular file deletion
+	if (path.empty() || path.back() != '/') {
+		logError("DELETE file requested but path ends with '/': " + path);
+		std::string response = createHttpResponse(404, "<h1>404 File /filename/ not possbile</h1>", "text/html");
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
 	if (!std::filesystem::remove(filePath, ec)) {
 		logError("Failed to delete file: " + (ec ? ec.message() : "Unknown error"));
 		std::string response;
@@ -541,8 +615,8 @@ void	HttpConnectionHandler::handleDeleteRequest()
 		return;
 	}
 
-    std::string response = createHttpResponse(200, "<h1>File Deleted Successfully</h1>", "text/html");
-    send(clientSocket, response.c_str(), response.size(), 0);
+	std::string response = createHttpResponse(200, "<h1>File Deleted Successfully</h1>", "text/html");
+	send(clientSocket, response.c_str(), response.size(), 0);
 }
 
 
@@ -558,7 +632,7 @@ void	HttpConnectionHandler::handleRequest()
 	if (!checkLocation()) {
 		return;
 	}
-
+	//cgi here probably
 	if (method == "GET") {
 		handleGetRequest();
 	}
