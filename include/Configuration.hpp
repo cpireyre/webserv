@@ -16,6 +16,8 @@
 
 const std::vector<std::string> DEFAULT_METHODS = {"GET"};
 const std::string DEFAULT_LISTEN = "80";
+const std::string DEFAULT_CGI_PYTHON = "/usr/bin";
+const std::string DEFAULT_CGI_PHP = "/usr/bin";
 
 struct LocationBlock {
     std::string path;                   		// The location path (e.g. "/images/")
@@ -42,12 +44,14 @@ class Configuration {
 		std::string								_index;	
 		unsigned int 							_maxClientBodySize;
 		std::vector<LocationBlock>				_locationBlocks;
+		std::map<std::string, LocationBlock>	_allPaths;
 
 		std::vector<std::string>				_rawBlock;
 		std::vector<std::string>				_rawServerBlock;
 
 		LocationBlock handleLocationBlock(std::vector<std::string>& locationBlock);
 		std::vector<std::string> generateLocationBlock(std::vector<std::string>::iterator& it, std::vector<std::string>::iterator end);
+		void populateMethodsPathsCgi(LocationBlock& locationBlock, std::vector<std::string> inheritedMethods, std::string inheritedCgiPathPython, std::string inheritedCgiPathPHP);
 
 		void createBarebonesBlock();
 	public:
@@ -70,4 +74,6 @@ class Configuration {
 		std::string getIndex() const;
 		unsigned int getMaxClientBodySize() const;
 		std::vector<LocationBlock>& getLocationBlocks();
+
+		std::string getRootViaLocation(std::string path) const;
 	};

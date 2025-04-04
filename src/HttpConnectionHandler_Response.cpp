@@ -1,4 +1,6 @@
 #include "HttpConnectionHandler.hpp"
+#include "Configuration.hpp"
+#include "CgiHandler.hpp"
 
 /* creates an HTTP response string with the given status code, body content, and content type
  *
@@ -632,7 +634,11 @@ void	HttpConnectionHandler::handleRequest()
 	if (!checkLocation()) {
 		return;
 	}
-	//cgi here probably
+	if (checkCgi() != NONE) {
+		CgiHandler cgiHandler(*this);
+		cgiHandler.executeCgi();
+		return;
+	}
 	if (method == "GET") {
 		handleGetRequest();
 	}
