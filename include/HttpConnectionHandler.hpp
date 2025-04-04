@@ -38,19 +38,6 @@ class HttpConnectionHandler
 				std::string &responseBody);
 
 	public:
-		// Additions to Jere's work
-		bool					isCgi; // Default false. True if the request is for a CGI script
-		CgiTypes				CgiType; // Type of CGI script (PHP or Python or none)
-		Configuration			serverInQuestion; // Server configuration for the current request
-		LocationBlock			locInQuestion; // Location block for the current request
-
-		std::string 			filePath; //  Requested path (differs from Jere's "path" because anything after the path (file name, question mark statements etc.) it will be pruned)
-		std::string				extension; // .php or .py or empty
-		std::string				queryString; // Everything from the URI after '?' character
-
-		const std::string getFilePath() const { return filePath; }
-		// End of additions
-
 		//Parse Http request
 		bool	parseRequest();
 
@@ -62,7 +49,6 @@ class HttpConnectionHandler
 		const int getClientSocket() const { return clientSocket; }
 		const std::string getMethod() const { return method; }
 		const std::string getPath() const { return path; }
-		const std::string getOriginalPath() const { return originalPath; }
 		const std::string getHttpVersion() const { return httpVersion; }
 		const std::string getBody() const { return body; }
 		const std::map<std::string, std::string> &getHeaders() const { return headers; }
