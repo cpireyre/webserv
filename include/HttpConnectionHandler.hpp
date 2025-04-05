@@ -21,21 +21,21 @@ extern std::vector<Configuration> serverMap;
 class HttpConnectionHandler
 {
 	private:
-		std::string				method;
-		std::string				path;
-		std::string				originalPath;
-		std::string				httpVersion;
-		std::string				body;
+		std::string							method;
+		std::string							path;
+		std::string							originalPath;
+		std::string							httpVersion;
+		std::string							body;
 		std::map<std::string, std::string>	headers;
-		int					clientSocket;
+		int									clientSocket;
 
-		std::string				filePath;
-		std::string				queryString;
-		std::string				extension;
-		CgiTypes				cgiType;
+		std::string							filePath; // Everything in URI before the question mark
+		std::string							queryString; // Everything in URI after the question mark
+		std::string							extension;
+		CgiTypes							cgiType;
 
-		Configuration				*conf;
-		LocationBlock				*locBlock;
+		Configuration						*conf;
+		LocationBlock						*locBlock;
 
 		bool		getMethodPathVersion(std::istringstream &requestStream);
 		bool		getHeaders(std::istringstream &requestStream);
