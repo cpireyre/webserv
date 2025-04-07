@@ -1,19 +1,5 @@
 #include "../include/Parser.hpp"
 
-void populateMethods(Configuration &server, LocationBlock& locationBlock, std::vector<std::string> inheritedMethods) {
-
-	if (locationBlock.methods.empty())
-		locationBlock.methods.insert(locationBlock.methods.end(), inheritedMethods.begin(), inheritedMethods.end());
-	else
-		inheritedMethods = locationBlock.methods;
-	
-	std::vector<LocationBlock> &nestedLocations = locationBlock.nestedLocations;
-
-	for (auto& nestedLocation : nestedLocations)
-		populateMethods(server, nestedLocation, inheritedMethods);
-}
-
-
 int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	int brace = 0;
 	
@@ -85,17 +71,6 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Conf
 		if (!serverBlock.empty())
 			serverBlock.push_back(line);
 	}
-
-	for (auto& server : serverMap) {
-		std::vector<LocationBlock>& locationBlocks = server.getLocationBlocks();
-		for (auto& locationBlock : locationBlocks)
-			populateMethods(server, locationBlock, DEFAULT_METHODS);
-	}
-
-
-	// for (const auto& server : serverMap) {
-	// 	server.printServerBlock();
-	// }
 }
 
 std::vector<Configuration> parser(std::string fileName) {

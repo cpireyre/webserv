@@ -9,6 +9,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <ctime>
+#include "CgiHandler.hpp"
+#include "Configuration.hpp"
+
+extern std::vector<Configuration> serverMap;
 
 #include "../include/Configuration.hpp"
 
@@ -17,16 +21,21 @@ extern std::vector<Configuration> serverMap;
 class HttpConnectionHandler
 {
 	private:
-		std::string				method;
-		std::string				path;
-		std::string				originalPath;
-		std::string				httpVersion;
-		std::string				body;
+		std::string							method;
+		std::string							path;
+		std::string							originalPath;
+		std::string							httpVersion;
+		std::string							body;
 		std::map<std::string, std::string>	headers;
-		int					clientSocket;
+		int									clientSocket;
 
-		Configuration				*conf;
-		LocationBlock				*locBlock;
+		std::string							filePath; // Everything in URI before the question mark
+		std::string							queryString; // Everything in URI after the question mark
+		std::string							extension;
+		CgiTypes							cgiType;
+
+		Configuration						*conf;
+		LocationBlock						*locBlock;
 
 		bool		getMethodPathVersion(std::istringstream &requestStream);
 		bool		getHeaders(std::istringstream &requestStream);
@@ -48,6 +57,8 @@ class HttpConnectionHandler
 		bool		isMethodAllowed(LocationBlock *block, std::string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
+		CgiTypes	checkCgi();
+		
 	public:
 		//Parse Http request
 		bool	parseRequest();
@@ -64,11 +75,17 @@ class HttpConnectionHandler
 		int						getClientSocket() const { return clientSocket; }
 		const std::string				&getMethod() const { return method; }
 		const std::string				&getPath() const { return path; }
+		const std::string				&getOriginalPath() const { return originalPath; }
 		const std::string				&getHttpVersion() const { return httpVersion; }
 		const std::string				&getBody() const { return body; }
 		const std::map<std::string, std::string>	&getHeaders() const { return headers; }
-		const Configuration 				*getConf() const { return conf; }
+		const Configuration 			*getConf() const { return conf; }
 		const LocationBlock				*getLocationBlock() const { return locBlock;}
+
+		const std::string				&getFilePath() const { return filePath; }
+		const std::string				&getQueryString() const { return queryString; }
+		const std::string				&getExtension() const { return extension; }
+		CgiTypes						getCgiType() const { return cgiType; }
 
 		// Setters
 		void setClientSocket(int socket) { clientSocket = socket; }

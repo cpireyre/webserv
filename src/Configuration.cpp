@@ -234,6 +234,34 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 			_locationBlocks.push_back(loc);
 		}
 	}
+		
+	for (auto& locationBlock : _locationBlocks)
+		populateMethodsPathsCgi(locationBlock, DEFAULT_METHODS, DEFAULT_CGI_PYTHON, DEFAULT_CGI_PHP);
+}
+
+void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::vector<std::string> inheritedMethods, std::string inheritedCgiPathPython, std::string inheritedCgiPathPHP) {
+
+	if (locationBlock.methods.empty())
+		locationBlock.methods.insert(locationBlock.methods.end(), inheritedMethods.begin(), inheritedMethods.end());
+	else
+		inheritedMethods = locationBlock.methods;
+
+	if (locationBlock.cgiPathPython.empty())
+		locationBlock.cgiPathPython = inheritedCgiPathPython;
+	else
+		inheritedCgiPathPython = locationBlock.cgiPathPython;
+
+	if (locationBlock.cgiPathPHP.empty())
+		locationBlock.cgiPathPHP = inheritedCgiPathPHP;
+	else
+		inheritedCgiPathPHP = locationBlock.cgiPathPHP;
+
+	_allPaths.insert(std::make_pair(locationBlock.path, locationBlock));
+	
+	std::vector<LocationBlock> &nestedLocations = locationBlock.nestedLocations;
+
+	for (auto& nestedLocation : nestedLocations)
+		populateMethodsPathsCgi(nestedLocation, inheritedMethods, inheritedCgiPathPython, inheritedCgiPathPHP);
 }
 
 std::vector<LocationBlock>& Configuration::getLocationBlocks() {
@@ -274,4 +302,11 @@ std::string	Configuration::getIndex() const {
 
 unsigned int	Configuration::getMaxClientBodySize() const {
 	return _maxClientBodySize;
+}
+
+std::string Configuration::getRootViaLocation(std::string path) const {
+	std::map<std::string, LocationBlock>::const_iterator it = _allPaths.find(path);
+	if (it != _allPaths.end())
+		return it->second.root;
+	return "";
 }
