@@ -92,8 +92,9 @@ Connection	*connectNewClient(Connection *conns, const Endpoint_t *endp)
 	int i = 0;
 	while (conns[i].alive == true)
 		i++;
+	assert(i == 0);
+	conns[i].alive = true;
 	conns[i].endpoint.sockfd = clientSocket;
-	conns[i].endpoint = *endp;
 	conns[i].endpoint.type = ENDPOINT_CLIENT;
 	Logger::debug("Connected client, socket: %d", clientSocket);
 	return (&conns[i]);

@@ -14,10 +14,6 @@
 
 extern std::vector<Configuration> serverMap;
 
-#include "../include/Configuration.hpp"
-
-extern std::vector<Configuration> serverMap;
-
 class HttpConnectionHandler
 {
 	private:

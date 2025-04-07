@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/01 15:52:14 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/07 11:17:47 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,6 +84,8 @@ int	main(int argc, char **argv)
 			if (endp->type == ENDPOINT_SERVER)
 			{
 				Connection *client = connectNewClient(conns, endp);
+				printf("Serve socket: %d\n", endp->sockfd);
+				printf("Current Client socket: %d\n", client->endpoint.sockfd);
 				queue_add_fd(qfd, client->endpoint.sockfd, QUEUE_EVENT_READ, client);
 			}
 			else if (endp->type == ENDPOINT_CLIENT)
