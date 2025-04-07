@@ -223,7 +223,7 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 		else if (std::regex_search(line, match, serverNamesRegex))
 			_serverNames = match[1];
 		else if (std::regex_search(line, match, errorPageRegex))
-			_errorPages.emplace(std::stoi(match[1]), match[2]);
+			_errorPages.insert_or_assign(std::stoi(match[1]), match[2]);
 		else if (std::regex_search(line, match, indexRegex))
 			_index = match[1];
 		else if (std::regex_search(line, match, locationRegex)) {
