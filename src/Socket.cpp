@@ -12,8 +12,13 @@ int	make_server_socket(const char *host, const char *port)
 		.ai_socktype = SOCK_STREAM,
 		.ai_protocol = 0,
 		.ai_addrlen = 0,
+#ifdef __linux__
+		.ai_addr = 0,
+		.ai_canonname = 0,
+#else
 		.ai_canonname = 0,
 		.ai_addr = 0,
+#endif
 		.ai_next = 0,
 	};
 
