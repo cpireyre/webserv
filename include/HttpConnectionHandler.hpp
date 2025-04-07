@@ -90,7 +90,8 @@ class HttpConnectionHandler
 		CgiTypes					getCgiType() const { return cgiType; }
 
 		// Setters
-		void setClientSocket(int socket) { clientSocket = socket; }
+		void	setClientSocket(int socket) { clientSocket = socket; }
+		void	setConfig(Configuration *config) { conf = config; }
 
 		//loggers
 		static void logError(const std::string& message)
