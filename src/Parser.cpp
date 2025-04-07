@@ -4,11 +4,9 @@ int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	int brace = 0;
 	
 	std::ifstream file(fileName);
-	if (!file) {
-		std::cerr << "Error opening file" << std::endl;
-		return 1;
-	}
-
+	if (!file)
+		throw std::runtime_error("Error opening file");
+	
 	std::string line;
 	while (std::getline(file, line)) {
 		size_t comment = line.find('#');
@@ -76,10 +74,12 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Conf
 std::vector<Configuration> parser(std::string fileName) {
 	std::vector<std::string> rawFile;
 	
-
-	if (getRawFile(fileName, rawFile) != 0) {
-		std::cerr << "Error parsing file" << std::endl;
-		return serverMap; // Handle better.
+	try {
+		getRawFile(fileName, rawFile);
+	}
+	catch (std::exception &e) {
+		std
+		throw e;
 	}
 
 	populateConfigMap(rawFile, serverMap);
