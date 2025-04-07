@@ -92,7 +92,7 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 		return false;
 	}
 
-	std::regex	httpRegex(R"(^([A-Z]+) (\/\S+) (HTTP\/[1]\.[1,0])\r$)");
+	std::regex	httpRegex(R"(^([A-Z]+) (\/\S*) (HTTP\/[1]\.[1,0])\r$)");
 	std::smatch	matches;
 	if (std::regex_match(firstLine, matches, httpRegex)) {
 		method = matches[1];
