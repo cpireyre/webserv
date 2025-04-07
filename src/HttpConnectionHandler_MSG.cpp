@@ -40,19 +40,20 @@ std::string HttpConnectionHandler::getCurrentHttpDate()
 
 std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 {
-	std::ostringstream response;
+	std::ostringstream			response;
+	std::map<int, std::string>	errorPages = conf->getErrorPages();
 
 	response << "HTTP/1.1 " << error << " " << getReasonPhrase(error) << "\r\n";
 	std::string errorPath;
-	if (conf->_errorPages.find(error) != conf->_errorPages.end()) {
-		errorPath = conf->_errorPages[error];
+	if (errorPages.find(error) != errorPages.end()) {
+		errorPath = errorPages[error];
 	}
 	else {
 		logError("Error page " + std::to_string(error) + " Not found");
 		exit(42);
 	}
 	
-	std::ifstream file(path.c_str());
+	std::ifstream file(errorPath.c_str());
 	if (!file.is_open()) {
 		logError("Cant open error page location " + errorPath);
 		exit(42);
@@ -63,7 +64,9 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 
 	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
 	response << "Content-Type: text/html\r\n";
-	response << "Content-Length : " << body.size() << "\r\n";
+	response << "Content-Length: " << body.size() << "\r\n";
 	response << "Connection: close\r\n\r\n";
 	response << body;
+
+	return response.str();
 }

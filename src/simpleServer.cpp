@@ -19,6 +19,7 @@ void startServer(int port, int ac, char **av) {
 	serverMap = parser(av[1]);
 	if (serverMap.size() < 1)
 		return ;
+	serverMap[0].printServerBlock();
 
 
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -44,6 +45,7 @@ void startServer(int port, int ac, char **av) {
         return;
     }
 
+
     std::cout << "Server is running on port " << port << "...\n";
 
     while (true) {
@@ -57,6 +59,7 @@ void startServer(int port, int ac, char **av) {
 
         HttpConnectionHandler handler;
         handler.setClientSocket(clientSocket);
+        handler.setConfig(&serverMap[0]);
         if (handler.parseRequest()) {
             handler.handleRequest();
         } else {
