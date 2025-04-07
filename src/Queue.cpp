@@ -103,3 +103,31 @@ void	*queue_event_get_data(const queue_event *e)
 	return (e->udata);
 #endif
 }
+
+int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
+{
+	assert(qfd >= 0);
+	assert(fd >= 0);
+	assert(t == QUEUE_EVENT_READ || t == QUEUE_EVENT_WRITE);
+#ifdef __linux__
+	struct epoll_event e;
+
+	switch (t) {
+		case QUEUE_EVENT_READ:
+			e.events |= EPOLLIN;
+			break;
+		case QUEUE_EVENT_WRITE:
+			e.events |= EPOLLOUT;
+			break;
+	}
+	e.data.ptr = (void *)data;
+	if (epoll_ctl(qfd, EPOLL_CTL_MOD, fd, &e) < 0)
+	{
+		Logger::warn("Error in epoll_ctl");
+		return (-1);
+	}
+#else
+	(void)data;
+#endif
+	return (0);
+}

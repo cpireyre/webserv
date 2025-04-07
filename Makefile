@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/07 10:27:50 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/07 14:00:08 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -47,6 +47,10 @@ re: fclean
 
 .PHONY: test
 test: all
-	./$(NAME) test.conf
+	./$(NAME) test.conf &
+	sleep 0.1
+	curl 127.0.0.1:8010/index.html
+	pkill webserv 
+
 
 -include $(obj:.o=.d)

@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/07 11:17:47 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/07 14:45:01 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,12 +94,9 @@ int	main(int argc, char **argv)
 				assert(clientSocket > 0);
 				HttpConnectionHandler handler;
 				handler.setClientSocket(clientSocket);
-				if (handler.parseRequest()) {
+				if (handler.parseRequest() == true)
 					handler.handleRequest();
-				} else {
-					std::string errorResponse = handler.createHttpResponse(400, "<h1>400 Bad Request</h1>", "text/html");
-					send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
-				}
+				exit(0);
 			}
 		}
 	}
