@@ -78,7 +78,6 @@ std::vector<Configuration> parser(std::string fileName) {
 		getRawFile(fileName, rawFile);
 	}
 	catch (std::exception &e) {
-		std
 		throw e;
 	}
 
