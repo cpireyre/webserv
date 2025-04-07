@@ -60,7 +60,7 @@ void startServer(int port, int ac, char **av) {
         if (handler.parseRequest()) {
             handler.handleRequest();
         } else {
-            std::string errorResponse = handler.createHttpResponse(400, "<h1>400 Bad Request</h1>", "text/html");
+            std::string errorResponse = handler.createHttpErrorResponse(400);
             send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
 
