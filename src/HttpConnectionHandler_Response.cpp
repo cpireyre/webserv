@@ -628,6 +628,9 @@ void	HttpConnectionHandler::handleDeleteRequest()
  * to the appropriate method handleGetRequest or handlePostRequest
  * If the method is not supported, it responds with a 405 Method Not Allowed error.
  */
+#include <string.h>
+#include <cassert>
+#include "Logger.hpp"
 void	HttpConnectionHandler::handleRequest() 
 {
 	originalPath = path;
@@ -638,6 +641,16 @@ void	HttpConnectionHandler::handleRequest()
 		CgiHandler cgiHandler(*this);
 		cgiHandler.printCgiInfo(); // Comment out when not needed
 		cgiHandler.executeCgi();
+		char buffer[1024];
+		memset(buffer, 0, 1024);
+		int size = read(cgiHandler._pipeFromCgi[0], buffer, 1024);
+		if (size < 0)
+			perror("read from cgi:");
+		assert(size >= 0);
+		write(1, buffer, size);
+		std::string response = createHttpResponse(200, buffer, "text/html");
+		Logger::debug("%s", response.c_str());
+		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}
 	if (method == "GET") {

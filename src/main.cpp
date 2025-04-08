@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/07 14:45:01 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/08 09:52:16 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,9 +35,15 @@ int	main(int argc, char **argv)
 		return (1);
 	}
 
-	serverMap = parser(argv[1]);
-	if (serverMap.size() < 1)
-		return (1);
+	try {
+		serverMap = parser(argv[1]);
+		if (serverMap.size() < 1)
+			return (1);
+	}
+	catch (std::exception &e) {
+		e.what();
+	}
+	
 
 	handlesignals(sigcleanup);
 	int qfd = queue_create();
