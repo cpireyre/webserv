@@ -33,6 +33,9 @@ class HttpConnectionHandler
 		Configuration							*conf;
 		LocationBlock							*locBlock;
 
+		//response stuff
+		int		errorCode;
+
 		//Parsing
 		bool		getMethodPathVersion(std::istringstream &requestStream);
 		bool		getHeaders(std::istringstream &requestStream);
@@ -40,6 +43,7 @@ class HttpConnectionHandler
 		std::string	getContentType(const std::string &path);
 
 		//Creating HTTP response
+		std::string	getDefaultErrorPage500();
 		std::string	getReasonPhrase(int statusCode);
 		std::string	getCurrentHttpDate();
 
@@ -74,6 +78,7 @@ class HttpConnectionHandler
 		std::string	createHttpRedirectResponse(int statusCode, const std::string &location);
 
 		// Getters
+		int						getErrorCode() const { return errorCode; }
 		int						getClientSocket() const { return clientSocket; }
 		const std::string				&getMethod() const { return method; }
 		const std::string				&getPath() const { return path; }

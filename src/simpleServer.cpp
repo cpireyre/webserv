@@ -63,7 +63,7 @@ void startServer(int port, int ac, char **av) {
         if (handler.parseRequest()) {
             handler.handleRequest();
         } else {
-            std::string errorResponse = handler.createHttpErrorResponse(400);
+            std::string errorResponse = handler.createHttpErrorResponse(handler.getErrorCode());
             send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
         }
 
