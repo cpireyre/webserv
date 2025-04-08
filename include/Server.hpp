@@ -3,6 +3,8 @@
 # include "Configuration.hpp"
 # include "Socket.hpp"
 # include "Logger.hpp"
+# include "HttpConnectionHandler.hpp"
+# include <csignal>
 
 constexpr int PORT_STRLEN = 12;
 
