@@ -1,5 +1,32 @@
 #include "HttpConnectionHandler.hpp"
 
+std::string HttpConnectionHandler::getCurrentHttpDate()
+{
+    std::time_t t = std::time(nullptr);
+    struct tm* tm_info = std::gmtime(&t);
+
+    std::ostringstream oss;
+    oss << std::put_time(tm_info, "%a, %d %b %Y %H:%M:%S GMT");
+    
+    return oss.str();
+}
+
+std::string HttpConnectionHandler::getDefaultErrorPage500()
+{
+	std::ostringstream oss;
+	oss << "HTTP/1.1 500 Internal Server Error\r\n";
+	oss << "Content-Type: text/html; charset=UTF-8\r\n";
+	oss << "Connection: close\r\n";
+	oss << "Date: " << getCurrentHttpDate() << "\r\n";
+	oss << "\r\n";
+	oss << "<html><head><title>500 Internal Server Error</title></head>";
+	oss << "<body><h1>500 Internal Server Error</h1>";
+	oss << "<p>Sorry, something went wrong while handling your request.</p>";
+	oss << "</body></html>";
+	return oss.str();
+}
+
+
 std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
 {
     static const std::map<int, std::string> reasonPhrases =
@@ -16,7 +43,8 @@ std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
 	    {413, "Payload Too Large"},
 	    {500, "Internal Server Error"},
 	    {501, "Not Implemented"},
-	    {503, "Service Unavailable"}
+	    {503, "Service Unavailable"},
+	    {505, "HTTP Version not supported"}
 	    // add more when needed!
     };
 
@@ -25,17 +53,6 @@ std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
 	    return it->second;
     }
     return "Unknown Status";
-}
-
-std::string HttpConnectionHandler::getCurrentHttpDate()
-{
-    std::time_t t = std::time(nullptr);
-    struct tm* tm_info = std::gmtime(&t);
-
-    std::ostringstream oss;
-    oss << std::put_time(tm_info, "%a, %d %b %Y %H:%M:%S GMT");
-    
-    return oss.str();
 }
 
 std::string HttpConnectionHandler::createHttpErrorResponse(int error)
@@ -50,14 +67,14 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 	}
 	else {
 		logError("Error page " + std::to_string(error) + " Not found");
-		exit(42);
+		return getDefaultErrorPage500();
 	}
 
 	errorPath = "." + errorPath;
 	std::ifstream file(errorPath.c_str());
 	if (!file.is_open()) {
 		logError("Cant open error page location " + errorPath);
-		exit(42);
+		return getCurrentHttpDate();
 	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
