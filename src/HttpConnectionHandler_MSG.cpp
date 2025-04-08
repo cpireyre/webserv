@@ -52,7 +52,8 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 		logError("Error page " + std::to_string(error) + " Not found");
 		exit(42);
 	}
-	
+
+	errorPath = "." + errorPath;
 	std::ifstream file(errorPath.c_str());
 	if (!file.is_open()) {
 		logError("Cant open error page location " + errorPath);

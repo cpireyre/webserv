@@ -38,6 +38,7 @@ bool	HttpConnectionHandler::parseRequest()
 	std::string	rawRequest;
 	int			bRead;
 
+	logInfo("Parsing connection on socket " + std::to_string(clientSocket));
 	while ((bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0)) > 0)
 	{
 		buffer[bRead] = '\0';
