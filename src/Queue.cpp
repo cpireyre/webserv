@@ -135,7 +135,10 @@ int	queue_rem_fd(int qfd, int fd)
 	}
 #else
 	struct kevent e;
-	EV_SET(&e, fd, 0, EV_DELETE, 0, 0, 0)
+
+	EV_SET(&e, fd, 0, EV_DELETE, 0, 0, 0);
+
+	if (kevent(qfd, &e, 1, NULL, 0, NULL) < 0)
 	{
 		Logger::warn("Error deleting fd: kevent");
 		return (-1);
@@ -159,7 +162,7 @@ int	queue_wait(int qfd, queue_event *events, int events_count)
 		return (-1);
 	}
 #else
-	nready = kevent(qfd, NULL, 0, e, elen, NULL);
+	nready = kevent(qfd, NULL, 0, events, events_count, NULL);
 	if (nready < 0)
 	{
 		Logger::warn("Error: kevent");
