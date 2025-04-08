@@ -2,6 +2,7 @@
 #include "HttpConnectionHandler.hpp"
 #include "Configuration.hpp"
 #include "Logger.hpp"
+#include <sys/wait.h>
 
 CgiHandler::CgiHandler(HttpConnectionHandler conn) {
 	if (conn.getCgiType() == PYTHON)
@@ -129,15 +130,15 @@ void CgiHandler::executeCgi() {
 
         // set the parent's pipe file descriptors to non-blocking mode.
 		// chatgpt says this is how you do it:
-        /* int flags = fcntl(_pipeToCgi[1], F_GETFL, 0); */
-        /* if (flags == -1) */
-			/* flags = 0; */
-        /* fcntl(_pipeToCgi[1], F_SETFL, flags | O_NONBLOCK); */
+        int flags = fcntl(_pipeToCgi[1], F_GETFL, 0);
+        if (flags == -1)
+			flags = 0;
+        fcntl(_pipeToCgi[1], F_SETFL, flags | O_NONBLOCK);
 
-        /* flags = fcntl(_pipeFromCgi[0], F_GETFL, 0); */
-        /* if (flags == -1) */
-			/* flags = 0; */
-        /* fcntl(_pipeFromCgi[0], F_SETFL, flags | O_NONBLOCK); */
+        flags = fcntl(_pipeFromCgi[0], F_GETFL, 0);
+        if (flags == -1)
+			flags = 0;
+        fcntl(_pipeFromCgi[0], F_SETFL, flags | O_NONBLOCK);
 
         // Attempt to write POST data (if any) to the CGI process in a non-blocking fashion.
         if (!_postData.empty()) {
@@ -161,7 +162,7 @@ void CgiHandler::executeCgi() {
             _pipeToCgi[1] = -1;
         }
 
-		// this is where we normally waitpid, but how does it work with non-blocking?
-		// will Colin handle it in the event loop?
+		int status;
+		waitpid(_cgiPid, &status, 0);
     }
 }
