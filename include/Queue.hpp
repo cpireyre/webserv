@@ -12,12 +12,14 @@
 	typedef struct kevent queue_event;
 #endif
 
-# define QUEUE_MAX_EVENTS 64
+constexpr int QUEUE_MAX_EVENTS = 64;
 
 enum queue_event_type {
 	QUEUE_EVENT_READ,
 	QUEUE_EVENT_WRITE,
 };
 
-int	queue_create(void);
-int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data);
+int		queue_create(void);
+int		queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data);
+int		queue_wait(int qfd, queue_event *events, int events_count);
+void	*queue_event_get_data(const queue_event *e);

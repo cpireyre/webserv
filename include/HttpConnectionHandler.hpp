@@ -14,10 +14,6 @@
 
 extern std::vector<Configuration> serverMap;
 
-#include "../include/Configuration.hpp"
-
-extern std::vector<Configuration> serverMap;
-
 class HttpConnectionHandler
 {
 	private:
@@ -34,7 +30,7 @@ class HttpConnectionHandler
 		std::string							extension;
 		CgiTypes							cgiType;
 
-		Configuration						*conf;
+		/* Configuration						*conf; */
 		LocationBlock						*locBlock;
 
 		bool		getMethodPathVersion(std::istringstream &requestStream);
@@ -60,6 +56,7 @@ class HttpConnectionHandler
 		CgiTypes	checkCgi();
 		
 	public:
+		Configuration						*conf;
 		//Parse Http request
 		bool	parseRequest();
 

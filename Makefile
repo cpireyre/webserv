@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/03/31 14:38:16 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/07 14:00:08 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,7 @@ debug := -DDEBUG
 CPPFLAGS := -I./include/ $(debug)
 NAME := webserv
 
-src_files := main.cpp Logger.cpp Socket.cpp Configuration.cpp Parser.cpp Server.cpp Queue.cpp
+src_files := CgiHandler.cpp Configuration.cpp HttpConnectionHandler_CGI.cpp HttpConnectionHandler_Parsing.cpp HttpConnectionHandler_Response.cpp Logger.cpp main.cpp Parser.cpp Queue.cpp Server.cpp Socket.cpp
 NAME := webserv
 
 src = $(addprefix ./src/, $(src_files))
@@ -47,6 +47,10 @@ re: fclean
 
 .PHONY: test
 test: all
-	./$(NAME) test.conf
+	./$(NAME) test.conf &
+	sleep 0.1
+	curl 127.0.0.1:8010/index.html
+	pkill webserv 
+
 
 -include $(obj:.o=.d)

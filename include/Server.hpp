@@ -3,14 +3,38 @@
 # include "Configuration.hpp"
 # include "Socket.hpp"
 # include "Logger.hpp"
+# include "HttpConnectionHandler.hpp"
+# include <csignal>
 
-# define PORT_STRLEN 12
+constexpr int PORT_STRLEN = 12;
 
-typedef struct IPAndPort {
-	int		sockfd;
-	char	IP[INET6_ADDRSTRLEN];
-	char	port[PORT_STRLEN];
-} IPAndPort_t;
+enum endpoint_type_t {
+	ENDPOINT_SERVER,
+	ENDPOINT_CLIENT,
+};
 
-int	start_servers(std::vector<Configuration> servers, IPAndPort_t *endpoints, int endpoints_count_max, int *endpoints_count);
-void	cleanup(IPAndPort_t *endpoints, int endpoints_count, int qfd);
+class Endpoint_t {
+	public:
+		int						sockfd;
+		char					IP[INET6_ADDRSTRLEN];
+		char					port[PORT_STRLEN];
+		enum endpoint_type_t	type;
+		HttpConnectionHandler	*handler;
+};
+
+
+int		start_servers(std::vector<Configuration> servers, Endpoint_t *endpoints,
+		int endpoints_count_max, int *endpoints_count);
+void	cleanup(Endpoint_t *endpoints, int endpoints_count, int qfd);
+
+constexpr int MAXCONNS = 1024;
+static_assert((MAXCONNS < 2100000), "The Hive machine I tested this on "
+	   	"could not handle this many.");
+
+class Connection {
+	public:
+		Endpoint_t				endpoint;
+		bool					alive;
+};
+
+Connection	*connectNewClient(Connection *conns, const Endpoint_t *endp);

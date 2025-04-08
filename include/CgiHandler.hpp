@@ -18,7 +18,7 @@ enum CgiTypes
 
 class CgiHandler
 {
-	private:
+	public:
 		std::string _contentLength;
 		std::string _contentType;
 		std::string _gatewayInterface;
