@@ -30,7 +30,7 @@ class HttpConnectionHandler
 		std::string							extension;
 		CgiTypes							cgiType;
 
-		Configuration						*conf;
+		/* Configuration						*conf; */
 		LocationBlock						*locBlock;
 
 		bool		getMethodPathVersion(std::istringstream &requestStream);
@@ -56,6 +56,7 @@ class HttpConnectionHandler
 		CgiTypes	checkCgi();
 		
 	public:
+		Configuration						*conf;
 		//Parse Http request
 		bool	parseRequest();
 

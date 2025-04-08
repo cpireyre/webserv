@@ -81,6 +81,7 @@ Connection	*connectNewClient(Connection *conns, const Endpoint_t *endp)
 {
 	assert(conns != NULL);
 	assert(endp->sockfd > 0);
+
 	struct sockaddr client_addr;
 	socklen_t		client_addr_len = sizeof(client_addr);
 	memset(&client_addr, 0, client_addr_len);
@@ -94,7 +95,6 @@ Connection	*connectNewClient(Connection *conns, const Endpoint_t *endp)
 	int i = 0;
 	while (conns[i].alive == true)
 		i++;
-	assert(i == 0);
 	conns[i].alive = true;
 	conns[i].endpoint.sockfd = clientSocket;
 	conns[i].endpoint.type = ENDPOINT_CLIENT;
@@ -123,22 +123,38 @@ static void handlesignals(void(*hdl)(int))
 
 int	run(std::vector<Configuration> serverMap)
 {
+	assert(!serverMap.empty());
+
 	int	error = 1;
 
-	handlesignals(sigcleanup);
 	int qfd = queue_create();
 	if (qfd < 0)
 		return (1);
+	handlesignals(sigcleanup);
 
-	const int	endpoints_count_max = serverMap.size();
+	Connection	conns[MAXCONNS];
+	for (int i = 0; i < MAXCONNS; i++)
+	{
+		conns[i].endpoint.sockfd = 0;
+		memset(conns[i].endpoint.IP, 0, INET6_ADDRSTRLEN);
+		memset(conns[i].endpoint.port, 0, PORT_STRLEN);
+		conns[i].endpoint.type = ENDPOINT_CLIENT;
+		conns[i].alive = false;
+	}
+
+	Endpoint_t	*endpoints = NULL;
 	int	endpoints_count = 0;
-	Endpoint_t	*endpoints = new(std::nothrow) Endpoint_t[endpoints_count_max];
+	const int	endpoints_count_max = serverMap.size();
+
+	endpoints = new(std::nothrow) Endpoint_t[endpoints_count_max];
 	if (endpoints == NULL)
 		goto cleanup;
+
 	error = start_servers(serverMap, endpoints,
 			endpoints_count_max, &endpoints_count);
 	if (error)
 		goto cleanup;
+
 	for (int i = 0; i < endpoints_count; i++)
 	{
 		error = queue_add_fd(qfd, endpoints[i].sockfd, QUEUE_EVENT_READ, &endpoints[i]);
@@ -152,8 +168,6 @@ int	run(std::vector<Configuration> serverMap)
 
 	queue_event events[QUEUE_MAX_EVENTS];
 	memset(events, 0, sizeof(events));
-	Connection	conns[MAXCONNS];
-	memset(conns, 0, sizeof(conns));
 	while (!g_ServerShoudClose)
 	{
 		assert(g_ServerShoudClose == false);
@@ -170,8 +184,6 @@ int	run(std::vector<Configuration> serverMap)
 			if (endp->type == ENDPOINT_SERVER)
 			{
 				Connection *client = connectNewClient(conns, endp);
-				printf("Serve socket: %d\n", endp->sockfd);
-				printf("Current Client socket: %d\n", client->endpoint.sockfd);
 				queue_add_fd(qfd, client->endpoint.sockfd, QUEUE_EVENT_READ, client);
 			}
 			else if (endp->type == ENDPOINT_CLIENT)
@@ -182,7 +194,7 @@ int	run(std::vector<Configuration> serverMap)
 				handler.setClientSocket(clientSocket);
 				if (handler.parseRequest() == true)
 					handler.handleRequest();
-				exit(0);
+				close(clientSocket);
 			}
 		}
 	}
