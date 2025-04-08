@@ -2,6 +2,10 @@
 
 int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	int brace = 0;
+
+	std::regex confRegex(R"((.+)\.conf$)");
+	if (!std::regex_search(fileName, confRegex))
+		throw std::runtime_error("File extension must be .conf");
 	
 	std::ifstream file(fileName);
 	if (!file)
@@ -76,12 +80,10 @@ std::vector<Configuration> parser(std::string fileName) {
 	
 	try {
 		getRawFile(fileName, rawFile);
+		populateConfigMap(rawFile, serverMap);
 	}
 	catch (std::exception &e) {
-		throw e;
+		throw;
 	}
-
-	populateConfigMap(rawFile, serverMap);
-
 	return serverMap;
 }
