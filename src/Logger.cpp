@@ -6,19 +6,21 @@
 /*   By: copireyr <copireyr@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 14:13:24 by copireyr          #+#    #+#             */
-/*   Updated: 2025/03/19 14:43:23 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/09 09:44:03 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Logger.hpp"
+#include <cerrno>
+#include <cstdlib>
 
 static void	verr(const char *fmt, va_list ap)
 {
 	vfprintf(stderr, fmt, ap);
 	if (fmt[0] && fmt[strlen(fmt) - 1] == ':')
-		std::cerr << " " << strerror(errno) << "\n";
+		dprintf(2, " %s\n", strerror(errno));
 	else
-		std::cerr << "\n";
+		dprintf(2, "\n");
 }
 
 void	Logger::warn(const char *fmt, ...)
@@ -41,7 +43,7 @@ void	Logger::die(const char *fmt, ...)
 static void	verr_short(const char *fmt, va_list ap)
 {
 	vfprintf(stderr, fmt, ap);
-	std::cerr << "\n";
+	dprintf(2, "\n");
 }
 
 void	Logger::warn_short(const char *fmt, ...)
@@ -55,11 +57,11 @@ void	Logger::warn_short(const char *fmt, ...)
 void	Logger::debug(const char *fmt, ...)
 {
 #ifdef DEBUG
-		std::cerr << "DEBUG: ";
-		va_list	ap;
-		va_start(ap, fmt);
-		verr_short(fmt, ap);
-		va_end(ap);
+	dprintf(2, "DEBUG: ");
+	va_list	ap;
+	va_start(ap, fmt);
+	verr_short(fmt, ap);
+	va_end(ap);
 #endif
-		(void)fmt;
+	(void)fmt;
 }
