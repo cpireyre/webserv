@@ -5,7 +5,7 @@
 #include "../include/Parser.hpp"
 #include "../include/HttpConnectionHandler.hpp"
 
-#define PORT 8080
+#define PORT 8081
 
 std::vector<Configuration> serverMap;
 

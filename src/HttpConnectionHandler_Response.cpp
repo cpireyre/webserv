@@ -38,14 +38,20 @@ std::string	HttpConnectionHandler::createHttpResponse(int statusCode, const std:
  */
 std::string	HttpConnectionHandler::createHttpRedirectResponse(int statusCode, const std::string &location)
 {
-    std::string response = "HTTP/1.1 " + std::to_string(statusCode) + " Moved Permanently\r\n";
-    response += "Location: " + location + "/\r\n";
-    response += "Content-Type: text/html\r\n";
-    std::string body = "<h1>301 Moved Permanently</h1><p>Try " + path + "/</p>";
-    response += "Content-Length: " + std::to_string(body.length()) + "\r\n\r\n";
-    response += body;
-
-    return response;
+	std::string response;
+	if (statusCode == 301) {
+		response = "HTTP/1.1 " + std::to_string(statusCode) + " Moved Permanently\r\n";
+		response += "Location: " + location + "/\r\n";
+	}
+	else if (statusCode == 307) {
+		response = "HTTP/1.1 " + std::to_string(statusCode) + " Temporary Redirection\r\n";
+		response += "Location: " + location + "\r\n";
+	}
+	response += "Content-Type: text/html\r\n\r\n";
+	//std::string body = "<h1>301 Moved Permanently</h1><p>Try " + path + "/</p>";
+	//response += "Content-Length: " + std::to_string(body.length()) + "\r\n\r\n";
+	//response += body;
+	return response;
 }
 
 /* determines the content type based on the file extension
@@ -111,6 +117,7 @@ LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBloc
 	for (LocationBlock &block : blocks) {
 		if (path.compare(0, block.path.length(), block.path) == 0)
 		{
+			std::cout << "FOUND: " << block.path << " & " << path << std::endl;
 			current = &block;
 			return (findLocationBlock(block.nestedLocations, current));
 		}
@@ -159,6 +166,12 @@ bool	HttpConnectionHandler::checkLocation()
 		return false;
 	}
 	locBlock = block;
+	//check redirections
+	if (block->returnCode == 307) {
+		std::string response = createHttpRedirectResponse(307, block->returnURL);
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return false;
+	}
 
 	if (!isMethodAllowed(block, method)) {
 		logError("Method " + method + " not allowed in location " + block->path);
@@ -316,7 +329,7 @@ void	HttpConnectionHandler::handleGetRequest()
 
 	if (std::filesystem::is_directory(filePath)) { //if request /directory was actually directory without trailing / WIP
 		logInfo("301 moved permanently, not handled yet. sending generic response");
-		std::string response = createHttpResponse(301, "<h1>301 Moved permanently.</h1>", "text/html");
+		std::string response = createHttpRedirectResponse(301, originalPath);
 		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}
