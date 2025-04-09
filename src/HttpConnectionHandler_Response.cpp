@@ -643,7 +643,8 @@ void	HttpConnectionHandler::handleRequest()
 		cgiHandler.executeCgi();
 		char buffer[1024];
 		memset(buffer, 0, 1024);
-		int size = read(cgiHandler._pipeFromCgi[0], buffer, 1024);
+		int* pipeFromCgi = cgiHandler.getPipeFromCgi();
+		int size = read(pipeFromCgi[0], buffer, 1024);
 		if (size < 0)
 			perror("read from cgi:");
 		assert(size >= 0);

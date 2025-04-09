@@ -18,7 +18,7 @@ enum CgiTypes
 
 class CgiHandler
 {
-	public:
+	private:
 		std::string _contentLength;
 		std::string _contentType;
 		std::string _gatewayInterface;
@@ -47,6 +47,12 @@ class CgiHandler
 		int			_waitpidRes;
 	public:
 		CgiHandler(HttpConnectionHandler conn);
-		void executeCgi();
-		void printCgiInfo();
+		void 		executeCgi();
+		void 		printCgiInfo();
+		int*		getPipeToCgi();
+		int*		getPipeFromCgi();
+		pid_t		getCgiPid();
+		std::string	getPostData();
+		size_t		getPostDataOffset();
+		int			getWaitpidRes();
 };

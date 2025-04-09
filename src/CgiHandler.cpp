@@ -4,6 +4,13 @@
 #include "Logger.hpp"
 #include <sys/wait.h>
 
+int*		CgiHandler::getPipeToCgi() { return _pipeToCgi; }
+int*		CgiHandler::getPipeFromCgi() { return _pipeFromCgi; }
+pid_t		CgiHandler::getCgiPid() { return _cgiPid; }
+std::string	CgiHandler::getPostData() { return _postData; }
+size_t		CgiHandler::getPostDataOffset() { return _postDataOffset; }
+int			CgiHandler::getWaitpidRes() { return _waitpidRes; }
+
 CgiHandler::CgiHandler(HttpConnectionHandler conn) {
 	if (conn.getCgiType() == PYTHON)
 		_pathToInterpreter = conn.getLocationBlock()->cgiPathPython + "/python3";
