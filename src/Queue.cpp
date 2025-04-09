@@ -81,6 +81,7 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 
 #ifdef __linux__
 	struct epoll_event e;
+	memset(&e, 0, sizeof(e));
 
 	switch (t) {
 		case QUEUE_EVENT_READ:

@@ -163,6 +163,6 @@ void CgiHandler::executeCgi() {
         }
 
 		int status;
-		waitpid(_cgiPid, &status, 0);
+		_waitpidRes = waitpid(_cgiPid, &status, 0);
     }
 }
