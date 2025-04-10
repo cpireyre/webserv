@@ -6,13 +6,13 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/07 14:00:08 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/10 14:57:45 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
 CC := c++
-CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
+CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20 -g3
 debug := -DDEBUG
 CPPFLAGS := -I./include/ $(debug)
 NAME := webserv
@@ -47,10 +47,7 @@ re: fclean
 
 .PHONY: test
 test: all
-	./$(NAME) test.conf &
-	sleep 0.1
-	curl 127.0.0.1:8010/index.html
-	pkill webserv 
+	./$(NAME) test.conf
 
 
 -include $(obj:.o=.d)

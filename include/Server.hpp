@@ -8,33 +8,36 @@
 
 constexpr int PORT_STRLEN = 12;
 
-enum endpoint_type_t {
+enum EndpointKind {
 	ENDPOINT_SERVER,
 	ENDPOINT_CLIENT,
+	ENDPOINT_UNKNOWN,
 };
 
-class Endpoint_t {
+enum ConnectionState {
+	CONNECTION_RECV_HEADER,
+	CONNECTION_SEND_RESPONSE,
+	CONNECTION_DISCONNECTED,
+};
+
+class Endpoint {
 	public:
 		int						sockfd;
 		char					IP[INET6_ADDRSTRLEN];
 		char					port[PORT_STRLEN];
-		enum endpoint_type_t	type;
-		HttpConnectionHandler	*handler;
+		bool					alive;
+		EndpointKind			kind;
+		HttpConnectionHandler	handler; // Only for clients
+		ConnectionState			state; // Only for clients
 };
 
 
-int		start_servers(std::vector<Configuration> servers, Endpoint_t *endpoints,
+int		start_servers(std::vector<Configuration> servers, Endpoint *endpoints,
 		int endpoints_count_max, int *endpoints_count);
-void	cleanup(Endpoint_t *endpoints, int endpoints_count, int qfd);
+void	cleanup(Endpoint *endpoints, int endpoints_count, int qfd);
 
-constexpr int MAXCONNS = 1024;
+constexpr int MAXCONNS = 4096;
 static_assert((MAXCONNS < 2100000), "The Hive machine I tested this on "
 	   	"could not handle this many.");
 
-class Connection {
-	public:
-		Endpoint_t				endpoint;
-		bool					alive;
-};
-
-Connection	*connectNewClient(Connection *conns, const Endpoint_t *endp);
+Endpoint	*connectNewClient(HttpConnectionHandler *handlers, const Endpoint *endp);
