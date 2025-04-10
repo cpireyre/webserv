@@ -55,6 +55,59 @@ std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
     return "Unknown Status";
 }
 
+/* creates an HTTP response string with the given status code, body content, and content type
+ *
+ * generates basic HTTP response string for the server to send to client
+ * the response includes a status line (HTTP version, status code, and status text),
+ * headers for content length, content type, and connection status, followed by the body
+ * very basic version, done for GET initially. missing time stamp also?
+ *
+ * @param statusCode The HTTP status code (200 for OK, 404 for Not Found etc)
+ * @param body The body of the HTTP response (HTML content, error message, etc)
+ * @param contentType The content type of the response body ("text/html", "application/json", etc).
+ *
+ * @return A string representing the full HTTP response, ready to be sent to the client.
+ *
+ * Example:
+ *   std::string response = createHttpResponse(200, "<h1>Success</h1>", "text/html");
+ */
+std::string	HttpConnectionHandler::createHttpResponse(int statusCode, const std::string &body, const std::string &contentType)
+{
+	std::string statusText = statusCode < 400 ? "OK" : "Not Found";
+
+	std::ostringstream response;
+	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n";
+	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
+	response << "Content-Length: " << body.size() << "\r\n";
+	response << "Content-Type: " << contentType << "\r\n";
+	response << "Connection: close\r\n";
+	response << "\r\n";
+	response << body;
+
+	return response.str();
+}
+
+/* handles creating HTTP response when DELETE or GET request gets 301 for example
+ * when trying to access directory with no trailing /, example DELETE /directory HTTP/1.1
+ */
+std::string	HttpConnectionHandler::createHttpRedirectResponse(int statusCode, const std::string &location)
+{
+	std::ostringstream response;
+	if (statusCode == 301) {
+		response << "HTTP/1.1 " << std::to_string(statusCode) << " Moved Permanently\r\n";
+		response << "Location: " << location + "/\r\n";
+	}
+	else if (statusCode == 307) {
+		response << "HTTP/1.1 " << std::to_string(statusCode) << " Temporary Redirection\r\n";
+		response << "Location: " << location << "\r\n";
+	}
+	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
+	response << "Content-Type: text/html\r\n";
+	response << "Content-Length: 0\r\n\r\n";
+	return response.str();
+}
+
+
 std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 {
 	std::ostringstream			response;
@@ -81,6 +134,13 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 	std::string body = buffer.str();
 
 	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
+	if (error == 405) {
+		response << "Allow:";
+		for (const auto method : locBlock->methods) {
+			response << " " << method;
+		}
+		response << "\r\n";
+	}
 	response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << body.size() << "\r\n";
 	response << "Connection: close\r\n\r\n";
