@@ -188,7 +188,6 @@ int	run(std::vector<Configuration> serverMap)
 				assert(endp->alive == true);
 				switch (endp->state) {
 					case CONNECTION_RECV_HEADER: 
-						Logger::debug("hi this should print only once per request");
 						endp->handler.parseRequest(); // TODO(colin) error manage here
 						assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
 						endp->state = CONNECTION_SEND_RESPONSE;
