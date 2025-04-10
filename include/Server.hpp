@@ -11,11 +11,13 @@ constexpr int PORT_STRLEN = 12;
 enum EndpointKind {
 	ENDPOINT_SERVER,
 	ENDPOINT_CLIENT,
+	ENDPOINT_UNKNOWN,
 };
 
 enum ConnectionState {
 	CONNECTION_RECV_HEADER,
 	CONNECTION_SEND_RESPONSE,
+	CONNECTION_DISCONNECTED,
 };
 
 class Endpoint {

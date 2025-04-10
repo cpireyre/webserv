@@ -33,7 +33,13 @@ int	start_servers(std::vector<Configuration> servers, Endpoint *endpoints, int e
 static void	initEndpoint(int sockfd, std::string host, std::string port, Endpoint *endpoint)
 {
 	assert(endpoint != nullptr);
-	memset(endpoint, 0, sizeof(*endpoint));
+	endpoint->sockfd = 0;
+	endpoint->IP[0] = '\0';
+	endpoint->port[0] = '\0';
+	endpoint->alive = false;
+	endpoint->kind = ENDPOINT_UNKNOWN;
+	endpoint->handler = HttpConnectionHandler();
+	endpoint->state = CONNECTION_DISCONNECTED;
 	int i = 0;
 	for (char c : host)
 		endpoint->IP[i++] = c;
@@ -197,6 +203,9 @@ int	run(std::vector<Configuration> serverMap)
 						/* assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_READ, endp) == 0); // & here */
 						queue_rem_fd(qfd,endp->handler.getClientSocket());
 						endp->state = CONNECTION_RECV_HEADER;
+						break;
+					case CONNECTION_DISCONNECTED:
+						/* Do something maybe */
 						break;
 				}
 			}
