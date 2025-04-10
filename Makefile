@@ -6,12 +6,12 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/10 10:42:55 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/10 14:57:45 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
-CC := clang++
+CC := c++
 CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20 -g3
 debug := -DDEBUG
 CPPFLAGS := -I./include/ $(debug)
