@@ -74,7 +74,6 @@ void	cleanup(Endpoint *endpoints, int endpoints_count, int qfd)
 			close(endpoints[i].sockfd);
 		}
 		Logger::debug("Deleting endpoints array");
-		delete[] endpoints;
 	}
 	close(qfd);
 }
@@ -196,7 +195,8 @@ int	run(std::vector<Configuration> serverMap)
 						break;
 					case CONNECTION_SEND_RESPONSE:
 						endp->handler.handleRequest();
-						assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_READ, endp) == 0); // & here
+						/* assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_READ, endp) == 0); // & here */
+						queue_rem_fd(qfd,endp->handler.getClientSocket());
 						endp->state = CONNECTION_RECV_HEADER;
 						break;
 				}

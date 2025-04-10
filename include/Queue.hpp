@@ -24,3 +24,4 @@ int		queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data);
 int		queue_wait(int qfd, queue_event *events, int events_count);
 void	*queue_event_get_data(const queue_event *e);
 int		queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data);
+int		queue_rem_fd(int qfd, int fd);
