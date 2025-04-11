@@ -38,6 +38,7 @@ bool	HttpConnectionHandler::parseRequest()
 	std::string	rawRequest;
 	int			bRead;
 
+	logInfo("Parsing connection on socket " + std::to_string(clientSocket));
 	while ((bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0)) > 0)
 	{
 		buffer[bRead] = '\0';
@@ -48,10 +49,12 @@ bool	HttpConnectionHandler::parseRequest()
 	}
 	if (bRead <= 0) {
 		HttpConnectionHandler::logError("Reading from the socket");
+		errorCode = 400;
 		return false;
 	}
 	else if (rawRequest.empty()) {
 		HttpConnectionHandler::logError("Empty request received");
+		errorCode = 400;
 		return false;
 	}
 
@@ -89,10 +92,11 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 
 	if (!std::getline(requestStream, firstLine) || firstLine.empty()) {
 		HttpConnectionHandler::logError("Failed to receive first line");
+		errorCode = 400;
 		return false;
 	}
 
-	std::regex	httpRegex(R"(^([A-Z]+) (\/\S+) (HTTP\/[1]\.[1,0])\r$)");
+	std::regex	httpRegex(R"(^([A-Z]+) (\/\S*) (HTTP\/\d(?:\.\d)?)\r$)");
 	std::smatch	matches;
 	if (std::regex_match(firstLine, matches, httpRegex)) {
 		method = matches[1];
@@ -101,11 +105,18 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 	}
 	else {
 		HttpConnectionHandler::logError("Invalid syntax on request first line: " + firstLine);
+		errorCode = 400;
 		return false;
 	}
 
-	if (method != "GET" && method != "POST" && method != "DELETE") { //405
+	if (method != "GET" && method != "POST" && method != "DELETE") {
 		HttpConnectionHandler::logError("Invalid method: " + method);
+		errorCode = 501;
+		return false;
+	}
+	else if (httpVersion != "HTTP/1.1") {
+		HttpConnectionHandler::logError("Unsupported HTTP version: " + httpVersion);
+		errorCode = 505;
 		return false;
 	}
 
@@ -139,6 +150,7 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 			std::string headerName = headerMatches[1];
 			if (headerName[0] == '-' || headerName[headerName.size() - 1] == '-') {
 				HttpConnectionHandler::logError("Invalid header: " + headerName);
+				errorCode = 400;
 				return false;
 			}
 			std::string headerValue = headerMatches[2];
@@ -146,14 +158,15 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 		}
 		else {
 			HttpConnectionHandler::logError("Invalid header format: " + headerLine);
-			std::cerr << "Invalid header format: " << headerLine << std::endl;
+			errorCode = 400;
 			return false;
 		}
 	}
 
 	//check host header exist in 1.1
-	if (httpVersion == "HTTP/1.1" && headers.find("Host") == headers.end()) {
+	if (headers.find("Host") == headers.end()) {
 		HttpConnectionHandler::logError("Missing Host header");
+		errorCode = 400;
 		return false;
 	}
 	else {
@@ -188,12 +201,14 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 		contentLength = std::stoi(headers["Content-Length"]);
 		if (contentLength < 0) {
 			HttpConnectionHandler::logError("Negative Content-Length");
+			errorCode = 400;
 			return false;
 		}
 	}
 	catch (...)
 	{
 		HttpConnectionHandler::logError("Invalid Content-Length value:" + headers["Content-Length"]);
+		errorCode = 400;
 		return false;
 	}
 
@@ -201,6 +216,7 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 	std::string::size_type	bodyStart = rawRequest.find("\r\n\r\n");
 	if (bodyStart == std::string::npos) {
 		HttpConnectionHandler::logError("Failed to find the end of the headers!");
+		errorCode = 400;
 		return false;
 	}
 	bodyStart += 4;
@@ -215,6 +231,7 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 		bRead = recv(clientSocket, buffer, readSize, 0);
 		if (bRead <= 0) {
 			HttpConnectionHandler::logError("Connection closed while reading body");
+			errorCode = 400;
 			return false;
 		}
 		body.append(buffer, bRead);

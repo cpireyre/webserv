@@ -2,52 +2,6 @@
 #include "Configuration.hpp"
 #include "CgiHandler.hpp"
 
-/* creates an HTTP response string with the given status code, body content, and content type
- *
- * generates basic HTTP response string for the server to send to client
- * the response includes a status line (HTTP version, status code, and status text),
- * headers for content length, content type, and connection status, followed by the body
- * very basic version, done for GET initially. missing time stamp also?
- *
- * @param statusCode The HTTP status code (200 for OK, 404 for Not Found etc)
- * @param body The body of the HTTP response (HTML content, error message, etc)
- * @param contentType The content type of the response body ("text/html", "application/json", etc).
- *
- * @return A string representing the full HTTP response, ready to be sent to the client.
- *
- * Example:
- *   std::string response = createHttpResponse(200, "<h1>Success</h1>", "text/html");
- */
-std::string	HttpConnectionHandler::createHttpResponse(int statusCode, const std::string &body, const std::string &contentType)
-{
-	std::string statusText = statusCode < 400 ? "OK" : "Not Found";
-
-	std::ostringstream response;
-	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n";
-	response << "Content-Length: " << body.size() << "\r\n";
-	response << "Content-Type: " << contentType << "\r\n";
-	response << "Connection: close\r\n";
-	response << "\r\n";
-	response << body;
-
-	return response.str();
-}
-
-/* handles creating HTTP response when DELETE or GET request gets 301 for example
- * when trying to access directory with no trailing /, example DELETE /directory HTTP/1.1
- */
-std::string	HttpConnectionHandler::createHttpRedirectResponse(int statusCode, const std::string &location)
-{
-    std::string response = "HTTP/1.1 " + std::to_string(statusCode) + " Moved Permanently\r\n";
-    response += "Location: " + location + "/\r\n";
-    response += "Content-Type: text/html\r\n";
-    std::string body = "<h1>301 Moved Permanently</h1><p>Try " + path + "/</p>";
-    response += "Content-Length: " + std::to_string(body.length()) + "\r\n\r\n";
-    response += body;
-
-    return response;
-}
-
 /* determines the content type based on the file extension
  *
  * checks the file extension (from the given file path) to the corresponding MIME content type
@@ -78,7 +32,7 @@ std::string HttpConnectionHandler::getContentType(const std::string &path)
 	if (extension == ".gif") return "image/gif";
 	if (extension == ".svg") return "image/svg+xml";
 	if (extension == ".ico") return "image/x-icon";
-if (extension == ".json") return "application/json";
+	if (extension == ".json") return "application/json";
 	if (extension == ".xml") return "application/xml";
 	if (extension == ".pdf") return "application/pdf";
 	if (extension == ".zip") return "application/zip";
@@ -111,6 +65,7 @@ LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBloc
 	for (LocationBlock &block : blocks) {
 		if (path.compare(0, block.path.length(), block.path) == 0)
 		{
+			std::cout << "FOUND: " << block.path << " & " << path << std::endl;
 			current = &block;
 			return (findLocationBlock(block.nestedLocations, current));
 		}
@@ -159,12 +114,23 @@ bool	HttpConnectionHandler::checkLocation()
 		return false;
 	}
 	locBlock = block;
+	//check redirections
+	if (block->returnCode == 307) {
+		std::string response = createHttpRedirectResponse(307, block->returnURL);
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return false;
+	}
 
 	if (!isMethodAllowed(block, method)) {
 		logError("Method " + method + " not allowed in location " + block->path);
-		std::string response = createHttpResponse(405, "<h1>405 Method not Allowed</h1>", "text/html");
+		std::string response = createHttpErrorResponse(405);
 		send(clientSocket, response.c_str(), response.size(), 0);
 		return false;
+	}
+	if (method == "POST" && !block->uploadDir.empty())
+	{
+		path = "./" + block->uploadDir;
+		return true;
 	}
 
 	std::string relativePath = path.substr(block->path.length());
@@ -314,9 +280,9 @@ void	HttpConnectionHandler::handleGetRequest()
 	}
 
 
-	if (std::filesystem::is_directory(filePath)) { //if request /directory was actually directory without trailing / WIP
-		logInfo("301 moved permanently, not handled yet. sending generic response");
-		std::string response = createHttpResponse(301, "<h1>301 Moved permanently.</h1>", "text/html");
+	if (std::filesystem::is_directory(filePath)) {
+		logInfo("Redirecting to " + path + "/");
+		std::string response = createHttpRedirectResponse(301, originalPath);
 		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}
@@ -364,17 +330,14 @@ bool	HttpConnectionHandler::processMultipartPart(const std::string& part,
 		return false;
 	}
 
-    	// extract file data
     	std::string fileData = part.substr(dataStart, dataEnd - dataStart);
-
-	// check if file already exists, corret behaviour overwrite or not?
-	if (access(("uploads/" + filename).c_str(), F_OK) == 0) {
+	if (access((path + filename).c_str(), F_OK) == 0) {
 		responseBody = "{ \"status\": \"error\", \"message\": \"File already exists: " + filename + "\" }";
 		return false;
 	}
 
     	// save the file
-    	std::ofstream outFile("uploads/" + filename, std::ios::binary);
+    	std::ofstream outFile(path + filename, std::ios::binary);
     	if (!outFile) {
 		responseBody = "{ \"status\": \"error\", \"message\": \"No permission to save file: " + filename + "\" }";
         	std::cerr << "Error: Could not create file: " << filename << std::endl;
@@ -585,7 +548,7 @@ void	HttpConnectionHandler::handleDeleteRequest()
         	send(clientSocket, response.c_str(), response.size(), 0);
         	return;
 	}
-	//its directory or somethung unsupported
+	//its directory or something unsupported
 	if (std::filesystem::is_directory(filePath, ec)) {
 		deleteDirectory();
 		return;
