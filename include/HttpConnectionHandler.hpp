@@ -65,7 +65,6 @@ class HttpConnectionHandler
 		CgiTypes	checkCgi();
 		
 	public:
-		Configuration						*conf;
 		//Parse Http request
 		bool	parseRequest();
 

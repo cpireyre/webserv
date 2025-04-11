@@ -136,7 +136,7 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
 	if (error == 405) {
 		response << "Allow:";
-		for (const auto method : locBlock->methods) {
+		for (const auto &method : locBlock->methods) {
 			response << " " << method;
 		}
 		response << "\r\n";
