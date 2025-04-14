@@ -32,45 +32,42 @@
  *       // Handle the error
  *   }
  */
-bool	HttpConnectionHandler::parseRequest()
+HandlerStatus	HttpConnectionHandler::parseRequest()
 {
 	char		buffer[8192];
-	std::string	rawRequest;
 	int			bRead;
 
 	logInfo("Parsing connection on socket " + std::to_string(clientSocket));
-	while ((bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0)) > 0)
-	{
-		buffer[bRead] = '\0';
-		rawRequest += buffer;
-		if (rawRequest.find("\r\n\r\n") != std::string::npos) {
-			break;
-		}
-	}
+	bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 	if (bRead <= 0) {
 		HttpConnectionHandler::logError("Reading from the socket");
 		errorCode = 400;
-		return false;
+		return S_Error;
+	}
+	buffer[bRead] = '\0';
+	rawRequest += buffer;
+	if (rawRequest.find("\r\n\r\n") == std::string::npos) {
+		return S_KeepReading;
 	}
 	else if (rawRequest.empty()) {
 		HttpConnectionHandler::logError("Empty request received");
 		errorCode = 400;
-		return false;
+		return S_Error;
 	}
 
 	std::istringstream requestStream(rawRequest);
 	if (!getMethodPathVersion(requestStream)) {
-		return false;
+		return S_Error;
 	}
 	if (!getHeaders(requestStream)) {
-		return false;
+		return S_Error;
 	}
 	//if there is body, read it completely
 	if (method == "POST" && headers.count("Content-Length")) {
 		if (!getBody(rawRequest))
-			return false;
+			return S_Error;
 	}
-	return true;
+	return S_Done;
 }
 
 /* parses the first line of the HTTP request to get the HTTP method, path, and version

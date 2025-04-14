@@ -186,19 +186,22 @@ int	run(std::vector<Configuration> serverMap)
 				assert(endp->alive == true);
 				switch (endp->state) {
 					case CONNECTION_RECV_HEADER: 
-						if (endp->handler.parseRequest())
 						{
-							assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
-							endp->state = CONNECTION_SEND_RESPONSE;
-						}
-						else /* Error reading from socket, terminate connection */
-						{
-							queue_rem_fd(qfd,endp->handler.getClientSocket());
-							endp->state = CONNECTION_DISCONNECTED;
-							endp->alive = false;
-							endp->sockfd = -1;
-							endp->handler.setClientSocket(-1);
-							close(endp->handler.getClientSocket());
+							HandlerStatus status = endp->handler.parseRequest();
+							if (status == S_Done)
+							{
+								assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
+								endp->state = CONNECTION_SEND_RESPONSE;
+							}
+							else if (status == S_Error)
+							{
+								queue_rem_fd(qfd,endp->handler.getClientSocket());
+								endp->state = CONNECTION_DISCONNECTED;
+								endp->alive = false;
+								endp->sockfd = -1;
+								endp->handler.setClientSocket(-1);
+								close(endp->handler.getClientSocket());
+							}
 						}
 						break;
 					case CONNECTION_SEND_RESPONSE:
