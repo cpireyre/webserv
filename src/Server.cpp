@@ -196,7 +196,11 @@ int	run(std::vector<Configuration> serverMap)
 					case CONNECTION_RECV_HEADER: 
 						if (!endp->handler.parseRequest())
 						{
+							queue_rem_fd(qfd,endp->handler.getClientSocket());
 							endp->state = CONNECTION_DISCONNECTED;
+							endp->alive = false;
+							endp->sockfd = -1;
+							endp->handler.setClientSocket(-1);
 							close(endp->handler.getClientSocket());
 						}
 						else
