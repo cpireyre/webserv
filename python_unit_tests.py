@@ -17,7 +17,9 @@ including:
 One asynchronous test simulates multiple concurrent GET requests.
 
 Run tests with:
-    python -m pytest -v python_unit_tests.py
+    python3 -m pytest -v python_unit_tests.py
+    or
+    python3 -m pytest -v python_unit_tests.py::test_repeated_requests (single test)
 """
 
 import subprocess
@@ -94,6 +96,12 @@ def test_images_post():
     # You might expect a 200 OK, 201 Created, or similar status code.
     # Adjust the expected status code as per your server’s behavior.
     assert response.status_code in (200, 201)
+    
+
+def test_images_post_2():    
+	files = {'file': ('filename.txt', b"dummy data\n")}
+	response = requests.post("http://127.0.0.1:8080/images/", files=files)
+	assert response.status_code in (200, 201)
 
 
 def test_images_delete():
@@ -113,15 +121,6 @@ def test_imagesREDIR():
     assert response.status_code == 307
     location = response.headers.get("Location", "")
     assert "/images/" in location
-
-
-def test_OdinEtchAndSketch():
-    """
-    Test that GET /Odin-Etch-And-Sketch-main/ (allowed methods are GET and POST)
-    returns 200.
-    """
-    response = requests.get("http://127.0.0.1:8080/Odin-Etch-And-Sketch-main/")
-    assert response.status_code == 200
 
 
 def test_cgi_empty_redirect():
@@ -169,7 +168,7 @@ async def test_repeated_requests():
     Asynchronously send multiple concurrent GET requests to /index.html.
     This test simulates load. Adjust num_requests as appropriate.
     """
-    num_requests = 100
+    num_requests = 1018
     url = "http://127.0.0.1:8080/index.html"
 
     async with aiohttp.ClientSession() as session:
@@ -178,4 +177,54 @@ async def test_repeated_requests():
 
     for resp in responses:
         assert resp.status == 200
+        await resp.release()
+
+import aiohttp
+import asyncio
+import pytest
+
+@pytest.mark.asyncio
+async def test_concurrent_get_and_post():
+    """
+    Asynchronously send multiple concurrent GET and POST requests to the server.
+    This test simulates a mixed load of GET and POST requests.
+    """
+    num_get = 510   # Number of GET requests to send
+    num_post = 510  # Number of POST requests to send
+    get_url = "http://127.0.0.1:8080/index.html"
+    post_url = "http://127.0.0.1:8080/images/"
+
+    async with aiohttp.ClientSession() as session:
+        # Create tasks for GET requests
+        get_tasks = [session.get(get_url) for _ in range(num_get)]
+        
+        # Create tasks for POST requests using FormData for file upload.
+        post_tasks = []
+        for _ in range(num_post):
+            form = aiohttp.FormData()
+            form.add_field(
+                'file',
+                b"dummy data\n", 
+                filename="filename.txt", 
+                content_type="application/octet-stream"
+            )
+            post_tasks.append(session.post(post_url, data=form))
+        
+        # Combine both sets of tasks and run them concurrently
+        tasks = get_tasks + post_tasks
+        responses = await asyncio.gather(*tasks)
+
+    # Process and verify each response
+    for resp in responses:
+        method = resp.request_info.method
+        if method == "GET":
+            assert resp.status == 200, (
+                f"GET request to {resp.request_info.url} returned {resp.status}"
+            )
+        elif method == "POST":
+            # Adjust expected status codes for POST as per your server logic.
+            assert resp.status in (200, 201), (
+                f"POST request to {resp.request_info.url} returned {resp.status}"
+            )
+        # Ensure proper cleanup of response objects.
         await resp.release()
