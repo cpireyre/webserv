@@ -71,11 +71,15 @@ class HttpConnectionHandler
 		CgiTypes	checkCgi();
 		
 	public:
-		std::string	rawRequest;
-		//Parse Http request
-		HandlerStatus	parseRequest();
+		//Basics
+		HttpConnectionHandler();
+		~HttpConnectionHandler();
+		HttpConnectionHandler(const HttpConnectionHandler&) = delete;
+		void resetObject();
 
-		//handle method
+		std::string	rawRequest;
+
+		HandlerStatus	parseRequest();
 		void	handleRequest();
 
 		//creating HTTP response
@@ -84,21 +88,20 @@ class HttpConnectionHandler
 		std::string	createHttpRedirectResponse(int statusCode, const std::string &location);
 
 		// Getters
-		int						getErrorCode() const { return errorCode; }
-		int						getClientSocket() const { return clientSocket; }
+		int								getErrorCode() const { return errorCode; }
+		int								getClientSocket() const { return clientSocket; }
 		const std::string				&getMethod() const { return method; }
 		const std::string				&getPath() const { return path; }
 		const std::string				&getOriginalPath() const { return originalPath; }
 		const std::string				&getHttpVersion() const { return httpVersion; }
 		const std::string				&getBody() const { return body; }
-		const std::map<std::string, std::string>	&getHeaders() const { return headers; }
-		const Configuration 				*getConf() const { return conf; }
+		const Configuration 			*getConf() const { return conf; }
 		const LocationBlock				*getLocationBlock() const { return locBlock;}
-
 		const std::string				&getFilePath() const { return filePath; }
 		const std::string				&getQueryString() const { return queryString; }
 		const std::string				&getExtension() const { return extension; }
-		CgiTypes					getCgiType() const { return cgiType; }
+		CgiTypes						getCgiType() const { return cgiType; }
+		const std::map<std::string, std::string>	&getHeaders() const { return headers; }
 
 		// Setters
 		void	setClientSocket(int socket) { clientSocket = socket; }
@@ -121,3 +124,5 @@ class HttpConnectionHandler
 			std::cout << "[" << timeBuf << "] INFO: " << message << std::endl;
 		}
 };
+
+std::ostream& operator<<(std::ostream& os, const HttpConnectionHandler& handler);
