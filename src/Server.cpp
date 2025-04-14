@@ -181,22 +181,25 @@ int	run(std::vector<Configuration> serverMap)
 		{
 			Endpoint *endp = (Endpoint *)queue_event_get_data(&events[event_id]);
 			assert(endp->sockfd > 0);
-			if (endp->kind == ENDPOINT_SERVER)
+			if (endp->kind == ENDPOINT_CLIENT)
 			{
-				Endpoint *client = connectNewClient(endpoints, endp);
-				queue_add_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_READ, client);
-				assert(client->handler.getClientSocket() != endp->handler.getClientSocket());
-				client->state = CONNECTION_RECV_HEADER;
-			}
-			else
-			{
-				assert(endp->kind == ENDPOINT_CLIENT);
 				assert(endp->alive == true);
 				switch (endp->state) {
 					case CONNECTION_RECV_HEADER: 
-						endp->handler.parseRequest(); // TODO(colin) error manage here
-						assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
-						endp->state = CONNECTION_SEND_RESPONSE;
+						if (endp->handler.parseRequest())
+						{
+							assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
+							endp->state = CONNECTION_SEND_RESPONSE;
+						}
+						else /* Error reading from socket, terminate connection */
+						{
+							queue_rem_fd(qfd,endp->handler.getClientSocket());
+							endp->state = CONNECTION_DISCONNECTED;
+							endp->alive = false;
+							endp->sockfd = -1;
+							endp->handler.setClientSocket(-1);
+							close(endp->handler.getClientSocket());
+						}
 						break;
 					case CONNECTION_SEND_RESPONSE:
 						endp->handler.handleRequest();
@@ -208,6 +211,14 @@ int	run(std::vector<Configuration> serverMap)
 						/* Do something maybe */
 						break;
 				}
+			}
+			else /* if (endp->kind == ENDPOINT_SERVER) */
+			{
+				assert(endp->kind == ENDPOINT_SERVER);
+				Endpoint *client = connectNewClient(endpoints, endp);
+				queue_add_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_READ, client);
+				assert(client->handler.getClientSocket() != endp->handler.getClientSocket());
+				client->state = CONNECTION_RECV_HEADER;
 			}
 		}
 	}
