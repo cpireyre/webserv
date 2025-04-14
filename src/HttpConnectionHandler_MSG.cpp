@@ -13,16 +13,20 @@ std::string HttpConnectionHandler::getCurrentHttpDate()
 
 std::string HttpConnectionHandler::getDefaultErrorPage500()
 {
+	std::string body =
+		"<html><head><title>500 Internal Server Error</title></head>"
+		"<body><h1>500 Internal Server Error</h1>"
+		"<p>Sorry, something went wrong while handling your request.</p>"
+		"</body></html>";
+
 	std::ostringstream oss;
 	oss << "HTTP/1.1 500 Internal Server Error\r\n";
 	oss << "Content-Type: text/html; charset=UTF-8\r\n";
+	oss << "Content-Length: " << body.length() << "\r\n";
 	oss << "Connection: close\r\n";
 	oss << "Date: " << getCurrentHttpDate() << "\r\n";
 	oss << "\r\n";
-	oss << "<html><head><title>500 Internal Server Error</title></head>";
-	oss << "<body><h1>500 Internal Server Error</h1>";
-	oss << "<p>Sorry, something went wrong while handling your request.</p>";
-	oss << "</body></html>";
+	oss << body;
 	return oss.str();
 }
 
@@ -127,7 +131,7 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 	std::ifstream file(errorPath.c_str());
 	if (!file.is_open()) {
 		logError("Cant open error page location " + errorPath);
-		return getCurrentHttpDate();
+		return getDefaultErrorPage500();
 	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
