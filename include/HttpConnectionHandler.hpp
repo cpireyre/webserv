@@ -14,6 +14,11 @@
 
 extern std::vector<Configuration> serverMap;
 
+typedef enum {
+	S_Error,
+	S_KeepReading,
+	S_Done,
+} HandlerStatus;
 class HttpConnectionHandler
 {
 	private:
@@ -65,8 +70,9 @@ class HttpConnectionHandler
 		CgiTypes	checkCgi();
 		
 	public:
+		std::string	rawRequest;
 		//Parse Http request
-		bool	parseRequest();
+		HandlerStatus	parseRequest();
 
 		//handle method
 		void	handleRequest();
