@@ -194,9 +194,16 @@ int	run(std::vector<Configuration> serverMap)
 				assert(endp->alive == true);
 				switch (endp->state) {
 					case CONNECTION_RECV_HEADER: 
-						endp->handler.parseRequest(); // TODO(colin) error manage here
-						assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
-						endp->state = CONNECTION_SEND_RESPONSE;
+						if (!endp->handler.parseRequest())
+						{
+							endp->state = CONNECTION_DISCONNECTED;
+							close(endp->handler.getClientSocket());
+						}
+						else
+						{
+							assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
+							endp->state = CONNECTION_SEND_RESPONSE;
+						}
 						break;
 					case CONNECTION_SEND_RESPONSE:
 						endp->handler.handleRequest();
