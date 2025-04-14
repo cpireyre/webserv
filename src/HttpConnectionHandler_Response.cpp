@@ -290,6 +290,37 @@ void	HttpConnectionHandler::handleGetRequest()
 	serveFile(filePath);
 }
 
+/* checks the path to directory and validates its able to handle POST request
+ *
+ * checks the directory exists, its actual directory, and creates
+ * tmp file there to make sure its writable
+ *
+ * 
+ */
+bool	HttpConnectionHandler::validateUploadRights()
+{
+	logInfo("checking POST directory rights:  Path is " + path);
+	std::filesystem::path fsPath(path);
+
+	if (!std::filesystem::exists(fsPath)) {
+		logError("POST request path: " + path + " doesnt't exist");
+		return false;
+	}
+	else if (!std::filesystem::is_directory(path)) {
+		logError("POST request path: " + path + " is not directory");
+		return false;
+	}
+	std::filesystem::path tmp = fsPath / "tmp_permission_check";
+	std::ofstream fd(tmp);
+	if (!fd) {
+		logError("POST request path: " + path + " not writable");
+		return false;
+	}
+	fd.close();
+	std::filesystem::remove(tmp);
+	return true;
+}
+
 /* processes a single part of a multipart/form-data body, typically used for file uploads
  *
  * extracts the filename and file data from a given part of the multipart body,
@@ -441,7 +472,12 @@ bool	HttpConnectionHandler::handleFileUpload()
 void	HttpConnectionHandler::handlePostRequest()
 {
 	if (body.empty()) {
-		std::string response = createHttpResponse(400, "<h1>400 Bad Request</h1>", "text/html");
+		std::string response = createHttpErrorResponse(400);
+		send(clientSocket, response.c_str(), response.size(), 0);
+		return;
+	}
+	if (!validateUploadRights()) {
+		std::string response = createHttpErrorResponse(500);
 		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}

@@ -60,6 +60,7 @@ class HttpConnectionHandler
 		void		deleteDirectory();
 
 		void		handlePostRequest();
+		bool		validateUploadRights();
 		bool		handleFileUpload();
 		bool		processMultipartPart(const std::string& part, std::string &responseBody);
 
