@@ -22,21 +22,30 @@ class HttpConnectionHandler
 		std::string							originalPath;
 		std::string							httpVersion;
 		std::string							body;
-		std::map<std::string, std::string>	headers;
-		int									clientSocket;
+		std::map<std::string, std::string>				headers;
+		int								clientSocket;
 
 		std::string							filePath; // Everything in URI before the question mark
 		std::string							queryString; // Everything in URI after the question mark
 		std::string							extension;
 		CgiTypes							cgiType;
 
-		/* Configuration						*conf; */
-		LocationBlock						*locBlock;
+		Configuration							*conf;
+		LocationBlock							*locBlock;
 
+		//response stuff
+		int		errorCode;
+
+		//Parsing
 		bool		getMethodPathVersion(std::istringstream &requestStream);
 		bool		getHeaders(std::istringstream &requestStream);
 		bool		getBody(std::string &rawRequest);
 		std::string	getContentType(const std::string &path);
+
+		//Creating HTTP response
+		std::string	getDefaultErrorPage500();
+		std::string	getReasonPhrase(int statusCode);
+		std::string	getCurrentHttpDate();
 
 		void		handleGetRequest();
 		void		handleGetDirectory();
@@ -56,19 +65,19 @@ class HttpConnectionHandler
 		CgiTypes	checkCgi();
 		
 	public:
-		Configuration						*conf;
 		//Parse Http request
 		bool	parseRequest();
 
-		//create Http response
+		//handle method
 		void	handleRequest();
+
+		//creating HTTP response
+		std::string	createHttpErrorResponse(int error);
 		std::string	createHttpResponse(int statusCode, const std::string &body, const std::string &contentType);
 		std::string	createHttpRedirectResponse(int statusCode, const std::string &location);
 
-
-		//find longest location block
-
 		// Getters
+		int						getErrorCode() const { return errorCode; }
 		int						getClientSocket() const { return clientSocket; }
 		const std::string				&getMethod() const { return method; }
 		const std::string				&getPath() const { return path; }
@@ -76,16 +85,17 @@ class HttpConnectionHandler
 		const std::string				&getHttpVersion() const { return httpVersion; }
 		const std::string				&getBody() const { return body; }
 		const std::map<std::string, std::string>	&getHeaders() const { return headers; }
-		const Configuration 			*getConf() const { return conf; }
+		const Configuration 				*getConf() const { return conf; }
 		const LocationBlock				*getLocationBlock() const { return locBlock;}
 
 		const std::string				&getFilePath() const { return filePath; }
 		const std::string				&getQueryString() const { return queryString; }
 		const std::string				&getExtension() const { return extension; }
-		CgiTypes						getCgiType() const { return cgiType; }
+		CgiTypes					getCgiType() const { return cgiType; }
 
 		// Setters
-		void setClientSocket(int socket) { clientSocket = socket; }
+		void	setClientSocket(int socket) { clientSocket = socket; }
+		void	setConfig(Configuration *config) { conf = config; }
 
 		//loggers
 		static void logError(const std::string& message)
