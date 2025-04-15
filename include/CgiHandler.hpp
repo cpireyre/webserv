@@ -18,7 +18,7 @@ enum CgiTypes
 
 class CgiHandler
 {
-	public:
+	private:
 		std::string _contentLength;
 		std::string _contentType;
 		std::string _gatewayInterface;
@@ -44,7 +44,14 @@ class CgiHandler
 		pid_t		_cgiPid;
 		std::string _postData;  // data to send to CGI process, if any
 		size_t		_postDataOffset = 0; // How many bytes have been written so far
+		int			_waitpidRes;
 	public:
+		int*		getPipeToCgi();
+		int*		getPipeFromCgi();
+		pid_t		getCgiPid();
+		std::string	getPostData();
+		size_t		getPostDataOffset();
+		int			getWaitpidRes();
 		CgiHandler(const HttpConnectionHandler &conn);
 		void executeCgi();
 		void printCgiInfo();

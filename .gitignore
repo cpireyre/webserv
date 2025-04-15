@@ -7,3 +7,4 @@ webserv
 tags
 .vscode/
 *obj*
+__pycache__/
