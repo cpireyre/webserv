@@ -30,6 +30,24 @@ std::string HttpConnectionHandler::getDefaultErrorPage500()
 	return oss.str();
 }
 
+std::string HttpConnectionHandler::getDefaultErrorPage400()
+{
+	std::string body =
+		"<html><head><title>400 Bad request</title></head>"
+		"<body><h1>400 Bad request</h1>"
+		"<p>Sorry, something went wrong while handling your request.</p>"
+		"</body></html>";
+
+	std::ostringstream oss;
+	oss << "HTTP/1.1 400 Bad request\r\n";
+	oss << "Content-Type: text/html; charset=UTF-8\r\n";
+	oss << "Content-Length: " << body.length() << "\r\n";
+	oss << "Connection: Keep-Alive\r\n";
+	oss << "Date: " << getCurrentHttpDate() << "\r\n";
+	oss << "\r\n";
+	oss << body;
+	return oss.str();
+}
 
 std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
 {
@@ -42,6 +60,7 @@ std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
 	    {403, "Forbidden"},
 	    {404, "Not Found"},
 	    {405, "Method Not Allowed"},
+	    {408, "Request Timeout"},
 	    {409, "Conflict"},
 	    {412, "Precondition Failed"},
 	    {413, "Payload Too Large"},
@@ -114,7 +133,11 @@ std::string	HttpConnectionHandler::createHttpRedirectResponse(int statusCode, co
 
 std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 {
-	std::ostringstream			response;
+	std::ostringstream		response;
+	if (!conf) {
+		logError("Error response func called with no configuration file match yet, ok if happens during parsing");
+		return getDefaultErrorPage400();
+	}
 	std::map<int, std::string>	errorPages = conf->getErrorPages();
 
 	response << "HTTP/1.1 " << error << " " << getReasonPhrase(error) << "\r\n";
