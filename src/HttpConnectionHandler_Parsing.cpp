@@ -39,8 +39,11 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 
 	logInfo("Parsing connection on socket " + std::to_string(clientSocket));
 	bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-	if (bRead <= 0) {
+	if (bRead == 0)
+		return S_ClosedConnection;
+	if (bRead < 0) {
 		HttpConnectionHandler::logError("Reading from the socket");
+		std::cout << clientSocket << std::endl;
 		errorCode = 400;
 		return S_Error;
 	}

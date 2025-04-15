@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/10 14:57:45 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/15 11:03:24 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -48,6 +48,10 @@ re: fclean
 .PHONY: test
 test: all
 	./$(NAME) test.conf
+
+.PHONY: val
+val: all
+	valgrind ./$(NAME) test.conf
 
 
 -include $(obj:.o=.d)

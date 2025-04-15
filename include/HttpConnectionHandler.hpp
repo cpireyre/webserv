@@ -18,6 +18,7 @@ typedef enum {
 	S_Error,
 	S_KeepReading,
 	S_Done,
+	S_ClosedConnection,
 } HandlerStatus;
 class HttpConnectionHandler
 {
