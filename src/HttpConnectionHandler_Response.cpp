@@ -597,7 +597,7 @@ void	HttpConnectionHandler::handleDeleteRequest()
 	}
 
 	//handle regular file deletion
-	if (path.empty() || path.back() != '/') {
+	if (path.empty() || path.back() == '/') {
 		logError("DELETE file requested but path ends with '/': " + path);
 		std::string response = createHttpResponse(404, "<h1>404 File /filename/ not possbile</h1>", "text/html");
 		send(clientSocket, response.c_str(), response.size(), 0);
