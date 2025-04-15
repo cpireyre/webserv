@@ -203,6 +203,7 @@ int	run(std::vector<Configuration> serverMap)
 								endp->alive = false;
 								endp->sockfd = -1;
 								endp->handler.setClientSocket(-1);
+								endp->handler.resetObject();
 							}
 						}
 						break;
