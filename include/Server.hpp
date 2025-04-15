@@ -26,6 +26,7 @@ class Endpoint {
 		char					IP[INET6_ADDRSTRLEN];
 		char					port[PORT_STRLEN];
 		bool					alive;
+		bool					error;
 		EndpointKind			kind;
 		HttpConnectionHandler	handler; // Only for clients
 		ConnectionState			state; // Only for clients
