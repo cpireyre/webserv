@@ -97,10 +97,11 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 	socklen_t		client_addr_len = sizeof(client_addr);
 	memset(&client_addr, 0, client_addr_len);
 	int clientSocket = accept(server->sockfd, &client_addr, &client_addr_len);
-	if (clientSocket < 0)
+	if (clientSocket < 0 || socket_set_nonblocking(clientSocket) < 0)
 	{
+		if (clientSocket > 0)
+			close(clientSocket);
 		perror("client accept");
-		assert(clientSocket >= 0); //TODO(colin): Error manage here
 		return nullptr;
 	}
 	endpoints[i].kind = ENDPOINT_CLIENT;
@@ -108,7 +109,8 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 	endpoints[i].sockfd = clientSocket;
 	endpoints[i].handler.setClientSocket(clientSocket);
 	Logger::debug("Connected client, socket: %d", clientSocket);
-	return (&endpoints[i]);
+
+	return &endpoints[i];
 }
 
 static void sigcleanup(int sig)
@@ -193,21 +195,21 @@ int	run(std::vector<Configuration> serverMap)
 								assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
 								endp->state = CONNECTION_SEND_RESPONSE;
 							}
-							else if (status == S_Error)
+							else if (status == S_Error || status == S_ClosedConnection)
 							{
 								queue_rem_fd(qfd,endp->handler.getClientSocket());
+								close(endp->handler.getClientSocket());
 								endp->state = CONNECTION_DISCONNECTED;
 								endp->alive = false;
 								endp->sockfd = -1;
 								endp->handler.setClientSocket(-1);
-								close(endp->handler.getClientSocket());
+								endp->handler.resetObject();
 							}
 						}
 						break;
 					case CONNECTION_SEND_RESPONSE:
 						endp->handler.handleRequest();
-						/* assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_READ, endp) == 0); // & here */
-						queue_rem_fd(qfd,endp->handler.getClientSocket());
+						queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_READ, endp);
 						endp->state = CONNECTION_RECV_HEADER;
 						break;
 					case CONNECTION_DISCONNECTED:
@@ -219,6 +221,8 @@ int	run(std::vector<Configuration> serverMap)
 			{
 				assert(endp->kind == ENDPOINT_SERVER);
 				Endpoint *client = connectNewClient(endpoints, endp);
+				if (client == nullptr)
+					continue;
 				queue_add_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_READ, client);
 				assert(client->handler.getClientSocket() != endp->handler.getClientSocket());
 				client->state = CONNECTION_RECV_HEADER;
