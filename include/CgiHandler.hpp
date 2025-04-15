@@ -46,13 +46,13 @@ class CgiHandler
 		size_t		_postDataOffset = 0; // How many bytes have been written so far
 		int			_waitpidRes;
 	public:
-		CgiHandler(HttpConnectionHandler conn);
-		void 		executeCgi();
-		void 		printCgiInfo();
 		int*		getPipeToCgi();
 		int*		getPipeFromCgi();
 		pid_t		getCgiPid();
 		std::string	getPostData();
 		size_t		getPostDataOffset();
 		int			getWaitpidRes();
+		CgiHandler(const HttpConnectionHandler &conn);
+		void executeCgi();
+		void printCgiInfo();
 };
