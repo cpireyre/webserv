@@ -4,7 +4,7 @@
 #include "Logger.hpp"
 #include <sys/wait.h>
 
-CgiHandler::CgiHandler(HttpConnectionHandler conn) {
+CgiHandler::CgiHandler(const HttpConnectionHandler &conn) {
 	if (conn.getCgiType() == PYTHON)
 		_pathToInterpreter = conn.getLocationBlock()->cgiPathPython + "/python3";
 	else if (conn.getCgiType() == PHP)
