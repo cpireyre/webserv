@@ -4,9 +4,11 @@
 # include "Socket.hpp"
 # include "Logger.hpp"
 # include "HttpConnectionHandler.hpp"
+# include "Timeout.hpp"
 # include <csignal>
 
 constexpr int PORT_STRLEN = 12;
+constexpr uint64_t	CLIENT_TIMEOUT_MS = 1000; /* One (1) second */
 
 enum EndpointKind {
 	ENDPOINT_SERVER,
@@ -18,6 +20,7 @@ enum ConnectionState {
 	CONNECTION_RECV_HEADER,
 	CONNECTION_SEND_RESPONSE,
 	CONNECTION_DISCONNECTED,
+	CONNECTION_TIMED_OUT,
 };
 
 class Endpoint {
@@ -26,7 +29,8 @@ class Endpoint {
 		char					IP[INET6_ADDRSTRLEN];
 		char					port[PORT_STRLEN];
 		bool					alive;
-		bool					error;
+		int						error;
+		uint64_t				lastHeardFrom_ms;
 		EndpointKind			kind;
 		HttpConnectionHandler	handler; // Only for clients
 		ConnectionState			state; // Only for clients
