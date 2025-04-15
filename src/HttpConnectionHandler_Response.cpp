@@ -65,7 +65,6 @@ LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBloc
 	for (LocationBlock &block : blocks) {
 		if (path.compare(0, block.path.length(), block.path) == 0)
 		{
-			std::cout << "FOUND: " << block.path << " & " << path << std::endl;
 			current = &block;
 			return (findLocationBlock(block.nestedLocations, current));
 		}
@@ -620,6 +619,110 @@ void	HttpConnectionHandler::handleDeleteRequest()
 	send(clientSocket, response.c_str(), response.size(), 0);
 }
 
+/* checks for name matches in the following priority:
+ * 1. Exact match
+ * 2. Wildcard at the beginning of the pattern ("*.example.com")
+ * 3. Wildcard at the end of the pattern ("www.example.*")
+ *
+ * only a single wildcard at the very beginning or very end is supported.
+ * a pattern consisting of only "*" is ambiguous and returns 0
+ *
+ * @param pattern: the server name fomr configs
+ * @param host:    the name form host header
+ * @return int match priority value
+ * 1: exact match (highest prio)
+ * 2: Wildcard match at the beginning (*suffix)
+ * 3: Wildcard match at the end (prefix*)
+ * 0: No match found
+ */
+int	HttpConnectionHandler::matchServerName(const std::string& pattern, const std::string& host)
+{
+    if (host.empty()) {
+	    return 0;
+    }
+    // pattern of just "*" is ambigious at best, returning no match
+    if (pattern == "*") {
+        return 0;
+    }
+    // priority 1: exact match
+    if (pattern == host) {
+        return 1;
+    }
+    // priority 2: wildcard at the beginning (*suffix)
+    if (pattern.length() > 1 && pattern.front() == '*' && pattern.back() != '*') {
+        std::string suffix = pattern.substr(1);
+        if (host.length() >= suffix.length() &&
+            host.compare(host.length() - suffix.length(), suffix.length(), suffix) == 0){
+            return 2;
+        }
+    }
+    // priority 3: wildcard at the end (prefix*)
+    if (pattern.length() > 1 && pattern.back() == '*' && pattern.front() != '*') {
+        std::string prefix = pattern.substr(0, pattern.length() - 1);
+        if (host.length() >= prefix.length() && host.compare(0, prefix.length(), prefix) == 0){
+            return 3;
+        }
+    }
+    return 0;
+}
+
+/* responsible for findings the configuration file
+ * current implementation is  called when host header file is found during parsing
+ * priority for match from low to high is:
+ * 1. IP + PORT match (first found is default until better match is found)
+ * 2. full or partial servername match, prio explained in matchServerName() function.
+ * 3. fallback if nothing matches is serverMap[0]
+ *
+ * future improvements: sometimes Host can come in with
+ *	trailing dot: example.com.
+ *	port: example.com:8080
+ */
+void	HttpConnectionHandler::findConfig()
+{
+	Configuration	*result = nullptr;
+	std::string	header;
+	int		bestMatch = 4;
+	int		current = 4;
+	try
+	{
+		header = headers.at("Host");
+	}
+	catch(const std::out_of_range &e)
+	{
+		logError("Can't find host header, bug in code with current logic");
+	}
+	logInfo("Trying too find config for " + IP + ":" + PORT + " Host: " + header);
+	// loop through all the confs
+	for (auto &server : serverMap)
+	{
+		// check ip and port match
+		if (IP == server.getHost() && PORT == server.getPort())
+		{
+			//default first match
+			if (!result)
+				result = &server;
+			std::stringstream	ss(server.getServerNames());
+			std::string		token;
+			while (ss >> token)
+			{
+				if ((current = matchServerName(token, header))) {
+					if (current < bestMatch) {
+						bestMatch = current;
+						result = &server;
+					}
+				}
+			}
+		}
+	}
+	if (!result) {
+		logError("No match for request IP:PORT, defaulting to servermap[0]");
+		conf = &serverMap[0];
+	}
+	else {
+		conf = result;
+	}
+	logInfo("Final config using server " + conf->getServerNames());
+}
 
 /* handles the incoming HTTP request based on its method (GET, POST atm).
  *

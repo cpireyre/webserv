@@ -41,6 +41,8 @@ class HttpConnectionHandler
 
 		//response stuff
 		int		errorCode;
+		std::string							PORT;
+		std::string 							IP;
 
 		//Parsing
 		bool		getMethodPathVersion(std::istringstream &requestStream);
@@ -50,6 +52,7 @@ class HttpConnectionHandler
 
 		//Creating HTTP response
 		std::string	getDefaultErrorPage500();
+		std::string	getDefaultErrorPage400();
 		std::string	getReasonPhrase(int statusCode);
 		std::string	getCurrentHttpDate();
 
@@ -66,6 +69,8 @@ class HttpConnectionHandler
 		bool		processMultipartPart(const std::string& part, std::string &responseBody);
 
 		bool		checkLocation();
+		int		matchServerName(const std::string& pattern, const std::string& host);
+		void		findConfig();
 		bool		isMethodAllowed(LocationBlock *block, std::string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
@@ -89,24 +94,26 @@ class HttpConnectionHandler
 		std::string	createHttpRedirectResponse(int statusCode, const std::string &location);
 
 		// Getters
-		int								getErrorCode() const { return errorCode; }
-		int								getClientSocket() const { return clientSocket; }
+		int						getErrorCode() const { return errorCode; }
+		int						getClientSocket() const { return clientSocket; }
 		const std::string				&getMethod() const { return method; }
 		const std::string				&getPath() const { return path; }
 		const std::string				&getOriginalPath() const { return originalPath; }
 		const std::string				&getHttpVersion() const { return httpVersion; }
 		const std::string				&getBody() const { return body; }
-		const Configuration 			*getConf() const { return conf; }
+		const Configuration 				*getConf() const { return conf; }
 		const LocationBlock				*getLocationBlock() const { return locBlock;}
 		const std::string				&getFilePath() const { return filePath; }
 		const std::string				&getQueryString() const { return queryString; }
 		const std::string				&getExtension() const { return extension; }
-		CgiTypes						getCgiType() const { return cgiType; }
+		CgiTypes					getCgiType() const { return cgiType; }
 		const std::map<std::string, std::string>	&getHeaders() const { return headers; }
 
 		// Setters
 		void	setClientSocket(int socket) { clientSocket = socket; }
 		void	setConfig(Configuration *config) { conf = config; }
+		void	setIP(std::string ip) { IP = ip; }
+		void	setPORT(std::string port) { PORT = port; }
 
 		//loggers
 		static void logError(const std::string& message)
