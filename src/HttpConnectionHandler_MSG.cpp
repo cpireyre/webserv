@@ -23,7 +23,7 @@ std::string HttpConnectionHandler::getDefaultErrorPage500()
 	oss << "HTTP/1.1 500 Internal Server Error\r\n";
 	oss << "Content-Type: text/html; charset=UTF-8\r\n";
 	oss << "Content-Length: " << body.length() << "\r\n";
-	oss << "Connection: close\r\n";
+	oss << "Connection: Keep-Alive\r\n";
 	oss << "Date: " << getCurrentHttpDate() << "\r\n";
 	oss << "\r\n";
 	oss << body;
@@ -84,7 +84,7 @@ std::string	HttpConnectionHandler::createHttpResponse(int statusCode, const std:
 	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
 	response << "Content-Length: " << body.size() << "\r\n";
 	response << "Content-Type: " << contentType << "\r\n";
-	response << "Connection: close\r\n";
+	response << "Connection: Keep-Alive\r\n";
 	response << "\r\n";
 	response << body;
 
@@ -147,7 +147,7 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 	}
 	response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << body.size() << "\r\n";
-	response << "Connection: close\r\n\r\n";
+	response << "Connection: Keep-Alive\r\n\r\n";
 	response << body;
 
 	return response.str();

@@ -174,7 +174,7 @@ void	HttpConnectionHandler::serveFile(std::string &filePath)
 	headerStream << "HTTP/1.1 200 OK\r\n";
 	headerStream << "Content-Length: " << fileSize << "\r\n";
 	headerStream << "Content-Type: " << contentType << "\r\n";
-	headerStream << "Connection: close\r\n";
+	headerStream << "Connection: Keep-Alive\r\n";
 	headerStream << "\r\n";
 
 	std::string headerStr = headerStream.str();
