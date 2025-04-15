@@ -195,7 +195,7 @@ int	run(std::vector<Configuration> serverMap)
 								assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
 								endp->state = CONNECTION_SEND_RESPONSE;
 							}
-							else if (status == S_Error || status == S_ClosedConnection)
+							else if (status == S_ClosedConnection)
 							{
 								queue_rem_fd(qfd,endp->handler.getClientSocket());
 								close(endp->handler.getClientSocket());
@@ -205,10 +205,23 @@ int	run(std::vector<Configuration> serverMap)
 								endp->handler.setClientSocket(-1);
 								endp->handler.resetObject();
 							}
+							else /* if (status == S_Error) */
+							{
+								endp->error = true;
+								assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
+								endp->state = CONNECTION_SEND_RESPONSE;
+							}
 						}
 						break;
 					case CONNECTION_SEND_RESPONSE:
-						endp->handler.handleRequest();
+						if (endp->error == true)
+						{
+							std::string errorResponse = endp->handler.createHttpErrorResponse(endp->handler.getErrorCode());
+							send(endp->sockfd, errorResponse.c_str(), errorResponse.size(), 0);
+							endp->error = false;
+						}
+						else
+							endp->handler.handleRequest();
 						queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_READ, endp);
 						endp->state = CONNECTION_RECV_HEADER;
 						break;
