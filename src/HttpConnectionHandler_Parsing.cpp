@@ -170,7 +170,7 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 		return false;
 	}
 	else {
-		conf = &serverMap[0];
+		findConfig();
 	}
 	return true;
 }
