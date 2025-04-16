@@ -108,6 +108,9 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 	endpoints[i].alive = true;
 	endpoints[i].sockfd = clientSocket;
 	endpoints[i].handler.setClientSocket(clientSocket);
+	endpoints[i].handler.setIP(server->IP);
+	endpoints[i].handler.setPORT(server->port);
+	endpoints[i].lastHeardFrom_ms = now_ms();
 	Logger::debug("Connected client, socket: %d", clientSocket);
 
 	return &endpoints[i];
@@ -179,14 +182,31 @@ int	run(std::vector<Configuration> serverMap)
 			error = 1;
 			break;
 		}
+		for (int i = 0; i < MAXCONNS; i++)
+		{
+			if (endpoints[i].alive == false || endpoints[i].kind != ENDPOINT_CLIENT)
+				continue;
+			assert(endpoints[i].alive == true);
+			if (now_ms() - endpoints[i].lastHeardFrom_ms > CLIENT_TIMEOUT_MS)
+			{
+				endpoints[i].state = CONNECTION_TIMED_OUT;
+				Logger::debug("Timing out %d", endpoints[i].sockfd);
+			}
+		}
 		for (int event_id = 0; event_id < nready; event_id++)
 		{
 			Endpoint *endp = (Endpoint *)queue_event_get_data(&events[event_id]);
 			assert(endp->sockfd > 0);
 			if (endp->kind == ENDPOINT_CLIENT)
 			{
+				endp->lastHeardFrom_ms = now_ms();
 				assert(endp->alive == true);
 				switch (endp->state) {
+					case CONNECTION_TIMED_OUT:
+						endp->error = 408;
+						endp->state = CONNECTION_SEND_RESPONSE;
+						assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
+						break;
 					case CONNECTION_RECV_HEADER: 
 						{
 							HandlerStatus status = endp->handler.parseRequest();
@@ -197,7 +217,7 @@ int	run(std::vector<Configuration> serverMap)
 							}
 							else if (status == S_ClosedConnection)
 							{
-								queue_rem_fd(qfd,endp->handler.getClientSocket());
+								queue_rem_fd(qfd, endp->handler.getClientSocket());
 								close(endp->handler.getClientSocket());
 								endp->state = CONNECTION_DISCONNECTED;
 								endp->alive = false;
@@ -207,18 +227,18 @@ int	run(std::vector<Configuration> serverMap)
 							}
 							else /* if (status == S_Error) */
 							{
-								endp->error = true;
+								endp->error = 400;
 								assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
 								endp->state = CONNECTION_SEND_RESPONSE;
 							}
 						}
 						break;
 					case CONNECTION_SEND_RESPONSE:
-						if (endp->error == true)
+						if (endp->error != 0)
 						{
-							std::string errorResponse = endp->handler.createHttpErrorResponse(endp->handler.getErrorCode());
+							std::string errorResponse = endp->handler.createHttpErrorResponse(endp->error);
 							send(endp->sockfd, errorResponse.c_str(), errorResponse.size(), 0);
-							endp->error = false;
+							endp->error = 0;
 						}
 						else
 							endp->handler.handleRequest();

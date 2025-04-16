@@ -157,13 +157,14 @@ int	queue_wait(int qfd, queue_event *events, int events_count)
 	int	nready = 0;
 
 #ifdef __linux__
-	nready = epoll_wait(qfd, events, events_count, -1);
+	nready = epoll_wait(qfd, events, events_count, 1000);
 	if (nready < 0)
 	{
 		Logger::warn("Error: epoll_wait");
 		return (-1);
 	}
 #else
+	//TODO mac time out
 	nready = kevent(qfd, NULL, 0, events, events_count, NULL);
 	if (nready < 0)
 	{

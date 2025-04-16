@@ -20,6 +20,7 @@ typedef enum {
 	S_Done,
 	S_ClosedConnection,
 } HandlerStatus;
+
 class HttpConnectionHandler
 {
 	private:
