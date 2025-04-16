@@ -183,17 +183,17 @@ int	run(std::vector<Configuration> serverMap)
 			error = 1;
 			break;
 		}
-		for (int i = 0; i < MAXCONNS; i++)
-		{
-			if (endpoints[i].alive == false || endpoints[i].kind != ENDPOINT_CLIENT)
-				continue;
-			assert(endpoints[i].alive == true);
-			if (now_ms() - endpoints[i].lastHeardFrom_ms > CLIENT_TIMEOUT_MS)
-			{
-				endpoints[i].state = CONNECTION_TIMED_OUT;
-				Logger::debug("Timing out %d", endpoints[i].sockfd);
-			}
-		}
+		/* for (int i = 0; i < MAXCONNS; i++) */
+		/* { */
+		/* 	if (endpoints[i].alive == false || endpoints[i].kind != ENDPOINT_CLIENT) */
+		/* 		continue; */
+		/* 	assert(endpoints[i].alive == true); */
+		/* 	if (now_ms() - endpoints[i].lastHeardFrom_ms > CLIENT_TIMEOUT_MS) */
+		/* 	{ */
+		/* 		endpoints[i].state = CONNECTION_TIMED_OUT; */
+		/* 		Logger::debug("Timing out %d", endpoints[i].sockfd); */
+		/* 	} */
+		/* } */
 		for (int event_id = 0; event_id < nready; event_id++)
 		{
 			Endpoint *endp = (Endpoint *)queue_event_get_data(&events[event_id]);
@@ -207,65 +207,13 @@ int	run(std::vector<Configuration> serverMap)
 					case CONNECTION_TIMED_OUT:
 						endp->error = 408;
 						endp->state = CONNECTION_SEND_RESPONSE;
-						assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
+						queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp);
 						break;
 					case CONNECTION_RECV_HEADER: 
-						{
-							HandlerStatus status = endp->handler.parseRequest();
-							switch (status)
-							{
-								case S_KeepReading:
-									// Here might be a good place to check for Slowloris behaviour
-									break;
-								case S_Done:
-									assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0);
-									endp->state = CONNECTION_RECV_BODY;
-									break;
-								case S_ClosedConnection:
-									queue_rem_fd(qfd, endp->handler.getClientSocket());
-									close(endp->handler.getClientSocket());
-									endp->state = CONNECTION_DISCONNECTED;
-									endp->alive = false;
-									endp->sockfd = -1;
-									endp->handler.setClientSocket(-1);
-									endp->handler.resetObject();
-									break;
-								case S_Error:
-									endp->error = 400;
-									assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0);
-									endp->state = CONNECTION_SEND_RESPONSE;
-									break;
-							}
-						}
+						receiveHeader(endp, qfd);
+						break;
 					case CONNECTION_RECV_BODY:
-						{
-							//HandlerStatus status = endp->handler.getBody();
-							HandlerStatus status = S_Done;
-							switch (status)
-							{
-								case S_KeepReading:
-									// probably do nothing? maybe some safety checks
-									break;
-								case S_Error:
-									endp->error = 400; // TODO Maybe should not be 400? Not sure what can go wrong while receiving body
-									queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp); // error handle here
-									endp->state = CONNECTION_SEND_RESPONSE;
-									break;
-								case S_Done:
-									queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp); // error handle here
-									endp->state = CONNECTION_SEND_RESPONSE;
-									break;
-								case S_ClosedConnection:
-									queue_rem_fd(qfd, endp->handler.getClientSocket());
-									close(endp->handler.getClientSocket());
-									endp->state = CONNECTION_DISCONNECTED;
-									endp->alive = false;
-									endp->sockfd = -1;
-									endp->handler.setClientSocket(-1);
-									endp->handler.resetObject();
-									break;
-							}
-						}
+						receiveBody(endp, qfd);
 						break;
 					case CONNECTION_SEND_RESPONSE:
 						if (endp->error != 0)
