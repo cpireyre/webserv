@@ -41,8 +41,7 @@ int		start_servers(std::vector<Configuration> servers, Endpoint *endpoints,
 		int endpoints_count_max, int *endpoints_count);
 void	cleanup(Endpoint *endpoints, int endpoints_count, int qfd);
 
-constexpr int MAXCONNS = 4096;
-static_assert((MAXCONNS < 2100000), "The Hive machine I tested this on "
-	   	"could not handle this many.");
+constexpr int MAXCONNS = 1024;
+static_assert(MAXCONNS <= 1024); /* Might not make sense to go past FD limit */
 
 Endpoint	*connectNewClient(HttpConnectionHandler *handlers, const Endpoint *endp);

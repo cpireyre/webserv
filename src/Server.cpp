@@ -108,6 +108,8 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 	endpoints[i].alive = true;
 	endpoints[i].sockfd = clientSocket;
 	endpoints[i].handler.setClientSocket(clientSocket);
+	endpoints[i].handler.setIP(server->IP);
+	endpoints[i].handler.setPORT(server->port);
 	endpoints[i].lastHeardFrom_ms = now_ms();
 	Logger::debug("Connected client, socket: %d", clientSocket);
 
