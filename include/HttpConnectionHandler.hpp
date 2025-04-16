@@ -19,6 +19,7 @@ typedef enum {
 	S_KeepReading,
 	S_Done,
 	S_ClosedConnection,
+	S_ReadBody,
 } HandlerStatus;
 
 class HttpConnectionHandler
@@ -87,6 +88,7 @@ class HttpConnectionHandler
 		std::string	rawRequest;
 
 		HandlerStatus	parseRequest();
+		HandlerStatus	readBody();
 		void	handleRequest();
 
 		//creating HTTP response
