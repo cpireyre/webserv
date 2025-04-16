@@ -105,6 +105,7 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 		return nullptr;
 	}
 	endpoints[i].kind = ENDPOINT_CLIENT;
+	endpoints[i].error = 0;
 	endpoints[i].alive = true;
 	endpoints[i].sockfd = clientSocket;
 	endpoints[i].handler.setClientSocket(clientSocket);
