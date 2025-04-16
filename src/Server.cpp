@@ -201,7 +201,8 @@ int	run(std::vector<Configuration> serverMap)
 			{
 				endp->lastHeardFrom_ms = now_ms();
 				assert(endp->alive == true);
-				switch (endp->state) {
+				switch (endp->state)
+				{
 					case CONNECTION_TIMED_OUT:
 						endp->error = 408;
 						endp->state = CONNECTION_SEND_RESPONSE;
@@ -210,26 +211,58 @@ int	run(std::vector<Configuration> serverMap)
 					case CONNECTION_RECV_HEADER: 
 						{
 							HandlerStatus status = endp->handler.parseRequest();
-							if (status == S_Done)
+							switch (status)
 							{
-								assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
-								endp->state = CONNECTION_SEND_RESPONSE;
+								case S_KeepReading:
+									// Here might be a good place to check for Slowloris behaviour
+									break;
+								case S_Done:
+									assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0);
+									endp->state = CONNECTION_RECV_BODY;
+									break;
+								case S_ClosedConnection:
+									queue_rem_fd(qfd, endp->handler.getClientSocket());
+									close(endp->handler.getClientSocket());
+									endp->state = CONNECTION_DISCONNECTED;
+									endp->alive = false;
+									endp->sockfd = -1;
+									endp->handler.setClientSocket(-1);
+									endp->handler.resetObject();
+									break;
+								case S_Error:
+									endp->error = 400;
+									assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0);
+									endp->state = CONNECTION_SEND_RESPONSE;
+									break;
 							}
-							else if (status == S_ClosedConnection)
+						}
+					case CONNECTION_RECV_BODY:
+						{
+							//HandlerStatus status = endp->handler.getBody();
+							HandlerStatus status = S_Done;
+							switch (status)
 							{
-								queue_rem_fd(qfd, endp->handler.getClientSocket());
-								close(endp->handler.getClientSocket());
-								endp->state = CONNECTION_DISCONNECTED;
-								endp->alive = false;
-								endp->sockfd = -1;
-								endp->handler.setClientSocket(-1);
-								endp->handler.resetObject();
-							}
-							else /* if (status == S_Error) */
-							{
-								endp->error = 400;
-								assert(queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp) == 0); // & here
-								endp->state = CONNECTION_SEND_RESPONSE;
+								case S_KeepReading:
+									// probably do nothing? maybe some safety checks
+									break;
+								case S_Error:
+									endp->error = 400; // TODO Maybe should not be 400? Not sure what can go wrong while receiving body
+									queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp); // error handle here
+									endp->state = CONNECTION_SEND_RESPONSE;
+									break;
+								case S_Done:
+									queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp); // error handle here
+									endp->state = CONNECTION_SEND_RESPONSE;
+									break;
+								case S_ClosedConnection:
+									queue_rem_fd(qfd, endp->handler.getClientSocket());
+									close(endp->handler.getClientSocket());
+									endp->state = CONNECTION_DISCONNECTED;
+									endp->alive = false;
+									endp->sockfd = -1;
+									endp->handler.setClientSocket(-1);
+									endp->handler.resetObject();
+									break;
 							}
 						}
 						break;
@@ -262,6 +295,7 @@ int	run(std::vector<Configuration> serverMap)
 			}
 		}
 	}
+
 
 cleanup:
 	cleanup(endpoints, endpoints_count, qfd);
