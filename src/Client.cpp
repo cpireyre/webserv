@@ -14,6 +14,7 @@ void	receiveHeader(Endpoint *client, int qfd)
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
 		case S_ClosedConnection:
+			Logger::debug("Disconnecting %d", client->handler.getClientSocket());
 			queue_rem_fd(qfd, client->handler.getClientSocket());
 			close(client->handler.getClientSocket());
 			client->state = CONNECTION_DISCONNECTED;

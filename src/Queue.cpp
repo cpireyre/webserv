@@ -1,5 +1,6 @@
 #include "Queue.hpp"
 #include "Logger.hpp"
+#include <cerrno>
 
 int	queue_create(void)
 {
@@ -69,7 +70,7 @@ int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	}
 #endif
 
-	Logger::debug("Registered socket %d", fd);
+	/* Logger::debug("Registered socket %d", fd); */
 	return (0);
 }
 
@@ -99,25 +100,25 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 		return (-1);
 	}
 #else
-	struct kevent e;
-	int events;
+	struct kevent ev[2];
+	int n = 0;
 
-	events = EV_CLEAR;
 	switch (t) {
 		case QUEUE_EVENT_READ:
-			events |= EVFILT_READ;
+			EV_SET(&ev[n++], fd, EVFILT_READ, EV_ADD, 0, 0, (void *)data);
+			EV_SET(&ev[n++], fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
 			break;
 		case QUEUE_EVENT_WRITE:
-			events |= EVFILT_WRITE;
+			EV_SET(&ev[n++], fd, EVFILT_WRITE, EV_ADD, 0, 0, (void *)data);
+			EV_SET(&ev[n++], fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 			break;
 	}
-	EV_SET(&e, fd, events, EV_ADD, 0, 0, (void *)data);
 
-	if (kevent(qfd, &e, 1, NULL, 0, NULL) < 0)
-	{
+	if (kevent(qfd, ev, n, NULL, 0, NULL) < 0) {
 		Logger::warn("Error in kevent");
-		return (-1);
+		return -1;
 	}
+
 #endif
 	return (0);
 }
@@ -138,7 +139,8 @@ int	queue_rem_fd(int qfd, int fd)
 #else
 	struct kevent e;
 
-	EV_SET(&e, fd, 0, EV_DELETE, 0, 0, 0);
+	EV_SET(&e, fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
+	EV_SET(&e, fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
 
 	if (kevent(qfd, &e, 1, NULL, 0, NULL) < 0)
 	{
@@ -168,8 +170,29 @@ int	queue_wait(int qfd, queue_event *events, int events_count)
 	nready = kevent(qfd, NULL, 0, events, events_count, NULL);
 	if (nready < 0)
 	{
-		Logger::warn("Error: kevent");
+		if (errno != EINTR)
+			Logger::warn("Error: kevent");
 		return (-1);
+	}
+	if (0) /* Show kevent debug information */
+	{
+		for (int i = 0; i < nready; ++i)
+		{
+			const struct kevent *e = &events[i];
+
+			const char *filter_str = "?";
+			if (e->filter == EVFILT_READ)
+				filter_str = "READ";
+			else if (e->filter == EVFILT_WRITE)
+				filter_str = "WRITE";
+
+			Logger::debug("[kevent] fd=%lu filter=%s flags=0x%x data=%ld udata=%p",
+					(unsigned long)e->ident,
+					filter_str,
+					e->flags,
+					(long)e->data,
+					e->udata);
+		}
 	}
 #endif
 
