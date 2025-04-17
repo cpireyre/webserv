@@ -19,8 +19,9 @@ enum EndpointKind {
 enum ConnectionState {
 	CONNECTION_RECV_HEADER,
 	CONNECTION_SEND_RESPONSE,
-	CONNECTION_DISCONNECTED,
+	CONNECTION_RECV_BODY,
 	CONNECTION_TIMED_OUT,
+	CONNECTION_DISCONNECTED,
 };
 
 class Endpoint {
@@ -45,3 +46,5 @@ constexpr int MAXCONNS = 1024;
 static_assert(MAXCONNS <= 1024); /* Might not make sense to go past FD limit */
 
 Endpoint	*connectNewClient(HttpConnectionHandler *handlers, const Endpoint *endp);
+void		receiveHeader(Endpoint *client, int qfd);
+void		receiveBody(Endpoint *client, int qfd);
