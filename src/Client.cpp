@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include "Queue.hpp"
 
+void	disconnectClient(Endpoint *client, int qfd);
+
 void	receiveHeader(Endpoint *client, int qfd)
 {
 	HandlerStatus status = client->handler.parseRequest();
@@ -14,14 +16,7 @@ void	receiveHeader(Endpoint *client, int qfd)
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
 		case S_ClosedConnection:
-			Logger::debug("Disconnecting %d", client->handler.getClientSocket());
-			queue_rem_fd(qfd, client->handler.getClientSocket());
-			close(client->handler.getClientSocket());
-			client->state = CONNECTION_DISCONNECTED;
-			client->alive = false;
-			client->sockfd = -1;
-			client->handler.setClientSocket(-1);
-			client->handler.resetObject();
+			disconnectClient(client, qfd);
 			break;
 		case S_Error:
 			client->error = 400;
@@ -53,15 +48,23 @@ void	receiveBody(Endpoint *client, int qfd)
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
 		case S_ClosedConnection:
-			queue_rem_fd(qfd, client->handler.getClientSocket());
-			close(client->handler.getClientSocket());
-			client->state = CONNECTION_DISCONNECTED;
-			client->alive = false;
-			client->sockfd = -1;
-			client->handler.setClientSocket(-1);
-			client->handler.resetObject();
+			disconnectClient(client, qfd);
 			break;
 		case S_ReadBody:
 			break;
 	}
 }
+
+void	disconnectClient(Endpoint *client, int qfd)
+{
+	assert(client->state != CONNECTION_DISCONNECTED);
+	Logger::debug("Disconnecting %d", client->handler.getClientSocket());
+	queue_rem_fd(qfd, client->handler.getClientSocket());
+	close(client->handler.getClientSocket());
+	client->state = CONNECTION_DISCONNECTED;
+	client->sockfd = -1;
+	client->error = 0;
+	client->handler.setClientSocket(-1);
+	client->handler.resetObject();
+}
+

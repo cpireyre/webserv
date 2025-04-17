@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cerrno>
 
 #ifdef __linux__
 	#include <sys/epoll.h>

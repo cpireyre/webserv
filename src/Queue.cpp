@@ -137,16 +137,20 @@ int	queue_rem_fd(int qfd, int fd)
 		return (-1);
 	}
 #else
-	struct kevent e;
+	struct kevent e[2];
+	struct kevent result[2];
 
-	EV_SET(&e, fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
-	EV_SET(&e, fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
+	EV_SET(&e[0], fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
+	EV_SET(&e[1], fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
 
-	if (kevent(qfd, &e, 1, NULL, 0, NULL) < 0)
+	if (kevent(qfd, e, 2, result, 2, NULL) < 0)
 	{
+		if (errno == ENOENT)
+			return (0);
 		Logger::warn("Error deleting fd: kevent");
 		return (-1);
 	}
+
 #endif
 	return (0);
 }
