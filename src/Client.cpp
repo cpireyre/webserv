@@ -28,13 +28,16 @@ void	receiveHeader(Endpoint *client, int qfd)
 			assert(queue_mod_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_WRITE, client) == 0);
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
+		case S_ReadBody:
+			client->state = CONNECTION_RECV_BODY;
+			break;
 	}
 }
 
 void	receiveBody(Endpoint *client, int qfd)
 {
-	//HandlerStatus status = client->handler.getBody();
-	HandlerStatus status = S_Done;
+	HandlerStatus status = client->handler.readBody();
+	//HandlerStatus status = S_Done;
 	switch (status)
 	{
 		case S_KeepReading:
@@ -57,6 +60,8 @@ void	receiveBody(Endpoint *client, int qfd)
 			client->sockfd = -1;
 			client->handler.setClientSocket(-1);
 			client->handler.resetObject();
+			break;
+		case S_ReadBody:
 			break;
 	}
 }

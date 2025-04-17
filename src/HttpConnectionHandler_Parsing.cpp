@@ -294,7 +294,7 @@ HandlerStatus	HttpConnectionHandler::readBody()
 		return S_Error;
 	}
 	buffer[bRead] = '\0';
-	body += buffer;
+	body.append( buffer, bRead);
 
 	auto it = headers.find("Content-Length");
 	if (it == headers.end()) {
@@ -320,9 +320,8 @@ HandlerStatus	HttpConnectionHandler::readBody()
 		return S_Error;
 	}
 	size_t contentLength = static_cast<size_t>(contentLengthInt);
-
 	if (body.size() < contentLength) {
-		return S_ReadBody;
+		return S_KeepReading;
 	}
 	else {
 		return S_Done;
