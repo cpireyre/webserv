@@ -65,12 +65,50 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 	if (!getHeaders(requestStream)) {
 		return S_Error;
 	}
-	//if there is body, read it completely
-	if (method == "POST" && headers.count("Content-Length")) {
-		if (!getBody(rawRequest))
+	//if there is body still to be read, read it completely
+	if (headers.count("Content-Length")) {
+		std::string::size_type	bodyStart = rawRequest.find("\r\n\r\n");
+		if (bodyStart == std::string::npos) {
+			HttpConnectionHandler::logError("Failed to find the end of the headers!");
+			errorCode = 400;
 			return S_Error;
+		}
+		bodyStart += 4;
+		if (bodyStart < rawRequest.size()) {
+			body = rawRequest.substr(bodyStart);
+		}
+	
+		auto it = headers.find("Content-Length");
+		if (it == headers.end()) {
+			logError("Cant find Content-Length header in getBody()");
+			errorCode = 400;
+			return S_Error;
+		}
+		std::string contentLengthStr = it->second;
+		int contentLengthInt;
+		try
+		{
+			contentLengthInt = std::stoi(contentLengthStr);
+			if (contentLengthInt < 0) {
+				logError("Negative Content-Length");
+				errorCode = 400;
+				return S_Error;
+			}
+		}
+		catch (const std::exception &e)
+		{
+			logError("Stoi Error");
+			errorCode = 400;
+			return S_Error;
+		}
+		size_t contentLength = static_cast<size_t>(contentLengthInt);
+
+		if (body.size() < contentLength)
+			return S_ReadBody;
+		else
+			return S_Done;
 	}
-	return S_Done;
+	return S_Done;  // need logic to determine if theres still body to read or not?
 }
 
 /* parses the first line of the HTTP request to get the HTTP method, path, and version
@@ -188,7 +226,7 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
  * Returns:
  * - true if the body is successfully parsed and fully received.
  * - false if an error occurs (invalid "Content-Length", connection issue, ...)
- */
+ *//*
 bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 {
 	int		contentLength;
@@ -237,4 +275,55 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 		body.append(buffer, bRead);
 	}
 	return true;
+}*/
+
+HandlerStatus	HttpConnectionHandler::readBody()
+{
+	//if chunked call something to handle it
+	char		buffer[8192];
+	int		bRead;
+
+	logInfo("Handle body called");
+	bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+	if (bRead == 0)
+		return S_ClosedConnection;
+	if (bRead < 0) {
+		HttpConnectionHandler::logError("Reading from the socket");
+		std::cout << clientSocket << std::endl;
+		errorCode = 400;
+		return S_Error;
+	}
+	buffer[bRead] = '\0';
+	body.append( buffer, bRead);
+
+	auto it = headers.find("Content-Length");
+	if (it == headers.end()) {
+		logError("Cant find Content-Length header in getBody()");
+		errorCode = 400;
+		return S_Error;
+	}
+	std::string contentLengthStr = it->second;
+	int contentLengthInt;
+	try
+	{
+		contentLengthInt = std::stoi(contentLengthStr);
+		if (contentLengthInt < 0) {
+			logError("Negative Content-Length");
+			errorCode = 400;
+			return S_Error;
+		}
+	}
+	catch (const std::exception &e)
+	{
+		logError("Stoi Error");
+		errorCode = 400;
+		return S_Error;
+	}
+	size_t contentLength = static_cast<size_t>(contentLengthInt);
+	if (body.size() < contentLength) {
+		return S_KeepReading;
+	}
+	else {
+		return S_Done;
+	}
 }
