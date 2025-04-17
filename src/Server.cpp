@@ -12,7 +12,6 @@ int	start_servers(std::vector<Configuration> servers, Endpoint *endpoints, int e
 	*endpoints_count = 0;
 	for (int i = 0; i < endpoints_count_max; i++)
 	{
-		assert(endpoints[*endpoints_count].alive == false);
 		const std::string host = servers[i].getHost();
 		const std::string port = servers[i].getPort();
 		if (endpointAlreadyBound(endpoints, i, host, port))
@@ -22,6 +21,7 @@ int	start_servers(std::vector<Configuration> servers, Endpoint *endpoints, int e
 			return (-1);
 		initEndpoint(sockfd, host, port, &endpoints[*endpoints_count]);
 		Logger::debug("Opened socket IP: %s, port: %s", endpoints[*endpoints_count].IP, endpoints[*endpoints_count].port);
+		assert(endpoints[*endpoints_count].state == CONNECTION_ACTUALLY_A_SERVER);
 		*endpoints_count += 1;
 	}
 	assert(*endpoints_count > 0);
@@ -33,13 +33,9 @@ int	start_servers(std::vector<Configuration> servers, Endpoint *endpoints, int e
 static void	initEndpoint(int sockfd, std::string host, std::string port, Endpoint *endpoint)
 {
 	assert(endpoint != nullptr);
-	endpoint->sockfd = 0;
-	endpoint->IP[0] = '\0';
-	endpoint->port[0] = '\0';
-	endpoint->alive = false;
-	endpoint->kind = ENDPOINT_UNKNOWN;
+	endpoint->sockfd = sockfd;
 	endpoint->handler = HttpConnectionHandler();
-	endpoint->state = CONNECTION_DISCONNECTED;
+	endpoint->state = CONNECTION_ACTUALLY_A_SERVER;
 	int i = 0;
 	for (char c : host)
 		endpoint->IP[i++] = c;
@@ -48,9 +44,6 @@ static void	initEndpoint(int sockfd, std::string host, std::string port, Endpoin
 	for (char c : port)
 		endpoint->port[i++] = c;
 	endpoint->port[i] = '\0';
-	endpoint->sockfd = sockfd;
-	endpoint->alive = true;
-	endpoint->kind = ENDPOINT_SERVER;
 	assert(endpoint->sockfd > 0);
 	assert(strlen(endpoint->port) >= 1);
 	assert(strlen(endpoint->IP) >= 7);
@@ -90,7 +83,7 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 	assert(server->sockfd > 0);
 
 	int i = 0;
-	while (i < MAXCONNS && endpoints[i].alive == true)
+	while (i < MAXCONNS && endpoints[i].state != CONNECTION_DISCONNECTED)
 		i++;
 	assert(i < MAXCONNS);
 	struct sockaddr client_addr;
@@ -104,9 +97,8 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 		perror("client accept");
 		return nullptr;
 	}
-	endpoints[i].kind = ENDPOINT_CLIENT;
 	endpoints[i].error = 0;
-	endpoints[i].alive = true;
+	endpoints[i].state = CONNECTION_RECV_HEADER;
 	endpoints[i].sockfd = clientSocket;
 	endpoints[i].handler.setClientSocket(clientSocket);
 	endpoints[i].handler.setIP(server->IP);
@@ -151,7 +143,7 @@ int	run(std::vector<Configuration> serverMap)
 	const int	server_socket_count = serverMap.size();
 	Endpoint	endpoints[MAXCONNS];
 	for (int n = 0; n < MAXCONNS; n++)
-		endpoints[n].alive = false;
+		endpoints[n].state = CONNECTION_DISCONNECTED;
 	error = start_servers(serverMap, endpoints, server_socket_count, &endpoints_count);
 	int i = 0;
 	if (error)
@@ -159,7 +151,7 @@ int	run(std::vector<Configuration> serverMap)
 
 	while (i < endpoints_count)
 	{
-		assert(endpoints[i].alive == true);
+		assert(endpoints[i].state == CONNECTION_ACTUALLY_A_SERVER);
 		assert(endpoints[i].sockfd > 0);
 		error = queue_add_fd(qfd, endpoints[i].sockfd, QUEUE_EVENT_READ, &endpoints[i]);
 		if (error)
@@ -196,51 +188,51 @@ int	run(std::vector<Configuration> serverMap)
 		/* } */
 		for (int event_id = 0; event_id < nready; event_id++)
 		{
-			Endpoint *endp = (Endpoint *)queue_event_get_data(&events[event_id]);
-			assert(endp->sockfd > 0);
-			if (endp->kind == ENDPOINT_CLIENT)
+			Endpoint *conn = (Endpoint *)queue_event_get_data(&events[event_id]);
+			assert(conn->sockfd > 0);
+			assert(conn->state != CONNECTION_DISCONNECTED);
+			conn->lastHeardFrom_ms = now_ms();
+			switch (conn->state)
 			{
-				endp->lastHeardFrom_ms = now_ms();
-				assert(endp->alive == true);
-				switch (endp->state)
-				{
-					case CONNECTION_TIMED_OUT:
-						endp->error = 408;
-						endp->state = CONNECTION_SEND_RESPONSE;
-						queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_WRITE, endp);
-						break;
-					case CONNECTION_RECV_HEADER: 
-						receiveHeader(endp, qfd);
-						break;
-					case CONNECTION_RECV_BODY:
-						receiveBody(endp, qfd);
-						break;
-					case CONNECTION_SEND_RESPONSE:
-						if (endp->error != 0)
-						{
-							std::string errorResponse = endp->handler.createHttpErrorResponse(endp->error);
-							send(endp->sockfd, errorResponse.c_str(), errorResponse.size(), 0);
-							endp->error = 0;
-						}
-						else
-							endp->handler.handleRequest();
-						queue_mod_fd(qfd, endp->handler.getClientSocket(), QUEUE_EVENT_READ, endp);
-						endp->state = CONNECTION_RECV_HEADER;
-						break;
-					case CONNECTION_DISCONNECTED:
-						/* Do something maybe */
-						break;
-				}
-			}
-			else /* if (endp->kind == ENDPOINT_SERVER) */
-			{
-				assert(endp->kind == ENDPOINT_SERVER);
-				Endpoint *client = connectNewClient(endpoints, endp);
-				if (client == nullptr)
-					continue;
-				queue_add_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_READ, client);
-				assert(client->handler.getClientSocket() != endp->handler.getClientSocket());
-				client->state = CONNECTION_RECV_HEADER;
+				case CONNECTION_TIMED_OUT:
+					conn->error = 408;
+					conn->state = CONNECTION_SEND_RESPONSE;
+					queue_mod_fd(qfd, conn->handler.getClientSocket(), QUEUE_EVENT_WRITE, conn);
+					break;
+				case CONNECTION_RECV_HEADER: 
+					receiveHeader(conn, qfd);
+					break;
+				case CONNECTION_RECV_BODY:
+					receiveBody(conn, qfd);
+					break;
+				case CONNECTION_SEND_RESPONSE:
+					if (conn->error != 0)
+					{
+						std::string errorResponse = conn->handler.createHttpErrorResponse(conn->error);
+						send(conn->sockfd, errorResponse.c_str(), errorResponse.size(), 0);
+						conn->error = 0;
+						disconnectClient(conn, qfd);
+					}
+					else
+					{
+						conn->handler.handleRequest();
+						queue_mod_fd(qfd, conn->handler.getClientSocket(), QUEUE_EVENT_READ, conn);
+						conn->state = CONNECTION_RECV_HEADER;
+						conn->handler.resetObject();
+					}
+					break;
+				case CONNECTION_ACTUALLY_A_SERVER:
+					{
+						Endpoint *newClient = connectNewClient(endpoints, conn);
+						if (newClient == nullptr)
+							continue;
+						queue_add_fd(qfd, newClient->handler.getClientSocket(), QUEUE_EVENT_READ, newClient);
+						assert(newClient->handler.getClientSocket() != conn->handler.getClientSocket());
+					}
+					break;
+				case CONNECTION_DISCONNECTED:
+					assert(false); /* Unreachable. Shouldn't happen */
+					break;
 			}
 		}
 	}

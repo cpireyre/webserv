@@ -10,18 +10,13 @@
 constexpr int PORT_STRLEN = 12;
 constexpr uint64_t	CLIENT_TIMEOUT_MS = 1000; /* One (1) second */
 
-enum EndpointKind {
-	ENDPOINT_SERVER,
-	ENDPOINT_CLIENT,
-	ENDPOINT_UNKNOWN,
-};
-
 enum ConnectionState {
+	CONNECTION_DISCONNECTED,
 	CONNECTION_RECV_HEADER,
 	CONNECTION_SEND_RESPONSE,
 	CONNECTION_RECV_BODY,
 	CONNECTION_TIMED_OUT,
-	CONNECTION_DISCONNECTED,
+	CONNECTION_ACTUALLY_A_SERVER,
 };
 
 class Endpoint {
@@ -29,12 +24,10 @@ class Endpoint {
 		int						sockfd;
 		char					IP[INET6_ADDRSTRLEN];
 		char					port[PORT_STRLEN];
-		bool					alive;
-		int						error;
-		uint64_t				lastHeardFrom_ms;
-		EndpointKind			kind;
-		HttpConnectionHandler	handler; // Only for clients
-		ConnectionState			state; // Only for clients
+		ConnectionState			state;
+		int						error; // Client-only
+		uint64_t				lastHeardFrom_ms; // Client-only
+		HttpConnectionHandler	handler; // Client-only
 };
 
 
@@ -48,3 +41,4 @@ static_assert(MAXCONNS <= 1024); /* Might not make sense to go past FD limit */
 Endpoint	*connectNewClient(HttpConnectionHandler *handlers, const Endpoint *endp);
 void		receiveHeader(Endpoint *client, int qfd);
 void		receiveBody(Endpoint *client, int qfd);
+void		disconnectClient(Endpoint *client, int qfd);
