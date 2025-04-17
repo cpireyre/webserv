@@ -108,6 +108,11 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 		else
 			return S_Done;
 	}
+	else if (headers.count("Transfer-Encoding") && headers["Transfer-Encoding"] == "chunked")
+	{
+		logInfo("Handling Chunked request");
+		return handleFirstChunks();
+	}
 	return S_Done;  // need logic to determine if theres still body to read or not?
 }
 
@@ -276,6 +281,78 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 	}
 	return true;
 }*/
+
+bool hexStringToSizeT(const std::string& hexStr, size_t& out)
+{
+    std::string trimmed;
+
+    size_t start = hexStr.find_first_not_of(" \t\r\n");
+    size_t end = hexStr.find_last_not_of(" \t\r\n");
+    if (start == std::string::npos || end == std::string::npos)
+        return false;
+    trimmed = hexStr.substr(start, end - start + 1);
+
+    if (!trimmed.empty() && trimmed[0] == '-')
+        return false;
+    for (char c : trimmed) {
+        if (!std::isxdigit(static_cast<unsigned char>(c))) {
+            return false;
+        }
+    }
+
+    std::stringstream ss;
+    ss << std::hex << trimmed;
+    size_t result;
+    ss >> result;
+
+    if (ss.fail() || !ss.eof()) {
+        return false;
+    }
+
+    out = result;
+    return true;
+}
+
+HandlerStatus	HttpConnectionHandler::handleFirstChunks()
+{
+	std::string::size_type bodyStartPos = rawRequest.find("\r\n\r\n");
+	if (bodyStartPos == std::string::npos) {
+		logError("Internal error: Headers parsed but \\r\\n\\r\\n not found.");
+		errorCode = 500;
+		return S_Error;
+	}
+	bodyStartPos += 4;
+
+	//check how much chunk we might have already catched
+	std::string chunkData = rawRequest.substr(bodyStartPos);
+        size_t chunkDataLen = 0;
+
+	while (true) { //each loop parses one chunk
+		//finding the chunk hex size string
+		std::string::size_type chunkSizeEnd = chunkData.find("\r\n", chunkDataLen);
+		if (chunkSizeEnd == std::string::npos) {
+			logInfo("Chunk size line incomplete, need more data.");
+			chunkRemainder = chunkData;
+			return S_ReadBody; // Need more data for chunk size
+		}
+
+		//turn hexa strig into num
+		std::string hexaStr = chunkData.substr(chunkDataLen, chunkSizeEnd - chunkDataLen);
+		size_t hexaSize;
+		if (!hexStringToSizeT(hexaStr, hexaSize))
+		{
+			logError("Invalid character or negative value in hexadecimal");
+			errorCode = 400;
+			return S_Error;
+		}
+		
+		size_t chunkDataStart = chunkSizeEnd + 2;
+		if (hexaSize == 0) //check if it end of chunks (0\r\n followed by \r\n)
+		{
+
+		}
+	}
+}
 
 HandlerStatus	HttpConnectionHandler::readBody()
 {

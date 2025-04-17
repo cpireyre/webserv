@@ -31,6 +31,7 @@ class HttpConnectionHandler
 		std::string							httpVersion;
 		std::string							body;
 		std::map<std::string, std::string>				headers;
+		std::string							chunkRemainder;
 		int								clientSocket;
 
 		std::string							filePath; // Everything in URI before the question mark
