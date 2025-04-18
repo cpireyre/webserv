@@ -6,29 +6,59 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 
+static void	*talk_slow(void *ctx);
 static void	*talk(void *ctx);
 static int	Connect(char *hostname, int port);
 static void	die(const char *err_msg);
 static int	socket_set_nonblocking(int sock);
 
-# define WORKERS_COUNT 32
-# define REQUESTS_PER_WORKER 10000
+# define WORKERS_COUNT 10000
+# define REQUESTS_PER_WORKER 100
 int	main(int argc, char **argv)
 {
+	signal(SIGPIPE, SIG_IGN);
 	if (argc != 3) {
 		printf("Usage: %s IP port\n", argv[0]);
 		printf("Example: %s 127.0.0.1 8080\n", argv[0]);
 		return (0);
 	}
 
+	(void)talk;
+	(void)talk_slow;
 	pthread_t	workers[WORKERS_COUNT];
 	for (int i = 0; i < WORKERS_COUNT; i++)
-		pthread_create(&workers[i], NULL, talk, argv);
+	{
+		pthread_create(&workers[i], NULL, talk_slow, argv);
+		usleep(5000);
+	}
 	for (int i = 0; i < WORKERS_COUNT; i++)
 		pthread_join(workers[i], NULL);
 
 	return (0);
+}
+
+static void	*talk_slow(void *ctx)
+{
+	char **argv = (char **)ctx;
+	const char *request = "GET /big.txt HTTP/1.1\r\nHost: default.com\r\n\r\n";
+	const size_t		len = strlen(request);
+	for (int i = 0; i < REQUESTS_PER_WORKER; i++)
+	{
+		int	sockfd;
+
+		sockfd = Connect(argv[1], atoi(argv[2]));
+		for (size_t offset = 0; offset < len; offset++)
+		{
+			int err = write(sockfd, request + offset, 1);
+			sleep(10);
+			if (err < 0)
+				perror("write");
+		}
+		close(sockfd);
+	}
+	return (NULL);
 }
 
 static void	*talk(void *ctx)
