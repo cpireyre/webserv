@@ -119,6 +119,7 @@ static void handlesignals(void(*hdl)(int))
 {
 	struct sigaction sa;
 
+	signal(SIGPIPE, SIG_IGN);
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = hdl;
 	sigemptyset(&sa.sa_mask);
