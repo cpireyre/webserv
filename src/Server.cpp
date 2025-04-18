@@ -91,7 +91,7 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server, int qfd)
 		while (i < MAXCONNS)
 		{
 			Endpoint *conn = &endpoints[i];
-			bool client_sending_header_suspiciously_slowly = conn->state == CONNECTION_RECV_HEADER && now_ms() - conn->began_sending_header_ms > 3000;
+			bool client_sending_header_suspiciously_slowly = conn->state == CONNECTION_RECV_HEADER && now_ms() - conn->began_sending_header_ms > RECV_HEADER_TIMEOUT_MS;
 			if (client_sending_header_suspiciously_slowly)
 			{
 				disconnectClient(conn, qfd);

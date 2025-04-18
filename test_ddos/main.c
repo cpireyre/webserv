@@ -15,7 +15,9 @@ static void	die(const char *err_msg);
 static int	socket_set_nonblocking(int sock);
 
 # define WORKERS_COUNT 10000
-# define REQUESTS_PER_WORKER 1000
+# define REQUESTS_PER_WORKER 2000
+# define CONN_DELAY_MICROSECONDS 25
+
 int	main(int argc, char **argv)
 {
 	signal(SIGPIPE, SIG_IGN);
@@ -31,7 +33,7 @@ int	main(int argc, char **argv)
 	for (int i = 0; i < WORKERS_COUNT; i++)
 	{
 		pthread_create(&workers[i], NULL, talk_slow, argv);
-		usleep(5000);
+		usleep(CONN_DELAY_MICROSECONDS);
 	}
 	for (int i = 0; i < WORKERS_COUNT; i++)
 		pthread_join(workers[i], NULL);
