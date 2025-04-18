@@ -15,7 +15,7 @@ static void	die(const char *err_msg);
 static int	socket_set_nonblocking(int sock);
 
 # define WORKERS_COUNT 10000
-# define REQUESTS_PER_WORKER 100
+# define REQUESTS_PER_WORKER 1000
 int	main(int argc, char **argv)
 {
 	signal(SIGPIPE, SIG_IGN);
