@@ -9,6 +9,16 @@
 
 constexpr int PORT_STRLEN = 12;
 constexpr uint64_t	CLIENT_TIMEOUT_MS = 1000; /* One (1) second */
+constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1000; /* One (1) second */
+
+#ifdef __linux__
+constexpr int MAXCONNS = 1024;
+static_assert(MAXCONNS <= 1024); // Haven't tested more than 1024 on Linux
+#else
+constexpr int MAXCONNS = 2048;
+static_assert(MAXCONNS <= 2048); // It won't go past this on macOS?
+#endif
+
 
 enum ConnectionState {
 	CONNECTION_DISCONNECTED,
@@ -26,7 +36,7 @@ class Endpoint {
 		char					port[PORT_STRLEN];
 		ConnectionState			state;
 		int						error; // Client-only
-		uint64_t				lastHeardFrom_ms; // Client-only
+		uint64_t				began_sending_header_ms; // Client-only
 		HttpConnectionHandler	handler; // Client-only
 };
 
@@ -35,10 +45,7 @@ int		start_servers(std::vector<Configuration> servers, Endpoint *endpoints,
 		int endpoints_count_max, int *endpoints_count);
 void	cleanup(Endpoint *endpoints, int endpoints_count, int qfd);
 
-constexpr int MAXCONNS = 1024;
-static_assert(MAXCONNS <= 1024); /* Might not make sense to go past FD limit */
-
-Endpoint	*connectNewClient(HttpConnectionHandler *handlers, const Endpoint *endp);
+Endpoint	*connectNewClient(HttpConnectionHandler *handlers, const Endpoint *endp, int qfd);
 void		receiveHeader(Endpoint *client, int qfd);
 void		receiveBody(Endpoint *client, int qfd);
 void		disconnectClient(Endpoint *client, int qfd);

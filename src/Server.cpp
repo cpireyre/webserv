@@ -77,7 +77,7 @@ void	cleanup(Endpoint *endpoints, int endpoints_count, int qfd)
 	close(qfd);
 }
 
-Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
+Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server, int qfd)
 {
 	assert(endpoints != nullptr);
 	assert(server->sockfd > 0);
@@ -85,6 +85,21 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 	int i = 0;
 	while (i < MAXCONNS && endpoints[i].state != CONNECTION_DISCONNECTED)
 		i++;
+	if (i == MAXCONNS) /* Uh oh, we need to kick someone out */
+	{
+		i = 0;
+		while (i < MAXCONNS)
+		{
+			Endpoint *conn = &endpoints[i];
+			bool client_sending_header_suspiciously_slowly = conn->state == CONNECTION_RECV_HEADER && now_ms() - conn->began_sending_header_ms > RECV_HEADER_TIMEOUT_MS;
+			if (client_sending_header_suspiciously_slowly)
+			{
+				disconnectClient(conn, qfd);
+				break;
+			}
+			i++;
+		}
+	}
 	assert(i < MAXCONNS);
 	struct sockaddr client_addr;
 	socklen_t		client_addr_len = sizeof(client_addr);
@@ -103,7 +118,7 @@ Endpoint	*connectNewClient(Endpoint *endpoints, const Endpoint *server)
 	endpoints[i].handler.setClientSocket(clientSocket);
 	endpoints[i].handler.setIP(server->IP);
 	endpoints[i].handler.setPORT(server->port);
-	endpoints[i].lastHeardFrom_ms = now_ms();
+	endpoints[i].began_sending_header_ms = now_ms();
 	Logger::debug("Connected client, socket: %d", clientSocket);
 
 	return &endpoints[i];
@@ -176,23 +191,11 @@ int	run(std::vector<Configuration> serverMap)
 			error = 1;
 			break;
 		}
-		/* for (int i = 0; i < MAXCONNS; i++) */
-		/* { */
-		/* 	if (endpoints[i].alive == false || endpoints[i].kind != ENDPOINT_CLIENT) */
-		/* 		continue; */
-		/* 	assert(endpoints[i].alive == true); */
-		/* 	if (now_ms() - endpoints[i].lastHeardFrom_ms > CLIENT_TIMEOUT_MS) */
-		/* 	{ */
-		/* 		endpoints[i].state = CONNECTION_TIMED_OUT; */
-		/* 		Logger::debug("Timing out %d", endpoints[i].sockfd); */
-		/* 	} */
-		/* } */
 		for (int event_id = 0; event_id < nready; event_id++)
 		{
 			Endpoint *conn = (Endpoint *)queue_event_get_data(&events[event_id]);
 			assert(conn->sockfd > 0);
 			assert(conn->state != CONNECTION_DISCONNECTED);
-			conn->lastHeardFrom_ms = now_ms();
 			switch (conn->state)
 			{
 				case CONNECTION_TIMED_OUT:
@@ -220,11 +223,12 @@ int	run(std::vector<Configuration> serverMap)
 						queue_mod_fd(qfd, conn->handler.getClientSocket(), QUEUE_EVENT_READ, conn);
 						conn->state = CONNECTION_RECV_HEADER;
 						conn->handler.resetObject();
+						conn->began_sending_header_ms = now_ms();
 					}
 					break;
 				case CONNECTION_ACTUALLY_A_SERVER:
 					{
-						Endpoint *newClient = connectNewClient(endpoints, conn);
+						Endpoint *newClient = connectNewClient(endpoints, conn, qfd);
 						if (newClient == nullptr)
 							continue;
 						queue_add_fd(qfd, newClient->handler.getClientSocket(), QUEUE_EVENT_READ, newClient);
