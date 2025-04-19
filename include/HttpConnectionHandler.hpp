@@ -55,6 +55,7 @@ class HttpConnectionHandler
 		//Creating HTTP response
 		std::string	getDefaultErrorPage500();
 		std::string	getDefaultErrorPage400();
+		std::string getDefaultErrorPage408();
 		std::string	getReasonPhrase(int statusCode);
 		std::string	getCurrentHttpDate();
 

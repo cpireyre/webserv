@@ -116,8 +116,7 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 
 	if (kevent(qfd, ev, n, NULL, 0, NULL) < 0)
 	{
-		if (errno != ENOENT)
-			perror("kevent");
+		perror("kevent");
 		return (-1);
 	}
 

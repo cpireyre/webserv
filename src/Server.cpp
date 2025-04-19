@@ -86,6 +86,7 @@ int	run(std::vector<Configuration> serverMap)
 				case CONNECTION_SEND_RESPONSE:
 					if (conn->error != 0)
 					{
+						Logger::debug("Error with %d", conn->sockfd);
 						std::string response = conn->handler
 							.createHttpErrorResponse(conn->error);
 						send(conn->sockfd, response.c_str(), response.size(), 0);
@@ -231,6 +232,8 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd)
 				continue;
 			default:
 				assert(conns[i].last_heard_from_ms != 0);
+				if (conns[i].error == 408) // Already marked for timeout
+					continue;
 				// Soft timeout: mark client for 408
 				if (idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS)
 				{

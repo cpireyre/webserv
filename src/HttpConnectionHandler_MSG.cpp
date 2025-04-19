@@ -49,6 +49,25 @@ std::string HttpConnectionHandler::getDefaultErrorPage400()
 	return oss.str();
 }
 
+std::string HttpConnectionHandler::getDefaultErrorPage408()
+{
+    std::string body =
+        "<html><head><title>408 Request Timeout</title></head>"
+        "<body><h1>408 Request Timeout</h1>"
+        "<p>Your browser took too long to send a complete request.</p>"
+        "</body></html>";
+
+    std::ostringstream oss;
+    oss << "HTTP/1.1 408 Request Timeout\r\n";
+    oss << "Content-Type: text/html; charset=UTF-8\r\n";
+    oss << "Content-Length: " << body.length() << "\r\n";
+    oss << "Connection: Close\r\n";
+    oss << "Date: " << getCurrentHttpDate() << "\r\n";
+    oss << "\r\n";
+    oss << body;
+    return oss.str();
+}
+
 std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
 {
     static const std::map<int, std::string> reasonPhrases =
@@ -136,6 +155,8 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 	std::ostringstream		response;
 	if (!conf) {
 		logError("Error response func called with no configuration file match yet, ok if happens during parsing");
+		if (error == 408)
+			return getDefaultErrorPage408();
 		return getDefaultErrorPage400();
 	}
 	std::map<int, std::string>	errorPages = conf->getErrorPages();

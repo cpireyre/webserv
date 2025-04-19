@@ -8,7 +8,7 @@
 # include <csignal>
 
 constexpr int 		PORT_STRLEN = 12;
-constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 10 * 1000; // Ten (10) seconds
+constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 2 * 1000; // Ten (10) seconds
 constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 
 #ifdef __linux__
