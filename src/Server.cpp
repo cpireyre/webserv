@@ -197,6 +197,8 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	endpoints[i].error = 0;
 	endpoints[i].state = CONNECTION_RECV_HEADER;
 	endpoints[i].sockfd = clientSocket;
+    memcpy(endpoints[i].IP, server->IP, INET6_ADDRSTRLEN);
+    memcpy(endpoints[i].port, server->port, PORT_STRLEN);
 	endpoints[i].handler.setClientSocket(clientSocket);
 	endpoints[i].handler.setIP(server->IP);
 	endpoints[i].handler.setPORT(server->port);
