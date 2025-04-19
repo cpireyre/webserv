@@ -8,7 +8,7 @@ static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int);
 static void	initEndpoint(int, std::string, std::string, Endpoint *);
 static bool endpointAlreadyBound(Endpoint *, int, std::string, std::string);
 static void	timeoutInactiveClients(Endpoint *, int);
-static void	cleanup(Endpoint *, int, int);
+static void	cleanup(Endpoint *, int);
 static void sigcleanup(int);
 static void handlesignals(void(*)(int));
 
@@ -124,7 +124,7 @@ int	run(std::vector<Configuration> serverMap)
 	}
 
 cleanup:
-	cleanup(endpoints, endpoints_count, qfd);
+	cleanup(endpoints, qfd);
 	if (error)
 		return (1);
 	return (0);
@@ -239,16 +239,21 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd)
 	}
 }
 
-static void	cleanup(Endpoint *endpoints, int endpoints_count, int qfd)
+static void	cleanup(Endpoint *endpoints, int qfd)
 {
 	if (endpoints)
 	{
-		for (int i = 0; i < endpoints_count; i++)
+		for (int i = 0; i < MAXCONNS; i++)
 		{
-			Logger::debug("Closing socket %s:%s",
-					endpoints[i].IP,
-					endpoints[i].port);
-			close(endpoints[i].sockfd);
+			if (endpoints[i].state != CONNECTION_DISCONNECTED)
+			{
+				assert(endpoints[i].sockfd > 0);
+				Logger::debug("Closing socket %s:%s (%d)",
+						endpoints[i].IP,
+						endpoints[i].port,
+						endpoints[i].sockfd);
+				close(endpoints[i].sockfd);
+			}
 		}
 		Logger::debug("Deleting endpoints array");
 	}
