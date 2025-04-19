@@ -17,10 +17,10 @@ int	queue_create(void)
 	qfd = kqueue();
 	if (qfd < 0)
 	{
-		Logger::warn("Error creating kqueue");
+		logError("Error creating kqueue");
 		return (-1);
 	}
-	Logger::debug("Created event queue");
+	logDebug("Created event queue");
 #endif
 
 	assert(qfd >= 0);
@@ -65,7 +65,7 @@ int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	EV_SET(&e, fd, events, EV_ADD, 0, 0, (void *)data);
 	if (kevent(qfd, &e, 1, NULL, 0, NULL) < 0)
 	{
-		Logger::warn("Error adding kevent");
+		logError("Error adding kevent");
 		return (-1);
 	}
 #endif
@@ -148,7 +148,7 @@ int	queue_rem_fd(int qfd, int fd)
 	{
 		if (errno == ENOENT)
 			return (0);
-		Logger::warn("Error deleting fd: kevent");
+		logError("Error deleting fd: kevent");
 		return (-1);
 	}
 
@@ -180,7 +180,7 @@ int	queue_wait(int qfd, queue_event *events, int events_count)
 	if (nready < 0)
 	{
 		if (errno != EINTR)
-			Logger::warn("Error: kevent");
+			logError("Error: kevent");
 		return (-1);
 	}
 	if (0) /* Show kevent debug information */
@@ -195,7 +195,7 @@ int	queue_wait(int qfd, queue_event *events, int events_count)
 			else if (e->filter == EVFILT_WRITE)
 				filter_str = "WRITE";
 
-			Logger::debug("[kevent] fd=%lu filter=%s flags=0x%x data=%ld udata=%p",
+			logDebug("[kevent] fd=%lu filter=%s flags=0x%x data=%ld udata=%p",
 					(unsigned long)e->ident,
 					filter_str,
 					e->flags,
@@ -218,12 +218,12 @@ void	*queue_event_get_data(const queue_event *e)
 #endif
 }
 
-int	queue_event_is_error(const queue_event *e)
+bool	queue_event_is_error(const queue_event *e)
 {
 #ifdef __linux__
-	return (e->events & ~(EPOLLIN | EPOLLOUT)) ? 1 : 0;
+	return (e->events & ~(EPOLLIN | EPOLLOUT)) ? true : false;
 #else
-	return (e->flags & EV_EOF) ? 1 : 0;
+	return (e->flags & EV_EOF) ? true : false;
 #endif
 }
 

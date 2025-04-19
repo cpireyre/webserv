@@ -1,4 +1,5 @@
 #include "HttpConnectionHandler.hpp"
+#include "Logger.hpp"
 
 std::string HttpConnectionHandler::getCurrentHttpDate()
 {

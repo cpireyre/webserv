@@ -1,6 +1,7 @@
 #include "HttpConnectionHandler.hpp"
 #include "Configuration.hpp"
 #include "CgiHandler.hpp"
+#include "Logger.hpp"
 
 /* determines the content type based on the file extension
  *
@@ -752,7 +753,7 @@ void	HttpConnectionHandler::handleRequest()
 		assert(size >= 0);
 		write(1, buffer, size);
 		std::string response = createHttpResponse(200, buffer, "text/html");
-		Logger::debug("%s", response.c_str());
+		logDebug("%s", response.c_str());
 		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}

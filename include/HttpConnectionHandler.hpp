@@ -119,22 +119,6 @@ class HttpConnectionHandler
 		void	setIP(std::string ip) { IP = ip; }
 		void	setPORT(std::string port) { PORT = port; }
 
-		//loggers
-		static void logError(const std::string& message)
-		{
-			std::time_t now = std::time(nullptr);
-			char timeBuf[20];
-			strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-			std::cerr << "[" << timeBuf << "] ERROR: " << message << std::endl;
-		}
-
-		static void logInfo(const std::string& message)
-		{
-			std::time_t now = std::time(nullptr);
-			char timeBuf[20];
-			strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-			std::cout << "[" << timeBuf << "] INFO: " << message << std::endl;
-		}
 };
 
 std::ostream& operator<<(std::ostream& os, const HttpConnectionHandler& handler);

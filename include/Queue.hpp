@@ -28,5 +28,5 @@ void	*queue_event_get_data(const queue_event *e);
 int		queue_mod_fd(int qfd, int fd,
 			enum queue_event_type t, const void *data);
 int		queue_rem_fd(int qfd, int fd);
-int		queue_event_is_error(const queue_event *e);
+bool	queue_event_is_error(const queue_event *e);
 queue_event_type	queue_event_get_type(const queue_event *e);

@@ -42,7 +42,7 @@ int	run(std::vector<Configuration> serverMap)
 				QUEUE_EVENT_READ, &endpoints[i]);
 		if (error)
 		{
-			Logger::warn("Error registering server socket events, "
+			logError("Error registering server socket events, "
 					"execution cannot proceed");
 			goto cleanup;
 		}
@@ -58,7 +58,7 @@ int	run(std::vector<Configuration> serverMap)
 		int nready = queue_wait(qfd, events, QUEUE_MAX_EVENTS);
 		if (nready < 0 && !g_ServerShoudClose)
 		{
-			Logger::warn("Error getting events from kernel");
+			logError("Error getting events from kernel");
 			error = 1;
 			break;
 		}
@@ -67,6 +67,8 @@ int	run(std::vector<Configuration> serverMap)
 			Endpoint *conn = (Endpoint*)queue_event_get_data(&events[id]);
 			assert(conn->sockfd > 0);
 			assert(conn->state != CONNECTION_DISCONNECTED);
+			if (queue_event_is_error(&events[id]))
+				disconnectClient(conn, qfd);
 			queue_event_type event_type = queue_event_get_type(&events[id]);
 			switch (conn->state)
 			{
@@ -90,7 +92,7 @@ int	run(std::vector<Configuration> serverMap)
 					assert(event_type == QUEUE_EVENT_WRITE);
 					if (conn->error != 0)
 					{
-						Logger::debug("Error with %d", conn->sockfd);
+						logDebug("Error with %d", conn->sockfd);
 						std::string response = conn->handler
 							.createHttpErrorResponse(conn->error);
 						send(conn->sockfd, response.c_str(), response.size(), 0);
@@ -123,8 +125,7 @@ int	run(std::vector<Configuration> serverMap)
 					}
 					break;
 				case CONNECTION_DISCONNECTED:
-					assert(false); /* Unreachable. Shouldn't happen */
-					break;
+					continue;
 			}
 		}
 	}
@@ -152,7 +153,7 @@ static int	start_servers(std::vector<Configuration> servers,
 		if (sockfd <= 0)
 			return (-1);
 		initEndpoint(sockfd, host, port, &endpoints[*count]);
-		Logger::debug("Opened socket IP: %s, port: %s",
+		logDebug("Opened socket IP: %s, port: %s",
 				endpoints[*count].IP,
 				endpoints[*count].port);
 		assert(endpoints[*count].state == CONNECTION_ACTUALLY_A_SERVER);
@@ -210,7 +211,7 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	endpoints[i].handler.setPORT(server->port);
 	endpoints[i].began_sending_header_ms = now_ms();
 	endpoints[i].last_heard_from_ms = now_ms();
-	Logger::debug("Connected client, socket: %d", clientSocket);
+	logDebug("Connected client, socket: %d", clientSocket);
 
 	return &endpoints[i];
 }
@@ -231,7 +232,7 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd)
 				// Hard timeout: forcibly disconnect
 				if (idle_duration_ms > 3 * CLIENT_TIMEOUT_THRESHOLD_MS)
 				{
-					Logger::debug("Hard timeout: %d", conns[i].sockfd);
+					logDebug("Hard timeout: %d", conns[i].sockfd);
 					disconnectClient(&conns[i], qfd);
 				}
 				continue;
@@ -242,7 +243,7 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd)
 				// Soft timeout: mark client for 408
 				if (idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS)
 				{
-					Logger::debug("Soft timeout: %d", conns[i].sockfd);
+					logDebug("Soft timeout: %d", conns[i].sockfd);
 					conns[i].state = CONNECTION_TIMED_OUT;
 				}
 		}
@@ -258,14 +259,14 @@ static void	cleanup(Endpoint *endpoints, int qfd)
 			if (endpoints[i].state != CONNECTION_DISCONNECTED)
 			{
 				assert(endpoints[i].sockfd > 0);
-				Logger::debug("Closing socket %s:%s (%d)",
+				logDebug("Closing socket %s:%s (%d)",
 						endpoints[i].IP,
 						endpoints[i].port,
 						endpoints[i].sockfd);
 				close(endpoints[i].sockfd);
 			}
 		}
-		Logger::debug("Deleting endpoints array");
+		logDebug("Deleting endpoints array");
 	}
 	close(qfd);
 }
