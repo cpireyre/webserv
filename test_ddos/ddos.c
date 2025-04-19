@@ -14,9 +14,9 @@ static int	Connect(char *hostname, int port);
 static void	die(const char *err_msg);
 static int	socket_set_nonblocking(int sock);
 
-# define WORKERS_COUNT 10000
-# define REQUESTS_PER_WORKER 2000
-# define CONN_DELAY_MICROSECONDS 25
+# define WORKERS_COUNT 100
+# define REQUESTS_PER_WORKER 200
+# define CONN_DELAY_MICROSECONDS 50
 
 int	main(int argc, char **argv)
 {
