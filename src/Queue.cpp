@@ -226,3 +226,18 @@ int	queue_event_is_error(const queue_event *e)
 	return (e->flags & EV_EOF) ? 1 : 0;
 #endif
 }
+
+queue_event_type	queue_event_get_type(const queue_event *e)
+{
+#ifdef __linux__
+	if (e->events & EPOLLIN)
+		return (QUEUE_EVENT_READ);
+	else
+		return (QUEUE_EVENT_WRITE);
+#else
+	if (e->filter == EVFILT_READ)
+		return (QUEUE_EVENT_READ);
+	else
+		return (QUEUE_EVENT_WRITE);
+#endif
+}

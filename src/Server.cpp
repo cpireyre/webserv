@@ -62,11 +62,12 @@ int	run(std::vector<Configuration> serverMap)
 			error = 1;
 			break;
 		}
-		for (int event_id = 0; event_id < nready; event_id++)
+		for (int id = 0; id < nready; id++)
 		{
-			Endpoint *conn = (Endpoint*)queue_event_get_data(&events[event_id]);
+			Endpoint *conn = (Endpoint*)queue_event_get_data(&events[id]);
 			assert(conn->sockfd > 0);
 			assert(conn->state != CONNECTION_DISCONNECTED);
+			queue_event_type event_type = queue_event_get_type(&events[id]);
 			switch (conn->state)
 			{
 				case CONNECTION_TIMED_OUT:
@@ -76,14 +77,17 @@ int	run(std::vector<Configuration> serverMap)
 							QUEUE_EVENT_WRITE, conn);
 					break;
 				case CONNECTION_RECV_HEADER: 
+					assert(event_type == QUEUE_EVENT_READ);
 					receiveHeader(conn, qfd);
 					conn->last_heard_from_ms = now_ms();
 					break;
 				case CONNECTION_RECV_BODY:
+					assert(event_type == QUEUE_EVENT_READ);
 					receiveBody(conn, qfd);
 					conn->last_heard_from_ms = now_ms();
 					break;
 				case CONNECTION_SEND_RESPONSE:
+					assert(event_type == QUEUE_EVENT_WRITE);
 					if (conn->error != 0)
 					{
 						Logger::debug("Error with %d", conn->sockfd);
@@ -104,6 +108,7 @@ int	run(std::vector<Configuration> serverMap)
 					}
 					break;
 				case CONNECTION_ACTUALLY_A_SERVER:
+					assert(event_type == QUEUE_EVENT_READ);
 					{
 						Endpoint *client =
 							connectNewClient(endpoints, conn, qfd);
