@@ -7,9 +7,13 @@
 # include "Timeout.hpp"
 # include <csignal>
 
-constexpr int 		PORT_STRLEN = 12;
-constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 2 * 1000; // Ten (10) seconds
+#ifdef DEBUG
+constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 10 * 1000; // Ten (10) seconds
 constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
+#else
+constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 60 * 1000; // One minute, like Nginx
+constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
+#endif
 
 #ifdef __linux__
 constexpr int MAXCONNS = 1024;
@@ -29,6 +33,7 @@ enum ConnectionState {
 	CONNECTION_ACTUALLY_A_SERVER,
 };
 
+constexpr int 		PORT_STRLEN = 12;
 class Endpoint {
 	public:
 		int						sockfd;
