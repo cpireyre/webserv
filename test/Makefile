@@ -9,3 +9,7 @@ ddos: ddos.c
 slow: slow.c
 	cc -Wall -Wextra -Werror $^ -o slow
 	./slow 127.0.0.1 8010
+
+.PHONY: slowloris
+slowloris:
+	perl slowloris.pl -dns 127.0.0.1 -port 8010
