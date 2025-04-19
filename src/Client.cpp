@@ -64,6 +64,8 @@ void	disconnectClient(Endpoint *client, int qfd)
 	client->state = CONNECTION_DISCONNECTED;
 	client->sockfd = -1;
 	client->error = 0;
+	client->began_sending_header_ms = 0;
+	client->last_heard_from_ms = 0;
 	client->handler.setClientSocket(-1);
 	client->handler.resetObject();
 }

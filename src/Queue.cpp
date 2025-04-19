@@ -114,9 +114,11 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 			break;
 	}
 
-	if (kevent(qfd, ev, n, NULL, 0, NULL) < 0) {
-		Logger::warn("Error in kevent");
-		return -1;
+	if (kevent(qfd, ev, n, NULL, 0, NULL) < 0)
+	{
+		if (errno != ENOENT)
+			perror("kevent");
+		return (-1);
 	}
 
 #endif
@@ -171,7 +173,11 @@ int	queue_wait(int qfd, queue_event *events, int events_count)
 	}
 #else
 	//TODO mac time out
-	nready = kevent(qfd, NULL, 0, events, events_count, NULL);
+	struct timespec timeout = {
+		.tv_sec = 1,
+		.tv_nsec = 0,
+	};
+	nready = kevent(qfd, NULL, 0, events, events_count, &timeout);
 	if (nready < 0)
 	{
 		if (errno != EINTR)
