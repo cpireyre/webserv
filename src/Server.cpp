@@ -2,6 +2,7 @@
 #include "Queue.hpp"
 
 volatile sig_atomic_t g_ServerShoudClose = false;
+int max_client_id = 0;
 
 static int	start_servers(std::vector<Configuration>, Endpoint *, int, int *);
 static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int);
@@ -190,6 +191,8 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 			i++;
 		}
 	}
+	if (i == MAXCONNS) /* We definitely can't make a new connection right now */
+		return nullptr;
 	assert(i < MAXCONNS);
 	struct sockaddr client_addr;
 	socklen_t		client_addr_len = sizeof(client_addr);
@@ -213,12 +216,14 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	endpoints[i].last_heard_from_ms = now_ms();
 	logDebug("Connected client, socket: %d", clientSocket);
 
+	if (i > max_client_id)
+		max_client_id = i;
 	return &endpoints[i];
 }
 
 static void	timeoutInactiveClients(Endpoint *conns, int qfd)
 {
-	for (int i = 0; i < MAXCONNS; i++)
+	for (int i = 0; i <= max_client_id; i++)
 	{
 		uint64_t idle_duration_ms = now_ms() - conns[i].last_heard_from_ms;
 		switch (conns[i].state)
@@ -254,7 +259,7 @@ static void	cleanup(Endpoint *endpoints, int qfd)
 {
 	if (endpoints)
 	{
-		for (int i = 0; i < MAXCONNS; i++)
+		for (int i = 0; i <= max_client_id; i++)
 		{
 			if (endpoints[i].state != CONNECTION_DISCONNECTED)
 			{
