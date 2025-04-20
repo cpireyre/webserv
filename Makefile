@@ -6,17 +6,16 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/20 13:24:24 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/20 15:44:55 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
 CC := c++
-CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20 -O2
-# debug := -DDEBUG
-# CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20 -g3
-# debug := -DDEBUG
-CPPFLAGS := -I./include/ $(debug)
+CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
+debug := -O0 -DDEBUG -g3
+# opt := -O2
+CPPFLAGS := -I./include/ $(debug) $(opt)
 NAME := webserv
 
 src_files := CgiHandler.cpp Configuration.cpp HttpConnectionHandler.cpp HttpConnectionHandler_CGI.cpp HttpConnectionHandler_Parsing.cpp HttpConnectionHandler_Response.cpp HttpConnectionHandler_MSG.cpp Logger.cpp main.cpp Parser.cpp Queue.cpp Server.cpp Socket.cpp Client.cpp
