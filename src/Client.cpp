@@ -19,7 +19,6 @@ void	receiveHeader(Endpoint *client, int qfd)
 			disconnectClient(client, qfd);
 			break;
 		case S_Error:
-			client->error = 400;
 			assert(queue_mod_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_WRITE, client) == 0);
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
@@ -38,7 +37,6 @@ void	receiveBody(Endpoint *client, int qfd)
 			// probably do nothing? maybe some safety checks
 			break;
 		case S_Error:
-			client->error = 400; // TODO Maybe should not be 400? Not sure what can go wrong while receiving body
 			queue_mod_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_WRITE, client); // error handle here
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
@@ -66,7 +64,6 @@ void	disconnectClient(Endpoint *client, int qfd)
 	client->sockfd = -1;
 	bzero(client->IP, INET6_ADDRSTRLEN);
 	bzero(client->port, PORT_STRLEN);
-	client->error = 0;
 	client->began_sending_header_ms = 0;
 	client->last_heard_from_ms = 0;
 	client->handler.setClientSocket(-1);

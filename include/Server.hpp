@@ -40,7 +40,6 @@ class Endpoint {
 		char					IP[INET6_ADDRSTRLEN];
 		char					port[PORT_STRLEN];
 		ConnectionState			state;
-		int						error; // Client-only
 		uint64_t				began_sending_header_ms; // Client-only
 		uint64_t				last_heard_from_ms; // Client-only
 		HttpConnectionHandler	handler; // Client-only

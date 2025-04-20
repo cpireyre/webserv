@@ -115,6 +115,7 @@ class HttpConnectionHandler
 
 		// Setters
 		void	setClientSocket(int socket) { clientSocket = socket; }
+		void	setErrorCode(int err) { errorCode = err; }
 		void	setConfig(Configuration *config) { conf = config; }
 		void	setIP(std::string ip) { IP = ip; }
 		void	setPORT(std::string port) { PORT = port; }

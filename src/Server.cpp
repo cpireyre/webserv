@@ -73,7 +73,7 @@ int	run(std::vector<Configuration> serverMap)
 			switch (conn->state)
 			{
 				case CONNECTION_TIMED_OUT:
-					conn->error = 408;
+					conn->handler.setErrorCode(408);
 					conn->state = CONNECTION_SEND_RESPONSE;
 					queue_mod_fd(qfd, conn->handler.getClientSocket(),
 							QUEUE_EVENT_WRITE, conn);
@@ -90,13 +90,14 @@ int	run(std::vector<Configuration> serverMap)
 					break;
 				case CONNECTION_SEND_RESPONSE:
 					assert(event_type == QUEUE_EVENT_WRITE);
-					if (conn->error != 0)
+					if (conn->handler.getErrorCode() != 0)
 					{
+						/* This assumes we can send the whole error
+						 * response in one send() call */
 						logDebug("Error with %d", conn->sockfd);
 						std::string response = conn->handler
-							.createHttpErrorResponse(conn->error);
+							.createHttpErrorResponse(conn->handler.getErrorCode());
 						send(conn->sockfd, response.c_str(), response.size(), 0);
-						conn->error = 0;
 						disconnectClient(conn, qfd);
 					}
 					else
@@ -201,7 +202,6 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 		perror("client accept");
 		return nullptr;
 	}
-	endpoints[i].error = 0;
 	endpoints[i].state = CONNECTION_RECV_HEADER;
 	endpoints[i].sockfd = clientSocket;
     memcpy(endpoints[i].IP, server->IP, INET6_ADDRSTRLEN);
@@ -238,7 +238,7 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd)
 				continue;
 			default:
 				assert(conns[i].last_heard_from_ms != 0);
-				if (conns[i].error == 408) // Already marked for timeout
+				if (conns[i].handler.getErrorCode() == 408) // Already marked for timeout
 					continue;
 				// Soft timeout: mark client for 408
 				if (idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS)
