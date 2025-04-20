@@ -5,7 +5,7 @@
 #include "../include/Parser.hpp"
 #include "../include/HttpConnectionHandler.hpp"
 
-#define PORT 8081
+#define PORT 8080
 
 std::vector<Configuration> serverMap;
 
@@ -59,7 +59,8 @@ void startServer(int port, int ac, char **av) {
 
         HttpConnectionHandler handler;
         handler.setClientSocket(clientSocket);
-        handler.setConfig(&serverMap[0]);
+	handler.setIP("127.0.0.1");
+	handler.setPORT("8080");
         if (handler.parseRequest()) {
             handler.handleRequest();
         } else {
