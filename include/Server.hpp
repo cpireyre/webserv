@@ -20,7 +20,7 @@ constexpr int MAXCONNS = 1024;
 static_assert(MAXCONNS <= 1024); // Haven't tested more than 1024 on Linux
 #else
 constexpr int MAXCONNS = 2048;
-static_assert(MAXCONNS <= 2048); // It won't go past this on macOS?
+static_assert(MAXCONNS <= 2048); // cf. `ulimit -a` for the bottleneck
 #endif
 
 

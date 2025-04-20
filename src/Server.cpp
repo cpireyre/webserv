@@ -2,14 +2,12 @@
 #include "Queue.hpp"
 
 volatile sig_atomic_t g_ServerShoudClose = false;
-int max_client_id = 0;
 
 static int	start_servers(std::vector<Configuration>, Endpoint *, int, int *);
-static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int);
+static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int, int *);
 static void	initEndpoint(int, std::string, std::string, Endpoint *);
 static bool endpointAlreadyBound(Endpoint *, int, std::string, std::string);
-static void	timeoutInactiveClients(Endpoint *, int);
-static void	cleanup(Endpoint *, int);
+static void	timeoutInactiveClients(Endpoint *, int, int);
 static void sigcleanup(int);
 static void handlesignals(void(*)(int));
 
@@ -17,6 +15,7 @@ int	run(std::vector<Configuration> serverMap)
 {
 	assert(!serverMap.empty());
 
+	int max_client_id = 0;
 	int	error = 1;
 
 	int qfd = queue_create();
@@ -55,7 +54,7 @@ int	run(std::vector<Configuration> serverMap)
 	while (!g_ServerShoudClose)
 	{
 		assert(g_ServerShoudClose == false);
-		timeoutInactiveClients(endpoints, qfd);
+		timeoutInactiveClients(endpoints, qfd, max_client_id);
 		int nready = queue_wait(qfd, events, QUEUE_MAX_EVENTS);
 		if (nready < 0 && !g_ServerShoudClose)
 		{
@@ -115,7 +114,7 @@ int	run(std::vector<Configuration> serverMap)
 					assert(event_type == QUEUE_EVENT_READ);
 					{
 						Endpoint *client =
-							connectNewClient(endpoints, conn, qfd);
+							connectNewClient(endpoints, conn, qfd, &max_client_id);
 						if (client == nullptr)
 							continue;
 						queue_add_fd(qfd, client->handler.getClientSocket(),
@@ -133,7 +132,20 @@ int	run(std::vector<Configuration> serverMap)
 	}
 
 cleanup:
-	cleanup(endpoints, qfd);
+	for (int i = 0; i <= max_client_id; i++)
+	{
+		if (endpoints[i].state != CONNECTION_DISCONNECTED)
+		{
+			assert(endpoints[i].sockfd > 0);
+			logDebug("Closing socket %s:%s (%d)",
+					endpoints[i].IP,
+					endpoints[i].port,
+					endpoints[i].sockfd);
+			close(endpoints[i].sockfd);
+		}
+	}
+	logDebug("Deleting endpoints array");
+	close(qfd);
 	if (error)
 		return (1);
 	return (0);
@@ -166,7 +178,7 @@ static int	start_servers(std::vector<Configuration> servers,
 }
 
 static Endpoint	*connectNewClient(Endpoint *endpoints,
-		const Endpoint *server, int qfd)
+		const Endpoint *server, int qfd, int *max_client_id)
 {
 	assert(endpoints != nullptr);
 	assert(server->sockfd > 0);
@@ -216,12 +228,12 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	endpoints[i].last_heard_from_ms = now_ms();
 	logDebug("Connected client, socket: %d", clientSocket);
 
-	if (i > max_client_id)
-		max_client_id = i;
+	if (i > *max_client_id)
+		*max_client_id = i;
 	return &endpoints[i];
 }
 
-static void	timeoutInactiveClients(Endpoint *conns, int qfd)
+static void	timeoutInactiveClients(Endpoint *conns, int qfd, int max_client_id)
 {
 	for (int i = 0; i <= max_client_id; i++)
 	{
@@ -253,27 +265,6 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd)
 				}
 		}
 	}
-}
-
-static void	cleanup(Endpoint *endpoints, int qfd)
-{
-	if (endpoints)
-	{
-		for (int i = 0; i <= max_client_id; i++)
-		{
-			if (endpoints[i].state != CONNECTION_DISCONNECTED)
-			{
-				assert(endpoints[i].sockfd > 0);
-				logDebug("Closing socket %s:%s (%d)",
-						endpoints[i].IP,
-						endpoints[i].port,
-						endpoints[i].sockfd);
-				close(endpoints[i].sockfd);
-			}
-		}
-		logDebug("Deleting endpoints array");
-	}
-	close(qfd);
 }
 
 static bool endpointAlreadyBound(Endpoint *endpoints, int count_to_check,
