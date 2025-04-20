@@ -16,7 +16,7 @@ extern std::vector<Configuration> serverMap;
 
 typedef enum {
 	S_Error,
-	S_KeepReading,
+	S_Again,
 	S_Done,
 	S_ClosedConnection,
 	S_ReadBody,

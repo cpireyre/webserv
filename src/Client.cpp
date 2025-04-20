@@ -8,7 +8,7 @@ void	receiveHeader(Endpoint *client, int qfd)
 	HandlerStatus status = client->handler.parseRequest();
 	switch (status)
 	{
-		case S_KeepReading:
+		case S_Again:
 			// Here might be a good place to check for Slowloris behaviour
 			break;
 		case S_Done:
@@ -32,10 +32,9 @@ void	receiveHeader(Endpoint *client, int qfd)
 void	receiveBody(Endpoint *client, int qfd)
 {
 	HandlerStatus status = client->handler.readBody();
-	//HandlerStatus status = S_Done;
 	switch (status)
 	{
-		case S_KeepReading:
+		case S_Again:
 			// probably do nothing? maybe some safety checks
 			break;
 		case S_Error:

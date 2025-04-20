@@ -51,7 +51,7 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 	buffer[bRead] = '\0';
 	rawRequest += buffer;
 	if (rawRequest.find("\r\n\r\n") == std::string::npos) {
-		return S_KeepReading;
+		return S_Again;
 	}
 	else if (rawRequest.empty()) {
 		logError("Empty request received");
@@ -322,7 +322,7 @@ HandlerStatus	HttpConnectionHandler::readBody()
 	}
 	size_t contentLength = static_cast<size_t>(contentLengthInt);
 	if (body.size() < contentLength) {
-		return S_KeepReading;
+		return S_Again;
 	}
 	else {
 		return S_Done;
