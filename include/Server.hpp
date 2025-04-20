@@ -46,6 +46,7 @@ class Endpoint {
 };
 
 
+extern int	run(const std::vector<Configuration> config);
 void		receiveHeader(Endpoint *client, int qfd);
 void		receiveBody(Endpoint *client, int qfd);
 void		disconnectClient(Endpoint *client, int qfd);

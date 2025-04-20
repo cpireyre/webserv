@@ -3,7 +3,7 @@
 
 volatile sig_atomic_t g_ServerShoudClose = false;
 
-static int	start_servers(std::vector<Configuration>, Endpoint *, int, int *);
+static int	start_servers(const std::vector<Configuration>,Endpoint*,int,int*);
 static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int, int *);
 static void	initEndpoint(int, std::string, std::string, Endpoint *);
 static bool endpointAlreadyBound(Endpoint *, int, std::string, std::string);
@@ -11,30 +11,28 @@ static void	timeoutInactiveClients(Endpoint *, int, int);
 static void sigcleanup(int);
 static void handlesignals(void(*)(int));
 
-int	run(std::vector<Configuration> serverMap)
+int	run(const std::vector<Configuration> config)
 {
-	assert(!serverMap.empty());
+	assert(!config.empty());
+	handlesignals(sigcleanup);
 
-	int max_client_id = 0;
 	int	error = 1;
 
 	int qfd = queue_create();
 	if (qfd < 0)
 		return (1);
-	handlesignals(sigcleanup);
 
 	int	endpoints_count = 0;
-	const int	server_socket_count = serverMap.size();
 	Endpoint	endpoints[MAXCONNS];
 	for (int n = 0; n < MAXCONNS; n++)
 		endpoints[n].state = CONNECTION_DISCONNECTED;
-	error = start_servers(serverMap, endpoints,
-			server_socket_count, &endpoints_count);
-	int i = 0;
+	error = start_servers(config, endpoints, config.size(), &endpoints_count);
+	int max_client_id = endpoints_count;
 	if (error)
 		goto cleanup;
 
-	while (i < endpoints_count)
+	/* Register all server sockets for read events */
+	for (int i = 0; i < endpoints_count; i++)
 	{
 		assert(endpoints[i].state == CONNECTION_ACTUALLY_A_SERVER);
 		assert(endpoints[i].sockfd > 0);
@@ -46,22 +44,20 @@ int	run(std::vector<Configuration> serverMap)
 					"execution cannot proceed");
 			goto cleanup;
 		}
-		i++;
 	}
 
 	queue_event events[QUEUE_MAX_EVENTS];
 	memset(events, 0, sizeof(events));
+
+	/* Main server event loop state machine */
 	while (!g_ServerShoudClose)
 	{
 		assert(g_ServerShoudClose == false);
 		timeoutInactiveClients(endpoints, qfd, max_client_id);
 		int nready = queue_wait(qfd, events, QUEUE_MAX_EVENTS);
-		if (nready < 0 && !g_ServerShoudClose)
-		{
-			logError("Error getting events from kernel");
-			error = 1;
+		error = nready < 0;
+		if (error != 0 && !g_ServerShoudClose)
 			break;
-		}
 		for (int id = 0; id < nready; id++)
 		{
 			Endpoint *conn = (Endpoint*)queue_event_get_data(&events[id]);
@@ -75,8 +71,6 @@ int	run(std::vector<Configuration> serverMap)
 				case CONNECTION_TIMED_OUT:
 					conn->handler.setErrorCode(408);
 					conn->state = CONNECTION_SEND_RESPONSE;
-					queue_mod_fd(qfd, conn->handler.getClientSocket(),
-							QUEUE_EVENT_WRITE, conn);
 					break;
 				case CONNECTION_RECV_HEADER: 
 					assert(event_type == QUEUE_EVENT_READ);
@@ -151,7 +145,7 @@ cleanup:
 	return (0);
 }
 
-static int	start_servers(std::vector<Configuration> servers,
+static int	start_servers(const std::vector<Configuration> servers,
 		Endpoint *endpoints, int count_max, int *count)
 {
 	assert(servers.size() > 0);
@@ -246,7 +240,7 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd, int max_client_id)
 				continue;
 			case CONNECTION_TIMED_OUT:
 				assert(conns[i].last_heard_from_ms != 0);
-				// Hard timeout: forcibly disconnect
+				/* Hard timeout: forcibly disconnect */
 				if (idle_duration_ms > 3 * CLIENT_TIMEOUT_THRESHOLD_MS)
 				{
 					logDebug("Hard timeout: %d", conns[i].sockfd);
@@ -255,13 +249,15 @@ static void	timeoutInactiveClients(Endpoint *conns, int qfd, int max_client_id)
 				continue;
 			default:
 				assert(conns[i].last_heard_from_ms != 0);
-				if (conns[i].handler.getErrorCode() == 408) // Already marked for timeout
+				if (conns[i].handler.getErrorCode() == 408)
 					continue;
-				// Soft timeout: mark client for 408
+				/* Soft timeout: mark client for 408 */
 				if (idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS)
 				{
 					logDebug("Soft timeout: %d", conns[i].sockfd);
 					conns[i].state = CONNECTION_TIMED_OUT;
+					queue_mod_fd(qfd, conns[i].handler.getClientSocket(),
+							QUEUE_EVENT_WRITE, &conns[i]);
 				}
 		}
 	}

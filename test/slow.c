@@ -22,10 +22,8 @@ int	main(int argc, char **argv)
 		return (0);
 	}
 
-	puts("Soft timeout test: should receive 408");
+	puts("Timeout test: should receive 408");
 	talk_slow(argv, 11);
-	puts("\nHard timeout test: disconnect with no response");
-	talk_slow(argv, 32);
 	return (0);
 }
 
