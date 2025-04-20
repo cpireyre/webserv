@@ -192,7 +192,7 @@ std::string HttpConnectionHandler::createHttpErrorResponse(int error)
 	}
 	response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << body.size() << "\r\n";
-	response << "Connection: Keep-Alive\r\n\r\n";
+	response << "Connection: close\r\n\r\n";
 	response << body;
 
 	return response.str();
