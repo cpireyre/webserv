@@ -10,7 +10,7 @@ int	queue_create(void)
 	qfd = epoll_create1(0);
 	if (qfd < 0)
 	{
-		Logger::warn("Error: epoll_create1");
+		logDebug("Error: epoll_create1");
 		return (-1);
 	}
 #else
@@ -48,7 +48,7 @@ int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	if (epoll_ctl(qfd, EPOLL_CTL_ADD, fd, &e) < 0)
 	{
 		perror("epoll");
-		Logger::warn("Error adding epoll event");
+		logDebug("Error adding epoll event");
 		return (-1);
 	}
 #else
@@ -70,7 +70,6 @@ int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	}
 #endif
 
-	/* Logger::debug("Registered socket %d", fd); */
 	return (0);
 }
 
@@ -96,7 +95,7 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	e.data.ptr = (void *)data;
 	if (epoll_ctl(qfd, EPOLL_CTL_MOD, fd, &e) < 0)
 	{
-		Logger::warn("Error in epoll_ctl");
+		logDebug("Error in epoll_ctl");
 		return (-1);
 	}
 #else
@@ -134,7 +133,7 @@ int	queue_rem_fd(int qfd, int fd)
 
 	if (epoll_ctl(qfd, EPOLL_CTL_DEL, fd, &e) < 0)
 	{
-		Logger::warn("Error deleting fd: epoll_ctl");
+		logDebug("Error deleting fd: epoll_ctl");
 		return (-1);
 	}
 #else
@@ -167,7 +166,7 @@ int	queue_wait(int qfd, queue_event *events, int events_count)
 	nready = epoll_wait(qfd, events, events_count, 1000);
 	if (nready < 0)
 	{
-		Logger::warn("Error: epoll_wait");
+		logDebug("Error: epoll_wait");
 		return (-1);
 	}
 #else
