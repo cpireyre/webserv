@@ -50,6 +50,8 @@ void	receiveBody(Endpoint *client, int qfd)
 			disconnectClient(client, qfd);
 			break;
 		case S_ReadBody:
+			/* Unreachable */
+			assert(false);
 			break;
 	}
 }
