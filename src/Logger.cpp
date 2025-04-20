@@ -6,13 +6,19 @@
 /*   By: copireyr <copireyr@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 14:13:24 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/20 13:24:40 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/20 15:44:24 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Logger.hpp"
 #include <cerrno>
 #include <cstdlib>
+
+static void	verr_short(const char *fmt, va_list ap)
+{
+	vfprintf(stderr, fmt, ap);
+	dprintf(2, "\n");
+}
 
 void	logDebug(const char *fmt, ...)
 {
@@ -22,8 +28,10 @@ void	logDebug(const char *fmt, ...)
 	va_start(ap, fmt);
 	verr_short(fmt, ap);
 	va_end(ap);
-#endif
+#else
+	(void)verr_short;
 	(void)fmt;
+#endif
 }
 
 void logError(const std::string& message)
