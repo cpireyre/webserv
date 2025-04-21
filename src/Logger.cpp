@@ -6,13 +6,15 @@
 /*   By: copireyr <copireyr@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 14:13:24 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/20 15:44:24 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/04/21 10:02:43 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Logger.hpp"
 #include <cerrno>
 #include <cstdlib>
+#include <cstdlib>
+#include <ctime>
 
 static void	verr_short(const char *fmt, va_list ap)
 {
