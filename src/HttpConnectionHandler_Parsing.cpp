@@ -111,7 +111,15 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 	else if (headers.count("Transfer-Encoding") && headers["Transfer-Encoding"] == "chunked")
 	{
 		logInfo("Handling Chunked request");
-		return handleFirstChunks();
+		std::string::size_type bodyStartPos = rawRequest.find("\r\n\r\n");
+		if (bodyStartPos == std::string::npos) {
+			logError("Internal error: Headers parsed but \\r\\n\\r\\n not found.");
+			errorCode = 500;
+			return S_Error;
+		}
+		bodyStartPos += 4;
+		std::string chunkData = rawRequest.substr(bodyStartPos);
+		return handleFirstChunks(chunkData);
 	}
 	return S_Done;  // need logic to determine if theres still body to read or not?
 }
@@ -282,7 +290,20 @@ bool	HttpConnectionHandler::getBody(std::string &rawRequest)
 	return true;
 }*/
 
-bool hexStringToSizeT(const std::string& hexStr, size_t& out)
+/* @brief Converts a hexadecimal string to a size_t
+ *
+ * is used to parse chunk sizes from HTTP/1.1 requests that use chunked encoding
+ *
+ *  - trims leading and trailing whitespace
+ *  - validates that all remaining characters are hexadecimal
+ *  - Rejects negative values (e.g., strings starting with '-').
+ *  - Uses std::stringstream in hexadecimal mode to parse the value into a size_t safely
+ *
+ * @param hexStr The input string containing the hexadecimal number
+ * @param out The resulting parsed size_t value if the conversion succeeds
+ * @return true if the input was valid hex and parsed successfully, false otherwise
+ */
+bool	HttpConnectionHandler::hexStringToSizeT(const std::string &hexStr, size_t &out)
 {
     std::string trimmed;
 
@@ -300,10 +321,9 @@ bool hexStringToSizeT(const std::string& hexStr, size_t& out)
         }
     }
 
-    std::stringstream ss;
-    ss << std::hex << trimmed;
+	std::stringstream ss(trimmed);
     size_t result;
-    ss >> result;
+    ss >> std::hex >> result;
 
     if (ss.fail() || !ss.eof()) {
         return false;
@@ -313,25 +333,38 @@ bool hexStringToSizeT(const std::string& hexStr, size_t& out)
     return true;
 }
 
-HandlerStatus	HttpConnectionHandler::handleFirstChunks()
+/* @brief Parses the chunks of an HTTP request body using chunked transfer encoding
+ *
+ * This function is called after headers have been parsed and begins processing the body
+ * it attempts to parse one or more complete chunks, extracting their sizes and
+ * appending the corresponding data to the body buffer
+ * handles partial data  by returning S_ReadBody and saving
+ * the current position in `chunkRemainder`. It also handles malformed input
+ * by logging an error and returning S_Error
+ *
+ * The HTTP chunked transfer encoding sends the body as a series of:
+ * 		<chunk-size-in-hex>\r\n
+ * 		<chunk-data>\r\n
+ * until a final chunk of size 0 is received.
+ * 		0\r\n
+ *		\r\n
+ *
+ * @return HandlerStatus:
+ *   - S_Done: Final 0 sized chunk received, body complete
+ *   - S_ReadBody: More data is needed to finish parsing chunks
+ *   - S_Error: Malformed request or internal error encountered
+ */
+HandlerStatus	HttpConnectionHandler::handleFirstChunks(std::string &chunkData)
 {
-	std::string::size_type bodyStartPos = rawRequest.find("\r\n\r\n");
-	if (bodyStartPos == std::string::npos) {
-		logError("Internal error: Headers parsed but \\r\\n\\r\\n not found.");
-		errorCode = 500;
-		return S_Error;
-	}
-	bodyStartPos += 4;
+	size_t chunkDataLen = 0;
 
-	//check how much chunk we might have already catched
-	std::string chunkData = rawRequest.substr(bodyStartPos);
-        size_t chunkDataLen = 0;
-
-	while (true) { //each loop parses one chunk
+	//parses one chunk pre loop
+	while (true)
+	{
 		//finding the chunk hex size string
 		std::string::size_type chunkSizeEnd = chunkData.find("\r\n", chunkDataLen);
 		if (chunkSizeEnd == std::string::npos) {
-			logInfo("Chunk size line incomplete, need more data.");
+			logInfo("Chunk size line incomplete");
 			chunkRemainder = chunkData;
 			return S_ReadBody; // Need more data for chunk size
 		}
@@ -347,10 +380,24 @@ HandlerStatus	HttpConnectionHandler::handleFirstChunks()
 		}
 		
 		size_t chunkDataStart = chunkSizeEnd + 2;
-		if (hexaSize == 0) //check if it end of chunks (0\r\n followed by \r\n)
+		size_t totalChunkLen = chunkDataStart + hexaSize + 2;
+		if (hexaSize == 0)
 		{
-
+			if (chunkData.substr(chunkDataStart, 2) != "\r\n") {
+				logError("Missing final CRLF after last chunk");
+				errorCode = 400;
+				return S_Error;
+			}
+			return S_Done;
 		}
+		if (totalChunkLen > chunkData.size()) {
+			logInfo("Partial chunk in buffer, saving and reading more");
+			chunkRemainder = chunkData.substr(chunkDataLen);
+			return S_ReadBody;
+		}
+		body += chunkData.substr(chunkDataStart, hexaSize);
+		//move to start of next chunk
+		chunkDataLen = totalChunkLen;
 	}
 }
 
