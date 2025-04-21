@@ -16,11 +16,11 @@ constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 #endif
 
 #ifdef __linux__
-constexpr int MAXCONNS = 1024;
-static_assert(MAXCONNS <= 1024); // Haven't tested more than 1024 on Linux
+constexpr int MAXCONNS = 1000;
+static_assert(MAXCONNS <= 1000); /* cf. `ulimit -a` for the bottleneck */
 #else
-constexpr int MAXCONNS = 2048;
-static_assert(MAXCONNS <= 2048); // cf. `ulimit -a` for the bottleneck
+constexpr int MAXCONNS = 2000;
+static_assert(MAXCONNS <= 2000); /* cf. `ulimit -a` for the bottleneck */
 #endif
 
 
