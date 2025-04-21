@@ -63,6 +63,7 @@ int	make_server_socket(const char *host, const char *port)
 		dprintf(2, "die: fcntl\n");
 		return (-1);
 	}
+#ifdef __linux__
 	fd_set	just_insock;
 	FD_ZERO(&just_insock);
 	FD_SET(insock, &just_insock);
@@ -78,6 +79,7 @@ int	make_server_socket(const char *host, const char *port)
 		dprintf(2, "die: select\n");
 		return (-1);
 	}
+#endif
 	if (listen(insock, SOMAXCONN) < 0)
 	{
 		close(insock);
