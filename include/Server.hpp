@@ -16,11 +16,11 @@ constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 #endif
 
 #ifdef __linux__
-constexpr int MAXCONNS = 1024;
-static_assert(MAXCONNS <= 1024); // Haven't tested more than 1024 on Linux
+constexpr int MAXCONNS = 1000;
+static_assert(MAXCONNS <= 1000); /* cf. `ulimit -a` for the bottleneck */
 #else
-constexpr int MAXCONNS = 2048;
-static_assert(MAXCONNS <= 2048); // It won't go past this on macOS?
+constexpr int MAXCONNS = 2000;
+static_assert(MAXCONNS <= 2000); /* cf. `ulimit -a` for the bottleneck */
 #endif
 
 
@@ -40,13 +40,13 @@ class Endpoint {
 		char					IP[INET6_ADDRSTRLEN];
 		char					port[PORT_STRLEN];
 		ConnectionState			state;
-		int						error; // Client-only
 		uint64_t				began_sending_header_ms; // Client-only
 		uint64_t				last_heard_from_ms; // Client-only
 		HttpConnectionHandler	handler; // Client-only
 };
 
 
+extern int	run(const std::vector<Configuration> config);
 void		receiveHeader(Endpoint *client, int qfd);
 void		receiveBody(Endpoint *client, int qfd);
 void		disconnectClient(Endpoint *client, int qfd);

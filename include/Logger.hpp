@@ -3,12 +3,8 @@
 # include <cstring>
 # include <cstdio>
 # include <cstdarg>
+# include <iostream>
 
-class Logger final
-{
-	public:
-		static void	warn(const char *fmt, ...);
-		static void	die(const char *fmt, ...);
-		static void	warn_short(const char *fmt, ...);
-		static void	debug(const char *fmt, ...);
-};
+extern void	logDebug(const char *fmt, ...);
+extern void logError(const std::string& message);
+extern void logInfo(const std::string& message);

@@ -54,13 +54,28 @@ int	make_server_socket(const char *host, const char *port)
 	freeaddrinfo(addr);
 	if (!p)
 	{
-		Logger::warn("Error binding to %s:%s", host, port);
+		logDebug("Error binding to %s:%s", host, port);
 		return (-1);
 	}
 	if (socket_set_nonblocking(insock) < 0)
 	{
 		close(insock);
 		dprintf(2, "die: fcntl\n");
+		return (-1);
+	}
+	fd_set	just_insock;
+	FD_ZERO(&just_insock);
+	FD_SET(insock, &just_insock);
+	struct timeval timeout = {
+		.tv_sec = 60,
+		.tv_usec = 0,
+	};
+	int err = select(insock + 1, &just_insock, NULL, NULL, &timeout);
+	/* We only registered 1 fd (insock) so select must return 1 or error */
+	if (err != 1)
+	{
+		close(insock);
+		dprintf(2, "die: select\n");
 		return (-1);
 	}
 	if (listen(insock, SOMAXCONN) < 0)
