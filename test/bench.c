@@ -31,7 +31,7 @@ int	main(int argc, char **argv)
 		uint64_t start_time_ms = now_ms();
 		repeat(argv, requests_count);
 		uint64_t	total_time_ms = now_ms() - start_time_ms;
-		printf("Successfully completed %d requests in %llums\n",
+		printf("Successfully completed %d requests in %lums\n",
 				requests_count,
 				total_time_ms);
 		requests_count *= 10;

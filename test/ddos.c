@@ -14,7 +14,7 @@ static int	Connect(char *hostname, int port);
 static void	die(const char *err_msg);
 static int	socket_set_nonblocking(int sock);
 
-# define WORKERS_COUNT 3000
+# define WORKERS_COUNT 300
 # define REQUESTS_PER_WORKER 200
 # define CONN_DELAY_MICROSECONDS 50
 
@@ -121,7 +121,7 @@ static int	Connect(char *hostname, int port)
 
 static void	die(const char *err_msg)
 {
-	dprintf(2, "%s\n", err_msg);
+	perror(err_msg);
 	exit(1);
 }
 
