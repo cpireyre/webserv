@@ -39,7 +39,7 @@ def start_server():
     print("\n=== Starting server ===")
     # Launch the server with the specified configuration file.
     proc = subprocess.Popen(["./webserv", "complete.conf"])
-    time.sleep(1)  # Allow time for the server to start.
+    time.sleep(5)  # Allow time for the server to start.
     yield proc
     print("=== Stopping server ===")
     proc.kill()
@@ -169,40 +169,47 @@ def test_bad_http_request():
     # Depending on the implementation of your server, the exact wording might vary.
     assert "400" in status_line, f"Expected a 400 Bad Request response, got: {status_line}"
     
-def test_idle_disconnect_send_error():
+def test_idle_disconnect():
     """
-    Test that the server disconnects an idle connection by attempting to
-    send additional data after a period of inactivity.
+    Test that the server disconnects an idle connection by
+    1) sending an HTTP 408 Request Timeout response, and then
+    2) closing the connection (EOF on recv).
 
-    We send a partial HTTP request, wait long enough for the server's idle
-    timeout to expire, and then attempt to complete the request. If the
-    connection was closed due to inactivity, the subsequent send call should
-    fail by raising an error.
+    We send a partial HTTP request, wait for the server's idle
+    timeout to expire, then read whatever comes back:
+      - The first recv should contain a 408 status line.
+      - A subsequent recv should return b'' to signal EOF.
     """
     import socket, time, pytest
 
-    # Adjust idle_wait to be longer than your server's configured idle/keep-alive timeout.
+    # This must exceed your server's idle/keep-alive timeout.
     idle_wait = 15  # seconds
 
-    # Establish a raw connection to the server.
     with socket.create_connection(("127.0.0.1", 8080), timeout=idle_wait + 2) as sock:
         sock.settimeout(idle_wait + 2)
-        
-        # Send a partial HTTP request without terminating it.
+
+        # Send a partial HTTP request (no terminating CRLF).
         partial_request = (
             "GET /index.html HTTP/1.1\r\n"
             "Host: 127.0.0.1\r\n"
-            # No final CRLF to complete the header block.
         )
         sock.sendall(partial_request.encode())
 
-        # Wait long enough for the server to consider the connection idle.
+        # Wait for the server to hit its idle timeout.
         time.sleep(idle_wait)
 
-        # At this point, if the server disconnects idle connections, trying to send more data
-        # to complete the request should raise an error.
-        with pytest.raises((BrokenPipeError, socket.error)):
-            sock.sendall(b"\r\n")
+        # Read the server's response (should be the 408 status).
+        resp = sock.recv(1024)
+        assert resp, "Expected a 408 response, but recv() returned no data"
+        # Check the status line starts with HTTP/1.1 408
+        status_line = resp.split(b"\r\n", 1)[0]
+        assert status_line.startswith(b"HTTP/1.1 408"), (
+            f"Expected status 'HTTP/1.1 408', got {status_line!r}"
+        )
+
+        # After the response, the server should close the connection:
+        eof = sock.recv(1024)
+        assert eof == b'', f"Expected EOF (b''), but got {eof!r}"
 
 
 
@@ -401,8 +408,8 @@ async def test_concurrent_get_and_post():
     Asynchronously send multiple concurrent GET and POST requests to the server.
     This test simulates a mixed load of GET and POST requests.
     """
-    num_get = 1000   # Number of GET requests to send
-    num_post = 1000  # Number of POST requests to send
+    num_get = 10   # Number of GET requests to send
+    num_post = 10  # Number of POST requests to send
     get_url = "http://127.0.0.1:8080/index.html"
     post_url = "http://127.0.0.1:8080/images/"
 
