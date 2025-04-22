@@ -54,7 +54,7 @@ int	make_server_socket(const char *host, const char *port)
 	freeaddrinfo(addr);
 	if (!p)
 	{
-		Logger::warn("Error binding to %s:%s", host, port);
+		logDebug("Error binding to %s:%s", host, port);
 		return (-1);
 	}
 	if (socket_set_nonblocking(insock) < 0)

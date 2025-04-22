@@ -8,3 +8,6 @@ tags
 .vscode/
 *obj*
 __pycache__/
+test/bench
+test/slow
+test/ddos

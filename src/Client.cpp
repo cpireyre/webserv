@@ -1,12 +1,14 @@
 #include "Server.hpp"
 #include "Queue.hpp"
 
+void	disconnectClient(Endpoint *client, int qfd);
+
 void	receiveHeader(Endpoint *client, int qfd)
 {
 	HandlerStatus status = client->handler.parseRequest();
 	switch (status)
 	{
-		case S_KeepReading:
+		case S_Again:
 			// Here might be a good place to check for Slowloris behaviour
 			break;
 		case S_Done:
@@ -14,17 +16,9 @@ void	receiveHeader(Endpoint *client, int qfd)
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
 		case S_ClosedConnection:
-			Logger::debug("Disconnecting %d", client->handler.getClientSocket());
-			queue_rem_fd(qfd, client->handler.getClientSocket());
-			close(client->handler.getClientSocket());
-			client->state = CONNECTION_DISCONNECTED;
-			client->alive = false;
-			client->sockfd = -1;
-			client->handler.setClientSocket(-1);
-			client->handler.resetObject();
+			disconnectClient(client, qfd);
 			break;
 		case S_Error:
-			client->error = 400;
 			assert(queue_mod_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_WRITE, client) == 0);
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
@@ -37,14 +31,12 @@ void	receiveHeader(Endpoint *client, int qfd)
 void	receiveBody(Endpoint *client, int qfd)
 {
 	HandlerStatus status = client->handler.readBody();
-	//HandlerStatus status = S_Done;
 	switch (status)
 	{
-		case S_KeepReading:
+		case S_Again:
 			// probably do nothing? maybe some safety checks
 			break;
 		case S_Error:
-			client->error = 400; // TODO Maybe should not be 400? Not sure what can go wrong while receiving body
 			queue_mod_fd(qfd, client->handler.getClientSocket(), QUEUE_EVENT_WRITE, client); // error handle here
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
@@ -53,15 +45,27 @@ void	receiveBody(Endpoint *client, int qfd)
 			client->state = CONNECTION_SEND_RESPONSE;
 			break;
 		case S_ClosedConnection:
-			queue_rem_fd(qfd, client->handler.getClientSocket());
-			close(client->handler.getClientSocket());
-			client->state = CONNECTION_DISCONNECTED;
-			client->alive = false;
-			client->sockfd = -1;
-			client->handler.setClientSocket(-1);
-			client->handler.resetObject();
+			disconnectClient(client, qfd);
 			break;
 		case S_ReadBody:
+			/* Unreachable */
+			assert(false);
 			break;
 	}
+}
+
+void	disconnectClient(Endpoint *client, int qfd)
+{
+	assert(client->state != CONNECTION_DISCONNECTED);
+	logDebug("Disconnecting %d", client->handler.getClientSocket());
+	queue_rem_fd(qfd, client->handler.getClientSocket());
+	close(client->handler.getClientSocket());
+	client->state = CONNECTION_DISCONNECTED;
+	client->sockfd = -1;
+	bzero(client->IP, INET6_ADDRSTRLEN);
+	bzero(client->port, PORT_STRLEN);
+	client->began_sending_header_ms = 0;
+	client->last_heard_from_ms = 0;
+	client->handler.setClientSocket(-1);
+	client->handler.resetObject();
 }
