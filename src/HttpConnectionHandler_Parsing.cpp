@@ -95,6 +95,12 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 				errorCode = 400;
 				return S_Error;
 			}
+			else if (conf && static_cast<unsigned int>(contentLengthInt) > conf->getMaxClientBodySize())
+			{
+				logError("Request Body size bigger than max client body size");
+				errorCode = 415;
+				return S_Error;
+			}
 		}
 		catch (const std::exception &e)
 		{
@@ -109,7 +115,31 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 		else
 			return S_Done;
 	}
-	return S_Done;  // need logic to determine if theres still body to read or not?
+	else if (headers.count("Transfer-Encoding") && headers["Transfer-Encoding"] == "chunked")
+	{
+		logInfo("Handling Chunked request");
+		std::string::size_type bodyStartPos = rawRequest.find("\r\n\r\n");
+		if (bodyStartPos == std::string::npos) {
+			logError("Internal error: Headers parsed but \\r\\n\\r\\n not found.");
+			errorCode = 500;
+			return S_Error;
+		}
+		bodyStartPos += 4;
+		std::string chunkData = rawRequest.substr(bodyStartPos);
+		if (conf && chunkData.size() > conf->getMaxClientBodySize())
+		{
+			logError("Request Body size bigger than max client body size");
+			errorCode = 415;
+			return S_Error;
+		}
+		HandlerStatus status = handleFirstChunks(chunkData);
+		if (status == S_Again) {
+			return S_ReadBody;
+		} else {
+			return status;
+		}
+	}
+	return S_Done;
 }
 
 /* parses the first line of the HTTP request to get the HTTP method, path, and version
@@ -178,12 +208,19 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 {
 	std::string	headerLine;
 	std::regex	headerRegex(R"(^([A-Za-z0-9\-]+): (.+)\r$)");
+	unsigned int	totalHeaderSize = 0;
 
 	while (std::getline(requestStream, headerLine) && !headerLine.empty())
 	{
 		if (headerLine == "\r") {
 			break;
 		}
+		totalHeaderSize += headerLine.size();
+		if (totalHeaderSize > 4082) {
+			logError("Total Header size limit reached");
+			errorCode = 431;
+			return false;
+		}	
 		std::smatch headerMatches;
 		if (std::regex_match(headerLine, headerMatches, headerRegex)) {
 			std::string headerName = headerMatches[1];
@@ -214,75 +251,124 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 	return true;
 }
 
-/* parses the body of the HTTP request
+/* @brief Converts a hexadecimal string to a size_t
  *
- * reads the body of an HTTP request from the socket using the "Content-Length"
- * header to determine how much data to read. It handles both extracting any existing body data
- * from the `rawRequest` string and then reading the remaining bytes from the socket until the full
- * body is received. If an error occurs (invalid "Content-Length" , connection issues), it returns false
- * checks if the initial read from socket captured whole body already, if not reads from socket again
- * !!having some trouble hanging if reading from empty socket, need attention!!
- * !!also might have trouble if Content_length is  incorrect!! (select, poll)?
+ * is used to parse chunk sizes from HTTP/1.1 requests that use chunked encoding
  *
- * Returns:
- * - true if the body is successfully parsed and fully received.
- * - false if an error occurs (invalid "Content-Length", connection issue, ...)
- *//*
-bool	HttpConnectionHandler::getBody(std::string &rawRequest)
+ *  - trims leading and trailing whitespace
+ *  - validates that all remaining characters are hexadecimal
+ *  - Rejects negative values (e.g., strings starting with '-').
+ *  - Uses std::stringstream in hexadecimal mode to parse the value into a size_t safely
+ *
+ * @param hexStr The input string containing the hexadecimal number
+ * @param out The resulting parsed size_t value if the conversion succeeds
+ * @return true if the input was valid hex and parsed successfully, false otherwise
+ */
+bool	HttpConnectionHandler::hexStringToSizeT(const std::string &hexStr, size_t &out)
 {
-	int		contentLength;
-	int		bRead = 0;
-	char		buffer[8192];
-	body.clear();
+    std::string trimmed;
 
-	try
+    size_t start = hexStr.find_first_not_of(" \t\r\n");
+    size_t end = hexStr.find_last_not_of(" \t\r\n");
+    if (start == std::string::npos || end == std::string::npos)
+        return false;
+    trimmed = hexStr.substr(start, end - start + 1);
+
+    if (!trimmed.empty() && trimmed[0] == '-')
+        return false;
+    for (char c : trimmed) {
+        if (!std::isxdigit(static_cast<unsigned char>(c))) {
+            return false;
+        }
+    }
+
+	std::stringstream ss(trimmed);
+    size_t result;
+    ss >> std::hex >> result;
+
+    if (ss.fail() || !ss.eof()) {
+        return false;
+    }
+
+    out = result;
+    return true;
+}
+
+/* @brief Parses the chunks of an HTTP request body using chunked transfer encoding
+ *
+ * This function is called after headers have been parsed and begins processing the body
+ * it attempts to parse one or more complete chunks, extracting their sizes and
+ * appending the corresponding data to the body buffer
+ * handles partial data  by returning S_ReadBody and saving
+ * the current position in `chunkRemainder`. It also handles malformed input
+ * by logging an error and returning S_Error
+ *
+ * The HTTP chunked transfer encoding sends the body as a series of:
+ * 		<chunk-size-in-hex>\r\n
+ * 		<chunk-data>\r\n
+ * until a final chunk of size 0 is received.
+ * 		0\r\n
+ *		\r\n
+ *
+ * @return HandlerStatus:
+ *   - S_Done: Final 0 sized chunk received, body complete
+ *   - S_ReadBody: More data is needed to finish parsing chunks
+ *   - S_Error: Malformed request or internal error encountered
+ */
+HandlerStatus	HttpConnectionHandler::handleFirstChunks(std::string &chunkData)
+{
+	size_t chunkDataLen = 0;
+
+	while (true)
 	{
-		contentLength = std::stoi(headers["Content-Length"]);
-		if (contentLength < 0) {
-			HttpConnectionHandler::logError("Negative Content-Length");
-			errorCode = 400;
-			return false;
+		//finding the chunk hex size string
+		std::string::size_type chunkSizeEnd = chunkData.find("\r\n", chunkDataLen);
+		if (chunkSizeEnd == std::string::npos) {
+			logInfo("Chunk size line incomplete");
+			chunkRemainder = chunkData.substr(chunkDataLen);
+			return S_Again; // Need more data for chunk size
 		}
-	}
-	catch (...)
-	{
-		HttpConnectionHandler::logError("Invalid Content-Length value:" + headers["Content-Length"]);
-		errorCode = 400;
-		return false;
-	}
 
-	// check if there is already part of body in rawReq and where body starts
-	std::string::size_type	bodyStart = rawRequest.find("\r\n\r\n");
-	if (bodyStart == std::string::npos) {
-		HttpConnectionHandler::logError("Failed to find the end of the headers!");
-		errorCode = 400;
-		return false;
-	}
-	bodyStart += 4;
-	if (bodyStart < rawRequest.size()) {
-		body = rawRequest.substr(bodyStart);
-	}
-
-	//read until full body is received
-	while (body.size() < static_cast<unsigned int>(contentLength))
-	{
-		int readSize = std::min(sizeof(buffer) - 1, contentLength - body.size());
-		bRead = recv(clientSocket, buffer, readSize, 0);
-		if (bRead <= 0) {
-			HttpConnectionHandler::logError("Connection closed while reading body");
+		//turn hexa strig into num
+		std::string hexaStr = chunkData.substr(chunkDataLen, chunkSizeEnd - chunkDataLen);
+		size_t hexaSize;
+		if (!hexStringToSizeT(hexaStr, hexaSize))
+		{
+			logError("Invalid character or negative value in hexadecimal");
 			errorCode = 400;
-			return false;
+			return S_Error;
 		}
-		body.append(buffer, bRead);
+		
+		size_t chunkDataStart = chunkSizeEnd + 2;
+		size_t totalChunkLen = chunkDataStart + hexaSize + 2;
+		if (hexaSize == 0)
+		{
+			if (chunkData.substr(chunkDataStart, 2) != "\r\n") {
+				logError("Missing final CRLF after last chunk");
+				errorCode = 400;
+				return S_Error;
+			}
+			return S_Done;
+		}
+		if (totalChunkLen > chunkData.size()) {
+			logInfo("Partial chunk in buffer, saving and reading more");
+			chunkRemainder = chunkData.substr(chunkDataLen);
+			return S_Again;
+		}
+		body += chunkData.substr(chunkDataStart, hexaSize);
+		//move to start of next chunk
+		chunkDataLen = totalChunkLen;
+		logInfo("Handled 1 chunk");
 	}
-	return true;
-}*/
+}
 
+/*
+ */
 HandlerStatus	HttpConnectionHandler::readBody()
 {
-	//if chunked call something to handle it
 	char		buffer[8192];
 	int		bRead;
+
 
 	logInfo("Handle body called");
 	bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
@@ -295,6 +381,19 @@ HandlerStatus	HttpConnectionHandler::readBody()
 		return S_Error;
 	}
 	buffer[bRead] = '\0';
+
+	if (conf && bRead + body.size() > conf->getMaxClientBodySize())
+	{
+		logError("Request Body size bigger than max client body size");
+		errorCode = 415;
+		return S_Error;
+	}
+
+	if (headers.count("Transfer-Encoding") && headers["Transfer-Encoding"] == "chunked")
+	{
+		chunkRemainder.append(buffer, bRead);
+		return handleFirstChunks(chunkRemainder);
+	}
 	body.append( buffer, bRead);
 
 	auto it = headers.find("Content-Length");

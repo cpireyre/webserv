@@ -28,6 +28,7 @@ void HttpConnectionHandler::resetObject()
 	locBlock = nullptr;
 	errorCode = 0;
 	rawRequest.clear();
+	chunkRemainder.clear();
 }
 
 std::ostream& operator<<(std::ostream& os, const HttpConnectionHandler& handler)
