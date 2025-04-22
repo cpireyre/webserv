@@ -112,6 +112,11 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 
 		if (body.size() < contentLength)
 			return S_ReadBody;
+		else if (body.size() > contentLength){
+			logError("Body size bigger than Content-Length");
+			errorCode = 400;
+			return S_Error;
+		}
 		else
 			return S_Done;
 	}
@@ -138,6 +143,12 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 		} else {
 			return status;
 		}
+	}
+	else if (method == "POST")
+	{
+		logError("POST request with no Content-Length or chunked header");
+		errorCode = 411;
+		return S_Error;
 	}
 	return S_Done;
 }
@@ -326,7 +337,7 @@ HandlerStatus	HttpConnectionHandler::handleFirstChunks(std::string &chunkData)
 		if (chunkSizeEnd == std::string::npos) {
 			logInfo("Chunk size line incomplete");
 			chunkRemainder = chunkData.substr(chunkDataLen);
-			return S_Again; // Need more data for chunk size
+			return S_Again;
 		}
 
 		//turn hexa strig into num
@@ -334,7 +345,7 @@ HandlerStatus	HttpConnectionHandler::handleFirstChunks(std::string &chunkData)
 		size_t hexaSize;
 		if (!hexStringToSizeT(hexaStr, hexaSize))
 		{
-			logError("Invalid character or negative value in hexadecimal");
+			logError("Invalid character or negative value in hexadecimal: " + hexaStr);
 			errorCode = 400;
 			return S_Error;
 		}
@@ -376,7 +387,6 @@ HandlerStatus	HttpConnectionHandler::readBody()
 		return S_ClosedConnection;
 	if (bRead < 0) {
 		logError("Reading from the socket");
-		std::cout << clientSocket << std::endl;
 		errorCode = 400;
 		return S_Error;
 	}
@@ -394,6 +404,7 @@ HandlerStatus	HttpConnectionHandler::readBody()
 		chunkRemainder.append(buffer, bRead);
 		return handleFirstChunks(chunkRemainder);
 	}
+
 	body.append( buffer, bRead);
 
 	auto it = headers.find("Content-Length");
@@ -422,6 +433,11 @@ HandlerStatus	HttpConnectionHandler::readBody()
 	size_t contentLength = static_cast<size_t>(contentLengthInt);
 	if (body.size() < contentLength) {
 		return S_Again;
+	}
+	else if (body.size() > contentLength) {
+		logError("Body size bigger than Content-Length");
+		errorCode = 400;
+		return S_Error;
 	}
 	else {
 		return S_Done;
