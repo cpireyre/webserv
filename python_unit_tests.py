@@ -387,7 +387,7 @@ async def test_repeated_requests():
     Asynchronously send multiple concurrent GET requests to /index.html.
     This test simulates load. Adjust num_requests as appropriate.
     """
-    num_requests = 102
+    num_requests = 10000
     url = "http://127.0.0.1:8080/index.html"
 
     async with aiohttp.ClientSession() as session:
@@ -408,8 +408,8 @@ async def test_concurrent_get_and_post():
     Asynchronously send multiple concurrent GET and POST requests to the server.
     This test simulates a mixed load of GET and POST requests.
     """
-    num_get = 10   # Number of GET requests to send
-    num_post = 10  # Number of POST requests to send
+    num_get = 10000   # Number of GET requests to send
+    num_post = 10000  # Number of POST requests to send
     get_url = "http://127.0.0.1:8080/index.html"
     post_url = "http://127.0.0.1:8080/images/"
 
