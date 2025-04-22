@@ -39,7 +39,7 @@ def start_server():
     print("\n=== Starting server ===")
     # Launch the server with the specified configuration file.
     proc = subprocess.Popen(["./webserv", "complete.conf"])
-    time.sleep(5)  # Allow time for the server to start.
+    time.sleep(1)  # Allow time for the server to start.
     yield proc
     print("=== Stopping server ===")
     proc.kill()
@@ -112,10 +112,10 @@ def test_images_delete():
     assert response.status_code in (200, 202, 204)
 
     # Optionally, clean up
-    if test_file.exists():
-        test_file.unlink()
-    if base_dir.exists() and not any(base_dir.iterdir()):
-        base_dir.rmdir()
+    # if test_file.exists():
+    #     test_file.unlink()
+    # if base_dir.exists() and not any(base_dir.iterdir()):
+    #     base_dir.rmdir()
 
 
 def test_imagesREDIR():
