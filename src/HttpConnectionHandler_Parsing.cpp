@@ -95,6 +95,12 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 				errorCode = 400;
 				return S_Error;
 			}
+			else if (conf && static_cast<unsigned int>(contentLengthInt) > conf->getMaxClientBodySize())
+			{
+				logError("Request Body size bigger than max client body size");
+				errorCode = 415;
+				return S_Error;
+			}
 		}
 		catch (const std::exception &e)
 		{
@@ -120,9 +126,20 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 		}
 		bodyStartPos += 4;
 		std::string chunkData = rawRequest.substr(bodyStartPos);
-		return handleFirstChunks(chunkData);
+		if (conf && chunkData.size() > conf->getMaxClientBodySize())
+		{
+			logError("Request Body size bigger than max client body size");
+			errorCode = 415;
+			return S_Error;
+		}
+		HandlerStatus status = handleFirstChunks(chunkData);
+		if (status == S_Again) {
+			return S_ReadBody;
+		} else {
+			return status;
+		}
 	}
-	return S_Done;  // need logic to determine if theres still body to read or not?
+	return S_Done;
 }
 
 /* parses the first line of the HTTP request to get the HTTP method, path, and version
@@ -191,12 +208,19 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 {
 	std::string	headerLine;
 	std::regex	headerRegex(R"(^([A-Za-z0-9\-]+): (.+)\r$)");
+	unsigned int	totalHeaderSize = 0;
 
 	while (std::getline(requestStream, headerLine) && !headerLine.empty())
 	{
 		if (headerLine == "\r") {
 			break;
 		}
+		totalHeaderSize += headerLine.size();
+		if (totalHeaderSize > 4082) {
+			logError("Total Header size limit reached");
+			errorCode = 431;
+			return false;
+		}	
 		std::smatch headerMatches;
 		if (std::regex_match(headerLine, headerMatches, headerRegex)) {
 			std::string headerName = headerMatches[1];
@@ -359,15 +383,14 @@ HandlerStatus	HttpConnectionHandler::handleFirstChunks(std::string &chunkData)
 {
 	size_t chunkDataLen = 0;
 
-	//parses one chunk pre loop
 	while (true)
 	{
 		//finding the chunk hex size string
 		std::string::size_type chunkSizeEnd = chunkData.find("\r\n", chunkDataLen);
 		if (chunkSizeEnd == std::string::npos) {
 			logInfo("Chunk size line incomplete");
-			chunkRemainder = chunkData;
-			return S_ReadBody; // Need more data for chunk size
+			chunkRemainder = chunkData.substr(chunkDataLen);
+			return S_Again; // Need more data for chunk size
 		}
 
 		//turn hexa strig into num
@@ -394,19 +417,22 @@ HandlerStatus	HttpConnectionHandler::handleFirstChunks(std::string &chunkData)
 		if (totalChunkLen > chunkData.size()) {
 			logInfo("Partial chunk in buffer, saving and reading more");
 			chunkRemainder = chunkData.substr(chunkDataLen);
-			return S_ReadBody;
+			return S_Again;
 		}
 		body += chunkData.substr(chunkDataStart, hexaSize);
 		//move to start of next chunk
 		chunkDataLen = totalChunkLen;
+		logInfo("Handled 1 chunk");
 	}
 }
 
+/*
+ */
 HandlerStatus	HttpConnectionHandler::readBody()
 {
-	//if chunked call something to handle it
 	char		buffer[8192];
 	int		bRead;
+
 
 	logInfo("Handle body called");
 	bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
@@ -419,6 +445,19 @@ HandlerStatus	HttpConnectionHandler::readBody()
 		return S_Error;
 	}
 	buffer[bRead] = '\0';
+
+	if (conf && bRead + body.size() > conf->getMaxClientBodySize())
+	{
+		logError("Request Body size bigger than max client body size");
+		errorCode = 415;
+		return S_Error;
+	}
+
+	if (headers.count("Transfer-Encoding") && headers["Transfer-Encoding"] == "chunked")
+	{
+		chunkRemainder.append(buffer, bRead);
+		return handleFirstChunks(chunkRemainder);
+	}
 	body.append( buffer, bRead);
 
 	auto it = headers.find("Content-Length");
