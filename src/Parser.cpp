@@ -40,7 +40,7 @@ int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	return 0;
 }
 
-void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Configuration>& serverMap)
+void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Configuration>& srvrMap)
 {
 
 	std::vector<std::string> serverBlock;
@@ -66,7 +66,7 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Conf
 			serverBlock.push_back(line);
 			if (port.empty())
 				port = DEFAULT_LISTEN;
-			serverMap.push_back(Configuration(serverBlock));
+			srvrMap.push_back(Configuration(serverBlock));
 			serverBlock.clear();
 			port.clear();
 		}
