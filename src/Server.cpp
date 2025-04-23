@@ -161,9 +161,7 @@ static int	start_servers(const std::vector<Configuration> servers,
 		if (sockfd <= 0)
 			return (-1);
 		initEndpoint(sockfd, host, port, &endpoints[*count]);
-		logDebug("Opened socket IP: %s, port: %s",
-				endpoints[*count].IP,
-				endpoints[*count].port);
+		servers[i].printCompact();
 		assert(endpoints[*count].state == CONNECTION_ACTUALLY_A_SERVER);
 		*count += 1;
 	}
