@@ -18,12 +18,9 @@ CgiHandler::CgiHandler(const HttpConnectionHandler &conn) {
 		_pathToInterpreter = conn.getLocationBlock()->cgiPathPHP + "/php-cgi";
 
 	std::string currentPath = std::filesystem::current_path();
-	std::cout << "Current path is: " << currentPath << std::endl;
-	std::string root = conn.getConf()->getRootViaLocation("/");
-	std::cout << "Root is: " << root << std::endl;
+	std::string root = "/" + conn.getConf()->getRootViaLocation("/");
 	_pathToScript = currentPath + root + conn.getFilePath();
 
-	std::cout << "Path to script: " << _pathToScript << "\n";
 	_execveArgs[0] = (char * )_pathToInterpreter.c_str();
 	_execveArgs[1] = (char * )_pathToScript.c_str();
 	_execveArgs[2] = NULL;
