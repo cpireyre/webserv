@@ -91,28 +91,47 @@ std::vector<Configuration> parser(std::string fileName) {
 
 void Configuration::printLocationBlockCompact(LocationBlock loc, int level) const
 {
+	int pad = 0;
 	if (level == 0)
+	{
 		std::cout << "├─";
+		pad += 1;
+	}
 	else
 		std::cout << "│";
+	pad += 1;
 	for (int i = 0; i < level; i++)
+	{
 		std::cout << " ";
+		pad += 1;
+	}
 	if (level > 0)
+	{
 		std::cout << "└";
+		pad += 1;
+	}
 	if (!loc.nestedLocations.empty())
+	{
 		std::cout << "┬";
-	std::cout << "─";
-	std::cout << "⟨";
+		pad += 1;
+	}
+	std::cout << "─"; pad += 1;
+	std::cout << "⟨"; pad += 1;
 	for (uint64_t i = 0; i < loc.methods.size(); i++)
 	{
 		std::cout << loc.methods[i]
 			<< (i + 1 < loc.methods.size() ? " " : "");
+		pad += loc.methods[i].size();
+		pad += (i + 1 < loc.methods.size() ? 1 : 0);
 	}
 	std::cout << "⟩ "
 		<< loc.path
 		<< (loc.returnCode == 307 ? " ↷ " : " → ")
-		<< (loc.returnCode == 307 ? loc.returnURL : loc.root)
-		<< " (";
+		<< (loc.returnCode == 307 ? loc.returnURL : loc.root);
+	pad += 1 + (int)loc.path.length() + 3;
+	pad += loc.returnCode == 307 ? (int)loc.returnURL.length() : (int)loc.root.length();
+	printf("%*s", 80 - pad, "");
+	std::cout << " (";
 		std::cout << (loc.dirListing ? "●" : "○");
 		std::cout<< " dir ";
 		std::cout << (!loc.cgiPathPHP.empty() ? "●" : "○");
