@@ -43,6 +43,7 @@ class Configuration {
 		std::string								_serverNames;
 		std::string								_index;	
 		unsigned int 							_maxClientBodySize;
+		unsigned int							_maxClientHeaderSize;
 		std::vector<LocationBlock>				_locationBlocks;
 		std::map<std::string, LocationBlock>	_allPaths;
 
@@ -73,6 +74,7 @@ class Configuration {
 		std::string getServerNames() const;
 		std::string getIndex() const;
 		unsigned int getMaxClientBodySize() const;
+		unsigned int getMaxClientHeaderSize() const;
 		std::vector<LocationBlock>& getLocationBlocks();
 
 		std::string getRootViaLocation(std::string path) const;

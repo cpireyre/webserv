@@ -34,6 +34,7 @@ class HttpConnectionHandler
 		string							body;
 		std::map<string, string>				headers;
 		HeadersMap							responseHeaders;
+		std::string							chunkRemainder;
 		int								clientSocket;
 
 		string							filePath; // Everything in URI before the question mark
@@ -52,8 +53,10 @@ class HttpConnectionHandler
 		//Parsing
 		bool		getMethodPathVersion(std::istringstream &requestStream);
 		bool		getHeaders(std::istringstream &requestStream);
-		bool		getBody(string &rawRequest);
-		string	getContentType(const string &path);
+		bool		getBody(std::string &rawRequest);
+		std::string	getContentType(const std::string &path);
+		HandlerStatus	handleFirstChunks(std::string &chunkData);
+		bool		hexStringToSizeT(const std::string& hexStr, size_t& out);
 
 		//Creating HTTP response
 		string	getDefaultErrorPage500();
@@ -75,7 +78,7 @@ class HttpConnectionHandler
 		bool		processMultipartPart(const string& part, string &responseBody);
 
 		bool		checkLocation();
-		int		matchServerName(const string& pattern, const string& host);
+		int			matchServerName(const std::string& pattern, const std::string& host);
 		void		findConfig();
 		bool		isMethodAllowed(LocationBlock *block, string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
