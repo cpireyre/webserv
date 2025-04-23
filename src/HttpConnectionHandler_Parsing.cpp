@@ -227,11 +227,7 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 			break;
 		}
 		totalHeaderSize += headerLine.size();
-		if (totalHeaderSize > 4082) {
-			logError("Total Header size limit reached");
-			errorCode = 431;
-			return false;
-		}	
+
 		std::smatch headerMatches;
 		if (std::regex_match(headerLine, headerMatches, headerRegex)) {
 			std::string headerName = headerMatches[1];
@@ -242,6 +238,14 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 			}
 			std::string headerValue = headerMatches[2];
 			headers[headerName] = headerValue;
+			if (headerName == "Host") {
+				findConfig();
+			}
+			if (conf && totalHeaderSize > conf->getMaxClientHeaderSize()) {
+				logError("Total Header size limit reached");
+				errorCode = 431;
+				return false;
+			}	
 		}
 		else {
 			logError("Invalid header format: " + headerLine);
@@ -249,15 +253,10 @@ bool	HttpConnectionHandler::getHeaders(std::istringstream &requestStream)
 			return false;
 		}
 	}
-
-	//check host header exist in 1.1
 	if (headers.find("Host") == headers.end()) {
 		logError("Missing Host header");
 		errorCode = 400;
 		return false;
-	}
-	else {
-		findConfig();
 	}
 	return true;
 }
