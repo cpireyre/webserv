@@ -33,22 +33,27 @@ class HttpConnectionHandler
 		string							httpVersion;
 		string							body;
 		std::map<string, string>				headers;
-		HeadersMap							responseHeaders;
-		std::string							chunkRemainder;
-		int								clientSocket;
+		HeadersMap						responseHeaders;
+		std::string						chunkRemainder;
+		int							clientSocket;
 
 		string							filePath; // Everything in URI before the question mark
 		string							queryString; // Everything in URI after the question mark
 		string							extension;
-		CgiTypes							cgiType;
+		CgiTypes						cgiType;
 
-		Configuration							*conf;
-		LocationBlock							*locBlock;
+		Configuration						*conf;
+		LocationBlock						*locBlock;
 
 		//response stuff
-		int		errorCode;
+		int							errorCode; //too lazy to rename?
 		string							PORT;
 		string 							IP;
+
+		string							resStatusline;
+		string							resHeaders;
+		string							resBody;
+		bool							fileServ;
 
 		//Parsing
 		bool		getMethodPathVersion(std::istringstream &requestStream);

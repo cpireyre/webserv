@@ -5,8 +5,8 @@ HttpConnectionHandler::HttpConnectionHandler()
 	: method(""), path(""), originalPath(""), httpVersion(""), body(""),
 	clientSocket(-1), filePath(""), queryString(""), extension(""),
 	cgiType(NONE), conf(nullptr), locBlock(nullptr), errorCode(0),
-	PORT("0000"), IP("0000")
-{}
+	PORT("0000"), IP("0000"), resStatusline(""), resHeaders(""),
+	resBody(""), fileServ(false) {}
 
 //add socket closing to destructor if needed
 HttpConnectionHandler::~HttpConnectionHandler() {}
@@ -30,6 +30,10 @@ void HttpConnectionHandler::resetObject()
 	errorCode = 0;
 	rawRequest.clear();
 	chunkRemainder.clear();
+	resStatusline.clear();
+	resHeaders.clear();
+	resBody.clear();
+	fileServ = false;
 }
 
 std::ostream& operator<<(std::ostream& os, const HttpConnectionHandler& handler)

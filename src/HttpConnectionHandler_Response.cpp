@@ -770,4 +770,8 @@ void	HttpConnectionHandler::handleRequest()
 		std::string response = createHttpResponse(501, "<h1>501 Method: " + method + "Not Implemented </h1>", "text/html");
 		send(clientSocket, response.c_str(), response.size(), 0);
 	}
+	/*check here whether error happened, post or delete was executed and we can send, or we need to file serv
+	  basic idea is either to send everything at once is possible, like redirections and short post/delete responses
+	  if error or serving get request then send headers and go to send body in chunks
+	 */
 }
