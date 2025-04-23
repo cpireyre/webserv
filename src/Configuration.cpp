@@ -249,6 +249,9 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	for (auto& locationBlock : _locationBlocks)
 		populateMethodsPathsCgi(locationBlock, DEFAULT_METHODS, DEFAULT_CGI_PYTHON, DEFAULT_CGI_PHP);
 
+	for (auto const &path : _allPaths)
+		std::cout << path.first << "\n";
+
 }
 
 void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::vector<std::string> inheritedMethods, std::string inheritedCgiPathPython, std::string inheritedCgiPathPHP) {
@@ -269,8 +272,6 @@ void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::v
 		inheritedCgiPathPHP = locationBlock.cgiPathPHP;
 
 	_allPaths.insert(std::make_pair(locationBlock.path, locationBlock));
-	for (auto const &path : _allPaths)
-		std::cout << path.first << "\n";
 	
 	std::vector<LocationBlock> &nestedLocations = locationBlock.nestedLocations;
 
