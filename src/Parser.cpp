@@ -87,3 +87,68 @@ std::vector<Configuration> parser(std::string fileName) {
 	}
 	return serverMap;
 }
+
+
+void Configuration::printLocationBlockCompact(LocationBlock loc, int level) const
+{
+	if (level == 0)
+		std::cout << "├─";
+	else
+		std::cout << "│";
+	for (int i = 0; i < level; i++)
+		std::cout << " ";
+	if (level > 0)
+		std::cout << "└";
+	if (!loc.nestedLocations.empty())
+		std::cout << "┬";
+	std::cout << "─";
+	std::cout << "⟨";
+	for (uint64_t i = 0; i < loc.methods.size(); i++)
+	{
+		std::cout << loc.methods[i]
+			<< (i + 1 < loc.methods.size() ? " " : "");
+	}
+	std::cout << "⟩ "
+		<< loc.path << " → ./" << loc.root
+		<< " (";
+		std::cout << (loc.dirListing ? "●" : "○");
+		std::cout<< " dir ";
+		std::cout << (!loc.cgiPathPHP.empty() ? "●" : "○");
+	std::cout << " php ";
+		std::cout << (!loc.cgiPathPython.empty() ? "●" : "○");
+	std::cout << " py";
+	std::cout << ")";
+	std::cout << "\n";
+	for (const auto& o : loc.nestedLocations)
+		printLocationBlockCompact(o, level + 1);
+}
+
+void	Configuration::printCompact() const
+{
+	constexpr char green[] = "\e[0;32m";
+	constexpr char reset[] = "\e[0m";
+	std::cout
+		<< "⌂ "
+		<< _serverNames << " @ " << _host << ":" << _port << " "
+		<< "(" << "maxbody: " << _maxClientBodySize / 10e6 << "M"
+		<< ", maxheader: " << _maxClientHeaderSize / 1e3 << "K" << ")"
+		<< green << " ✓"  << reset
+		<< "\n";
+	for (const auto& loc : _locationBlocks)
+		printLocationBlockCompact(loc, 0);
+	std::cout << "└ .";
+	std::string err_path = _errorPages.begin()->second;
+	std::string err_dir = err_path.substr(0, err_path.size() - 8);
+	std::cout << err_dir << "{";
+	auto it = _errorPages.begin();
+    for (; it != _errorPages.end(); it = std::next(it)) {
+        std::cout << it->first;
+
+        auto next = std::next(it);
+        if (next != _errorPages.end()) {
+            std::cout << ",";
+        }
+    }
+	std::cout << "}.html";
+	std::cout << "\n\n";
+}

@@ -20,7 +20,6 @@ int	queue_create(void)
 		logError("Error creating kqueue");
 		return (-1);
 	}
-	logDebug("Created event queue");
 #endif
 
 	assert(qfd >= 0);
