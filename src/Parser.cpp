@@ -109,7 +109,9 @@ void Configuration::printLocationBlockCompact(LocationBlock loc, int level) cons
 			<< (i + 1 < loc.methods.size() ? " " : "");
 	}
 	std::cout << "⟩ "
-		<< loc.path << " → ./" << loc.root
+		<< loc.path
+		<< (loc.returnCode == 307 ? " ↷ " : " → ")
+		<< (loc.returnCode == 307 ? loc.returnURL : loc.root)
 		<< " (";
 		std::cout << (loc.dirListing ? "●" : "○");
 		std::cout<< " dir ";
@@ -126,17 +128,19 @@ void Configuration::printLocationBlockCompact(LocationBlock loc, int level) cons
 void	Configuration::printCompact() const
 {
 	constexpr char green[] = "\e[0;32m";
+	constexpr char underline[] = "\e[0;4m";
 	constexpr char reset[] = "\e[0m";
 	std::cout
 		<< "⌂ "
-		<< _serverNames << " @ " << _host << ":" << _port << " "
+		<< underline
+		<< _serverNames << " @ " << _host << ":" << _port << reset << " "
 		<< "(" << "maxbody: " << _maxClientBodySize / 10e6 << "M"
 		<< ", maxheader: " << _maxClientHeaderSize / 1e3 << "K" << ")"
 		<< green << " ✓"  << reset
 		<< "\n";
 	for (const auto& loc : _locationBlocks)
 		printLocationBlockCompact(loc, 0);
-	std::cout << "└ .";
+	std::cout << "└ ";
 	std::string err_path = _errorPages.begin()->second;
 	std::string err_dir = err_path.substr(0, err_path.size() - 8);
 	std::cout << err_dir << "{";
