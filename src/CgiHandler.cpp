@@ -21,6 +21,7 @@ CgiHandler::CgiHandler(const HttpConnectionHandler &conn) {
 	std::string root = conn.getConf()->getRootViaLocation("/");
 	_pathToScript = currentPath + root + conn.getFilePath();
 
+	std::cout << "Path to script: " << _pathToScript << "\n";
 	_execveArgs[0] = (char * )_pathToInterpreter.c_str();
 	_execveArgs[1] = (char * )_pathToScript.c_str();
 	_execveArgs[2] = NULL;

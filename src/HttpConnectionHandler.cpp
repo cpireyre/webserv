@@ -1,4 +1,5 @@
 #include "HttpConnectionHandler.hpp"
+#include "Logger.hpp"
 
 HttpConnectionHandler::HttpConnectionHandler()
 	: method(""), path(""), originalPath(""), httpVersion(""), body(""),
@@ -58,4 +59,27 @@ std::ostream& operator<<(std::ostream& os, const HttpConnectionHandler& handler)
 	os << "=========================================\n";
 
 	return os;
+}
+
+HeadersMap HttpConnectionHandler::createDefaultHeaders()
+{
+	HeadersMap	res;
+	
+	res["Date"] = getCurrentHttpDate();
+	headers["Connection"] = "Keep-Alive";
+	return (res);
+}
+
+/* Will calculate and append Content-Length header with the right value. */
+string HttpConnectionHandler::
+serializeResponse(int status, HeadersMap& headers, const string& body)
+{
+	std::ostringstream	response;
+
+	headers["Content-Length"] = std::to_string(body.size());
+	response << "HTTP/1.1 " << status << " " << getReasonPhrase(status) << "\r\n";
+	for (const auto& [key, value] : headers)
+		response << key << ": " << value << "\r\n";
+	response << "\r\n" << body;
+	return (response.str());
 }

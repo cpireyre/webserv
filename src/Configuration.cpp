@@ -256,6 +256,8 @@ void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::v
 		inheritedCgiPathPHP = locationBlock.cgiPathPHP;
 
 	_allPaths.insert(std::make_pair(locationBlock.path, locationBlock));
+	for (auto const &path : _allPaths)
+		std::cout << path.first << "\n";
 	
 	std::vector<LocationBlock> &nestedLocations = locationBlock.nestedLocations;
 
