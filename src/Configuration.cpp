@@ -13,6 +13,7 @@ Configuration::Configuration(const Configuration &other)
 	  _serverNames(other._serverNames),
 	  _index(other._index),
 	  _maxClientBodySize(other._maxClientBodySize),
+	  _maxClientHeaderSize(other._maxClientHeaderSize),
 	  _locationBlocks(other._locationBlocks),
 	  _rawBlock(other._rawBlock),
 	  _rawServerBlock(other._rawServerBlock)
@@ -29,6 +30,7 @@ Configuration &Configuration::operator=(const Configuration &other) {
 		_serverNames = other._serverNames;
 		_index = other._index;
 		_maxClientBodySize = other._maxClientBodySize;
+		_maxClientHeaderSize = other._maxClientHeaderSize;
 		_locationBlocks = other._locationBlocks;
 		_rawBlock = other._rawBlock;
 		_rawServerBlock = other._rawServerBlock;
@@ -67,6 +69,7 @@ void Configuration::printServerBlock() const {
 	std::cout << "Host: " << _host << std::endl;
 	std::cout << "Server Names: " << _serverNames << std::endl;
 	std::cout << "Max Client Body Size: " << _maxClientBodySize << std::endl;
+	std::cout << "Max Client Header Size: " << _maxClientHeaderSize << std::endl;
 	std::cout << "Index: " << _index << std::endl;
 	for (const auto& errorPage : _errorPages) {
 		std::cout << "Error Page [" << errorPage.first << "]: " << errorPage.second << std::endl;
@@ -84,6 +87,7 @@ void Configuration::createBarebonesBlock() {
 	_host = "0.0.0.0"; // In case no host is specified, defaulting to all interfaces. Nginx default I think.
 	_port = DEFAULT_LISTEN;
 	_maxClientBodySize = 1048576; // 1MB, nginx default
+	_maxClientHeaderSize = 4000;
 	_globalCgiPathPHP = G_CGI_PATH_PHP;
 	_globalCgiPathPython = G_CGI_PATH_PYTHON;
 	_errorPages.emplace(400, "/default-error-pages/400.html");
@@ -115,7 +119,6 @@ std::vector<std::string> Configuration::generateLocationBlock(std::vector<std::s
 			brace--;
 			if (!brace) {
 				locationBlock.push_back(line);
-				//++it;
 				break;
 			}
 		}
@@ -199,6 +202,7 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	std::regex hostRegex(R"(^host ([^\s]+)\s*;$)");
 	std::regex serverNamesRegex(R"(^server_name ([^\s;]+(?: [^\s;]+)*)\s*;$)");
 	std::regex maxClientBodyRegex(R"(^max_client_body_size (\d+)\s*;$)");
+	std::regex maxClientHeaderRegex(R"(^max_client_header_size (\d+)\s*;$)");
 	std::regex errorPageRegex(R"(^error_page (400|403|404|405|408|409|411|413|414|431|500|501|503|505) (/home/\S+\.html)\s*;$)");
 	std::regex indexRegex(R"(^index ([^\s]+)\s*;$)");
 	std::regex locationRegex(R"(^location ([^\s]+)\s*$)");
@@ -213,6 +217,14 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 			}
 			catch (const std::exception& e) {
 				std::cerr << "Invalid max_client_body_size value: " << match[1] << ". Using default value." << std::endl;
+			}
+		}
+		else if (std::regex_search(line, match, maxClientHeaderRegex)) {
+			try {
+				_maxClientHeaderSize = std::stoul(match[1]);
+			}
+			catch (const std::exception& e) {
+				std::cerr << "Invalid max_client_header_size value: " << match[1] << ". Using default value." << std::endl;
 			}
 		}
 		else if (std::regex_search(line, match, listenRegex))
@@ -233,9 +245,10 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 			_locationBlocks.push_back(loc);
 		}
 	}
-		
+
 	for (auto& locationBlock : _locationBlocks)
 		populateMethodsPathsCgi(locationBlock, DEFAULT_METHODS, DEFAULT_CGI_PYTHON, DEFAULT_CGI_PHP);
+
 }
 
 void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::vector<std::string> inheritedMethods, std::string inheritedCgiPathPython, std::string inheritedCgiPathPHP) {
@@ -256,6 +269,8 @@ void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::v
 		inheritedCgiPathPHP = locationBlock.cgiPathPHP;
 
 	_allPaths.insert(std::make_pair(locationBlock.path, locationBlock));
+	for (auto const &path : _allPaths)
+		std::cout << path.first << "\n";
 	
 	std::vector<LocationBlock> &nestedLocations = locationBlock.nestedLocations;
 
@@ -301,6 +316,10 @@ std::string	Configuration::getIndex() const {
 
 unsigned int	Configuration::getMaxClientBodySize() const {
 	return _maxClientBodySize;
+}
+
+unsigned int	Configuration::getMaxClientHeaderSize() const {
+	return _maxClientHeaderSize;
 }
 
 std::string Configuration::getRootViaLocation(std::string path) const {

@@ -1,7 +1,7 @@
 #include "HttpConnectionHandler.hpp"
 #include "Logger.hpp"
 
-std::string HttpConnectionHandler::getCurrentHttpDate()
+string HttpConnectionHandler::getCurrentHttpDate()
 {
     std::time_t t = std::time(nullptr);
     struct tm* tm_info = std::gmtime(&t);
@@ -12,66 +12,24 @@ std::string HttpConnectionHandler::getCurrentHttpDate()
     return oss.str();
 }
 
-std::string HttpConnectionHandler::getDefaultErrorPage500()
+string HttpConnectionHandler::getDefaultErrorPage500()
 {
-	std::string body =
-		"<html><head><title>500 Internal Server Error</title></head>"
-		"<body><h1>500 Internal Server Error</h1>"
-		"<p>Sorry, something went wrong while handling your request.</p>"
-		"</body></html>";
-
-	std::ostringstream oss;
-	oss << "HTTP/1.1 500 Internal Server Error\r\n";
-	oss << "Content-Type: text/html; charset=UTF-8\r\n";
-	oss << "Content-Length: " << body.length() << "\r\n";
-	oss << "Connection: Keep-Alive\r\n";
-	oss << "Date: " << getCurrentHttpDate() << "\r\n";
-	oss << "\r\n";
-	oss << body;
-	return oss.str();
+	return createHttpErrorResponse(500);
 }
 
-std::string HttpConnectionHandler::getDefaultErrorPage400()
+string HttpConnectionHandler::getDefaultErrorPage400()
 {
-	std::string body =
-		"<html><head><title>400 Bad request</title></head>"
-		"<body><h1>400 Bad request</h1>"
-		"<p>Sorry, something went wrong while handling your request.</p>"
-		"</body></html>";
-
-	std::ostringstream oss;
-	oss << "HTTP/1.1 400 Bad request\r\n";
-	oss << "Content-Type: text/html; charset=UTF-8\r\n";
-	oss << "Content-Length: " << body.length() << "\r\n";
-	oss << "Connection: Keep-Alive\r\n";
-	oss << "Date: " << getCurrentHttpDate() << "\r\n";
-	oss << "\r\n";
-	oss << body;
-	return oss.str();
+	return createHttpErrorResponse(400);
 }
 
-std::string HttpConnectionHandler::getDefaultErrorPage408()
+string HttpConnectionHandler::getDefaultErrorPage408()
 {
-    std::string body =
-        "<html><head><title>408 Request Timeout</title></head>"
-        "<body><h1>408 Request Timeout</h1>"
-        "<p>Your browser took too long to send a complete request.</p>"
-        "</body></html>";
-
-    std::ostringstream oss;
-    oss << "HTTP/1.1 408 Request Timeout\r\n";
-    oss << "Content-Type: text/html; charset=UTF-8\r\n";
-    oss << "Content-Length: " << body.length() << "\r\n";
-    oss << "Connection: Close\r\n";
-    oss << "Date: " << getCurrentHttpDate() << "\r\n";
-    oss << "\r\n";
-    oss << body;
-    return oss.str();
+	return createHttpErrorResponse(408);
 }
 
-std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
+string HttpConnectionHandler::getReasonPhrase(int statusCode)
 {
-    static const std::map<int, std::string> reasonPhrases =
+    static const std::map<int, string> reasonPhrases =
     {
 	    {200, "OK"},
 	    {301, "Moved Permanently"},
@@ -112,88 +70,88 @@ std::string HttpConnectionHandler::getReasonPhrase(int statusCode)
  * @return A string representing the full HTTP response, ready to be sent to the client.
  *
  * Example:
- *   std::string response = createHttpResponse(200, "<h1>Success</h1>", "text/html");
+ *   string response = createHttpResponse(200, "<h1>Success</h1>", "text/html");
  */
-std::string	HttpConnectionHandler::createHttpResponse(int statusCode, const std::string &body, const std::string &contentType)
+string	HttpConnectionHandler::createHttpResponse(int statusCode, const string &body, const string &contentType)
 {
-	std::string statusText = statusCode < 400 ? "OK" : "Not Found";
+	HeadersMap h = createDefaultHeaders();
+	h["Content-Type"] = contentType;
 
-	std::ostringstream response;
-	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n";
-	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
-	response << "Content-Length: " << body.size() << "\r\n";
-	response << "Content-Type: " << contentType << "\r\n";
-	response << "Connection: Keep-Alive\r\n";
-	response << "\r\n";
-	response << body;
-
-	return response.str();
+	return serializeResponse(statusCode, h, body);
 }
 
 /* handles creating HTTP response when DELETE or GET request gets 301 for example
  * when trying to access directory with no trailing /, example DELETE /directory HTTP/1.1
  */
-std::string	HttpConnectionHandler::createHttpRedirectResponse(int statusCode, const std::string &location)
+string	HttpConnectionHandler::createHttpRedirectResponse(int statusCode, const string &location)
 {
-	std::ostringstream response;
+	HeadersMap h = createDefaultHeaders();
+
 	if (statusCode == 301) {
-		response << "HTTP/1.1 " << std::to_string(statusCode) << " Moved Permanently\r\n";
-		response << "Location: " << location + "/\r\n";
+		h["Location"] = location + "/";
 	}
 	else if (statusCode == 307) {
-		response << "HTTP/1.1 " << std::to_string(statusCode) << " Temporary Redirection\r\n";
-		response << "Location: " << location << "\r\n";
+		h["Location"] = location;
 	}
-	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
-	response << "Content-Type: text/html\r\n";
-	response << "Content-Length: 0\r\n\r\n";
-	return response.str();
+	h["Content-Type"] = "text/html";
+	return serializeResponse(statusCode, h, "");
 }
 
-
-std::string HttpConnectionHandler::createHttpErrorResponse(int error)
+string HttpConnectionHandler::getErrorPageBody(int error)
 {
-	std::ostringstream		response;
-	if (!conf) {
-		logError("Error response func called with no configuration file match yet, ok if happens during parsing");
+	if (!conf) /* Should return hardcoded defaults in my opinion */
+	{
 		if (error == 408)
-			return getDefaultErrorPage408();
-		return getDefaultErrorPage400();
+			return "<html><head><title>408 Request Timeout</title></head>"
+        "<body><h1>408 Request Timeout</h1>"
+        "<p>Your browser took too long to send a complete request.</p>"
+        "</body></html>";
+		return "<html><head><title>400 Bad request</title></head>"
+		"<body><h1>400 Bad request</h1>"
+		"<p>Sorry, something went wrong while handling your request.</p>"
+		"</body></html>";
 	}
-	std::map<int, std::string>	errorPages = conf->getErrorPages();
-
-	response << "HTTP/1.1 " << error << " " << getReasonPhrase(error) << "\r\n";
-	std::string errorPath;
-	if (errorPages.find(error) != errorPages.end()) {
-		errorPath = errorPages[error];
-	}
-	else {
-		logError("Error page " + std::to_string(error) + " Not found");
-		return getDefaultErrorPage500();
-	}
-
-	errorPath = "." + errorPath;
-	std::ifstream file(errorPath.c_str());
-	if (!file.is_open()) {
-		logError("Cant open error page location " + errorPath);
-		return getDefaultErrorPage500();
-	}
-	std::stringstream buffer;
-	buffer << file.rdbuf();
-	std::string body = buffer.str();
-
-	response << "Date: " << getCurrentHttpDate() <<  "\r\n";
-	if (error == 405) {
-		response << "Allow:";
-		for (const auto &method : locBlock->methods) {
-			response << " " << method;
+	std::map<int, string> errorPages = conf->getErrorPages();
+	string errorPath;
+	
+	if (errorPages.find(error) != errorPages.end())
+	{
+		errorPath = "." + errorPath;
+		std::ifstream file(errorPath.c_str());
+		if (file.is_open()) {
+			std::stringstream buffer;
+			buffer << file.rdbuf();
+			return buffer.str();
 		}
-		response << "\r\n";
+		logError("Can't open error page location " + errorPath);
 	}
-	response << "Content-Type: text/html\r\n";
-	response << "Content-Length: " << body.size() << "\r\n";
-	response << "Connection: close\r\n\r\n";
-	response << body;
+	else
+		logError("Error page " + std::to_string(error) + " Not found");
 
-	return response.str();
+	return "<html><head><title>500 Internal Server Error</title></head>"
+		"<body><h1>500 Internal Server Error</h1>"
+		"<p>Sorry, something went wrong while handling your request.</p>"
+		"</body></html>";
+}
+
+string HttpConnectionHandler::createHttpErrorResponse(int error)
+{
+	string body = getErrorPageBody(error);
+	HeadersMap h = createDefaultHeaders();
+	h["Content-Type"] = "text/html";
+	h["Connection"] = "close";
+
+	if (error == 405 && locBlock)
+	{
+		string allowValue;
+		for (const auto &method : locBlock->methods)
+		{
+			if (!allowValue.empty())
+				allowValue += " ";
+			allowValue += method;
+		}
+		h["Allow"] = allowValue;
+	}
+	
+	return serializeResponse(error, h, body);
 }

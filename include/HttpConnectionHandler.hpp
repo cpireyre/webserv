@@ -13,6 +13,7 @@
 #include "Configuration.hpp"
 
 extern std::vector<Configuration> serverMap;
+using std::string;
 
 typedef enum {
 	S_Error,
@@ -22,21 +23,23 @@ typedef enum {
 	S_ReadBody,
 } HandlerStatus;
 
+typedef std::map<string, string> HeadersMap;
 class HttpConnectionHandler
 {
 	private:
-		std::string							method;
-		std::string							path;
-		std::string							originalPath;
-		std::string							httpVersion;
-		std::string							body;
-		std::map<std::string, std::string>				headers;
+		string							method;
+		string							path;
+		string							originalPath;
+		string							httpVersion;
+		string							body;
+		std::map<string, string>				headers;
+		HeadersMap							responseHeaders;
 		std::string							chunkRemainder;
 		int								clientSocket;
 
-		std::string							filePath; // Everything in URI before the question mark
-		std::string							queryString; // Everything in URI after the question mark
-		std::string							extension;
+		string							filePath; // Everything in URI before the question mark
+		string							queryString; // Everything in URI after the question mark
+		string							extension;
 		CgiTypes							cgiType;
 
 		Configuration							*conf;
@@ -44,8 +47,8 @@ class HttpConnectionHandler
 
 		//response stuff
 		int		errorCode;
-		std::string							PORT;
-		std::string 							IP;
+		string							PORT;
+		string 							IP;
 
 		//Parsing
 		bool		getMethodPathVersion(std::istringstream &requestStream);
@@ -56,15 +59,15 @@ class HttpConnectionHandler
 		bool		hexStringToSizeT(const std::string& hexStr, size_t& out);
 
 		//Creating HTTP response
-		std::string	getDefaultErrorPage500();
-		std::string	getDefaultErrorPage400();
-		std::string getDefaultErrorPage408();
-		std::string	getReasonPhrase(int statusCode);
-		std::string	getCurrentHttpDate();
+		string	getDefaultErrorPage500();
+		string	getDefaultErrorPage400();
+		string	getDefaultErrorPage408();
+		string	getReasonPhrase(int statusCode);
+		string	getCurrentHttpDate();
 
 		void		handleGetRequest();
 		void		handleGetDirectory();
-		void		serveFile(std::string &filePath);
+		void		serveFile(string &filePath);
 
 		void		handleDeleteRequest();
 		void		deleteDirectory();
@@ -72,12 +75,12 @@ class HttpConnectionHandler
 		void		handlePostRequest();
 		bool		validateUploadRights();
 		bool		handleFileUpload();
-		bool		processMultipartPart(const std::string& part, std::string &responseBody);
+		bool		processMultipartPart(const string& part, string &responseBody);
 
 		bool		checkLocation();
 		int			matchServerName(const std::string& pattern, const std::string& host);
 		void		findConfig();
-		bool		isMethodAllowed(LocationBlock *block, std::string &method);
+		bool		isMethodAllowed(LocationBlock *block, string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
 		CgiTypes	checkCgi();
@@ -89,39 +92,44 @@ class HttpConnectionHandler
 		HttpConnectionHandler(const HttpConnectionHandler&) = delete;
 		void resetObject();
 
-		std::string	rawRequest;
+		string	rawRequest;
 
 		HandlerStatus	parseRequest();
 		HandlerStatus	readBody();
 		void	handleRequest();
 
 		//creating HTTP response
-		std::string	createHttpErrorResponse(int error);
-		std::string	createHttpResponse(int statusCode, const std::string &body, const std::string &contentType);
-		std::string	createHttpRedirectResponse(int statusCode, const std::string &location);
+		string	createHttpErrorResponse(int error);
+		string	createHttpResponse(int statusCode, const string &body, const string &contentType);
+		string	createHttpRedirectResponse(int statusCode, const string &location);
+		HeadersMap createDefaultHeaders();
+		string getErrorPageBody(int error);
+
+		/* Will calculate and append Content-Length header with the right value. */
+		string serializeResponse(int status, HeadersMap& headers, const string& body);
 
 		// Getters
 		int						getErrorCode() const { return errorCode; }
 		int						getClientSocket() const { return clientSocket; }
-		const std::string				&getMethod() const { return method; }
-		const std::string				&getPath() const { return path; }
-		const std::string				&getOriginalPath() const { return originalPath; }
-		const std::string				&getHttpVersion() const { return httpVersion; }
-		const std::string				&getBody() const { return body; }
+		const string				&getMethod() const { return method; }
+		const string				&getPath() const { return path; }
+		const string				&getOriginalPath() const { return originalPath; }
+		const string				&getHttpVersion() const { return httpVersion; }
+		const string				&getBody() const { return body; }
 		const Configuration 				*getConf() const { return conf; }
 		const LocationBlock				*getLocationBlock() const { return locBlock;}
-		const std::string				&getFilePath() const { return filePath; }
-		const std::string				&getQueryString() const { return queryString; }
-		const std::string				&getExtension() const { return extension; }
+		const string				&getFilePath() const { return filePath; }
+		const string				&getQueryString() const { return queryString; }
+		const string				&getExtension() const { return extension; }
 		CgiTypes					getCgiType() const { return cgiType; }
-		const std::map<std::string, std::string>	&getHeaders() const { return headers; }
+		const std::map<string, string>	&getHeaders() const { return headers; }
 
 		// Setters
 		void	setClientSocket(int socket) { clientSocket = socket; }
 		void	setErrorCode(int err) { errorCode = err; }
 		void	setConfig(Configuration *config) { conf = config; }
-		void	setIP(std::string ip) { IP = ip; }
-		void	setPORT(std::string port) { PORT = port; }
+		void	setIP(string ip) { IP = ip; }
+		void	setPORT(string port) { PORT = port; }
 
 };
 
