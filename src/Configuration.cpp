@@ -15,6 +15,7 @@ Configuration::Configuration(const Configuration &other)
 	  _maxClientBodySize(other._maxClientBodySize),
 	  _maxClientHeaderSize(other._maxClientHeaderSize),
 	  _locationBlocks(other._locationBlocks),
+	  _allPaths(other._allPaths),
 	  _rawBlock(other._rawBlock),
 	  _rawServerBlock(other._rawServerBlock)
 {}
@@ -32,6 +33,7 @@ Configuration &Configuration::operator=(const Configuration &other) {
 		_maxClientBodySize = other._maxClientBodySize;
 		_maxClientHeaderSize = other._maxClientHeaderSize;
 		_locationBlocks = other._locationBlocks;
+		_allPaths = other._allPaths;
 		_rawBlock = other._rawBlock;
 		_rawServerBlock = other._rawServerBlock;
 	}
@@ -248,7 +250,6 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 
 	for (auto& locationBlock : _locationBlocks)
 		populateMethodsPathsCgi(locationBlock, DEFAULT_METHODS, DEFAULT_CGI_PYTHON, DEFAULT_CGI_PHP);
-
 }
 
 void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::vector<std::string> inheritedMethods, std::string inheritedCgiPathPython, std::string inheritedCgiPathPHP) {
@@ -269,8 +270,6 @@ void Configuration::populateMethodsPathsCgi(LocationBlock& locationBlock, std::v
 		inheritedCgiPathPHP = locationBlock.cgiPathPHP;
 
 	_allPaths.insert(std::make_pair(locationBlock.path, locationBlock));
-	for (auto const &path : _allPaths)
-		std::cout << path.first << "\n";
 	
 	std::vector<LocationBlock> &nestedLocations = locationBlock.nestedLocations;
 
