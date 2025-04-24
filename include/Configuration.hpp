@@ -78,4 +78,6 @@ class Configuration {
 		std::vector<LocationBlock>& getLocationBlocks();
 
 		std::string getRootViaLocation(std::string path) const;
+		void	printCompact() const;
+		void printLocationBlockCompact(LocationBlock loc, int level) const;
 	};
