@@ -93,7 +93,7 @@ void Configuration::printLocationBlockCompact(LocationBlock loc, int level) cons
 {
 	int pad = 0;
 	if (level == 0) {
-		std::cout << "├─"; pad += 1;
+		std::cout << "├─"; pad += 2;
 	}
 	else {
 		std::cout << "│"; pad += 1;
