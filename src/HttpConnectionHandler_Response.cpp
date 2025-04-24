@@ -742,7 +742,7 @@ void	HttpConnectionHandler::handleRequest()
 	}
 	if (checkCgi() != NONE) {
 		CgiHandler cgiHandler(*this);
-		cgiHandler.printCgiInfo(); // Comment out when not needed
+		//cgiHandler.printCgiInfo(); // Comment out when not needed
 		cgiHandler.executeCgi();
 		char buffer[1024];
 		memset(buffer, 0, 1024);
