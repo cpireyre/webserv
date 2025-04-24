@@ -38,7 +38,8 @@ CgiHandler::CgiHandler(const HttpConnectionHandler &conn) {
 	_queryString = "QUERY_STRING=" + conn.getQueryString();
 	_pathInfo = "PATH_INFO=" + _pathToScript;
 	_requestMethod = "REQUEST_METHOD=" + conn.getMethod();
-	_scriptFileName = "SCRIPT_FILENAME=" + _pathToScript.substr(_pathToScript.find_last_of('/') + 1);
+	//_scriptFileName = "SCRIPT_FILENAME=" + _pathToScript.substr(_pathToScript.find_last_of('/') + 1);
+	_scriptFileName = "SCRIPT_FILENAME=" + _pathToScript;
 	_scriptName = "SCRIPT_NAME=" + root + conn.getFilePath();
 	_redirectStatus = "REDIRECT_STATUS=200";
 	_serverProtocol = "SERVER_PROTOCOL=HTTP/1.1";
@@ -64,12 +65,14 @@ CgiHandler::CgiHandler(const HttpConnectionHandler &conn) {
 }
 
 void CgiHandler::printCgiInfo() {
+	std::cout << BLUE << "------- Beginning of CGI data summary--------------" << DEFAULT_COLOR << std::endl;
 	std::cout << GREEN << "Execve Args: " << DEFAULT_COLOR << std::endl;
 	for (int i = 0; _execveArgs[i] != NULL; i++)
 		std::cout << _execveArgs[i] << std::endl;
 	std::cout << GREEN << "Execve Env: " << DEFAULT_COLOR << std::endl;
 	for (int i = 0; _execveEnv[i] != NULL; i++)
 		std::cout << _execveEnv[i] << std::endl;
+	std::cout << BLUE << "------- END of CGI data summary-------------------" << DEFAULT_COLOR << std::endl;
 }
 
 void CgiHandler::executeCgi() {
@@ -124,8 +127,7 @@ void CgiHandler::executeCgi() {
 		_pipeToCgi[0] = -1;
         close(_pipeFromCgi[1]);
 		_pipeFromCgi[1] = -1;
-		for (int i = 0; i < 13; i++)
-			std::cerr << "\t\t\t===>" << _execveEnv[i] << std::endl;
+
         execve(_execveArgs[0], _execveArgs, _execveEnv);
         std::cerr << "execve error in child" << std::endl; // handle better
         exit(EXIT_FAILURE);
