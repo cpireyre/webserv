@@ -5,8 +5,7 @@ HttpConnectionHandler::HttpConnectionHandler()
 	: method(""), path(""), originalPath(""), httpVersion(""), body(""),
 	clientSocket(-1), filePath(""), queryString(""), extension(""),
 	cgiType(NONE), conf(nullptr), locBlock(nullptr), errorCode(0),
-	PORT("0000"), IP("0000"), resStatusline(""), resHeaders(""),
-	resBody(""), fileServ(false) {}
+	PORT("0000"), IP("0000"), response(""), fileServ(false), bSent(0) {}
 
 //add socket closing to destructor if needed
 HttpConnectionHandler::~HttpConnectionHandler() {}
@@ -30,9 +29,8 @@ void HttpConnectionHandler::resetObject()
 	errorCode = 0;
 	rawRequest.clear();
 	chunkRemainder.clear();
-	resStatusline.clear();
-	resHeaders.clear();
-	resBody.clear();
+	response.clear();
+	bSent = 0;
 	fileServ = false;
 }
 

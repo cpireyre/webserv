@@ -50,10 +50,9 @@ class HttpConnectionHandler
 		string							PORT;
 		string 							IP;
 
-		string							resStatusline;
-		string							resHeaders;
-		string							resBody;
+		string							response;
 		bool							fileServ;
+		int							bSent;
 
 		//Parsing
 		bool		getMethodPathVersion(std::istringstream &requestStream);
@@ -72,7 +71,7 @@ class HttpConnectionHandler
 
 		void		handleGetRequest();
 		void		handleGetDirectory();
-		void		serveFile(string &filePath);
+		void		checkFileToServe(string &filePath);
 
 		void		handleDeleteRequest();
 		void		deleteDirectory();
@@ -105,10 +104,12 @@ class HttpConnectionHandler
 
 		//creating HTTP response
 		string	createHttpErrorResponse(int error);
+		string	createErrorResponse(int error); //placeholder for know
 		string	createHttpResponse(int statusCode, const string &body, const string &contentType);
 		string	createHttpRedirectResponse(int statusCode, const string &location);
 		HeadersMap createDefaultHeaders();
 		string getErrorPageBody(int error);
+		HandlerStatus serveFile();
 
 		/* Will calculate and append Content-Length header with the right value. */
 		string serializeResponse(int status, HeadersMap& headers, const string& body);
@@ -126,6 +127,8 @@ class HttpConnectionHandler
 		const string				&getFilePath() const { return filePath; }
 		const string				&getQueryString() const { return queryString; }
 		const string				&getExtension() const { return extension; }
+		const string				&getResponse() const { return response; }
+		bool				getFileServ() const { return fileServ; }
 		CgiTypes					getCgiType() const { return cgiType; }
 		const std::map<string, string>	&getHeaders() const { return headers; }
 

@@ -86,13 +86,18 @@ int	run(const std::vector<Configuration> config)
 					assert(event_type == QUEUE_EVENT_WRITE);
 					if (conn->handler.getErrorCode() != 0)
 					{
-						/* This assumes we can send the whole error
-						 * response in one send() call */
+						/* depending on handler.getfileServ() we already have the whole response
+						 * or we are just sending everyhting but body */
 						logDebug("Error with %d", conn->sockfd);
 						std::string response = conn->handler
-							.createHttpErrorResponse(conn->handler.getErrorCode());
+							.createErrorResponse(conn->handler.getErrorCode());
 						send(conn->sockfd, response.c_str(), response.size(), 0);
-						disconnectClient(conn, qfd);
+						//move to the file sercing section and serve the error age file
+						//need to still set the path for it somehow
+						if (conn->handler.getFileServ()) //update time stamp?
+							conn->state = CONNECTION_FILE_SERVE;
+						else
+							disconnectClient(conn, qfd);
 					}
 					else
 					{
@@ -102,6 +107,24 @@ int	run(const std::vector<Configuration> config)
 						conn->state = CONNECTION_RECV_HEADER;
 						conn->handler.resetObject();
 						conn->began_sending_header_ms = now_ms();
+					}
+					break;
+				case CONNECTION_FILE_SERVE:
+					switch(conn->handler.serveFile())
+					{
+						case S_Done:
+							queue_mod_fd(qfd, conn->handler.getClientSocket(),
+								QUEUE_EVENT_READ, conn);
+							conn->state = CONNECTION_RECV_HEADER;
+							if (conn->handler.getErrorCode() != 0)
+								disconnectClient(conn, qfd);
+							conn->handler.resetObject();
+							break;
+						case S_Error:
+							disconnectClient(conn, qfd);
+							break;
+						default:
+							continue;
 					}
 					break;
 				case CONNECTION_ACTUALLY_A_SERVER:
