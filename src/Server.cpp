@@ -92,8 +92,6 @@ int	run(const std::vector<Configuration> config)
 						std::string response = conn->handler
 							.createErrorResponse(conn->handler.getErrorCode());
 						send(conn->sockfd, response.c_str(), response.size(), 0);
-						//move to the file sercing section and serve the error age file
-						//need to still set the path for it somehow
 						if (conn->handler.getFileServ()) //update time stamp?
 							conn->state = CONNECTION_FILE_SERVE;
 						else
@@ -102,6 +100,11 @@ int	run(const std::vector<Configuration> config)
 					else
 					{
 						conn->handler.handleRequest();
+						send(conn->sockfd, conn->handler.getResponse().c_str(), conn->handler.getResponse().size(), 0);
+						if (conn->handler.getFileServ()) {
+							conn->state = CONNECTION_FILE_SERVE;
+							break;
+						}
 						queue_mod_fd(qfd, conn->handler.getClientSocket(),
 								QUEUE_EVENT_READ, conn);
 						conn->state = CONNECTION_RECV_HEADER;

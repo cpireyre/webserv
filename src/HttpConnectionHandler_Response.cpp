@@ -183,8 +183,7 @@ void	HttpConnectionHandler::checkFileToServe(std::string &filePath)
 {
 	std::ifstream file(filePath, std::ios::binary);
 	if (!file.is_open()) {
-		std::string errorResponse = createHttpResponse(404, "<h1>404 Not Found</h1>", "text/html");
-		send(clientSocket, errorResponse.c_str(), errorResponse.size(), 0);
+		errorCode = 404;
 		return;
 	}
 
@@ -204,14 +203,9 @@ void	HttpConnectionHandler::checkFileToServe(std::string &filePath)
 	headerStream << "Connection: Keep-Alive\r\n";
 	headerStream << "\r\n";
 
-	std::string headerStr = headerStream.str();
-	send(clientSocket, headerStr.c_str(), headerStr.size(), 0); // Send headers
-
-	// Send file content in chunks
-	char buffer[8192];
-	while (file.read(buffer, sizeof(buffer)) || file.gcount() > 0) {
-		send(clientSocket, buffer, file.gcount(), 0);
-	}
+	response = headerStream.str();
+	fileServ = true;
+	path = filePath;
 	file.close();
 }
 
@@ -219,7 +213,6 @@ void	HttpConnectionHandler::checkFileToServe(std::string &filePath)
  * 1. if directory contains one of index files, serve that
  * 2. check if auto index is on on locaton block, return auto-index of directory
  * 	else 403
-
  * need to catch filesystem errors?
  */
 void	HttpConnectionHandler::handleGetDirectory()
@@ -239,8 +232,7 @@ void	HttpConnectionHandler::handleGetDirectory()
 	// check block.dirListing -> off -> 403
 	if (!locBlock->dirListing) {
 		logError("Get request for directory " + path + ", but file serving not allowed");
-		std::string response = createHttpResponse(403, "<h1>Permission denied.</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 403;
 		return;
 	}
 
@@ -256,8 +248,7 @@ void	HttpConnectionHandler::handleGetDirectory()
 	catch (const std::filesystem::filesystem_error& e)
 	{
 		logError("Get request for directory " + path + ", filesystem error");
-		std::string response = createHttpResponse(403, "<h1>Permission denied.</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 403;
 		return;
 	}
 
@@ -273,8 +264,7 @@ void	HttpConnectionHandler::handleGetDirectory()
 	}
 	htmlListing += "</ul>\r\n<hr>\r\n</body>\r\n</html>\r\n";
 
-	std::string response = createHttpResponse(200, htmlListing, "text/html");
-	send(clientSocket, response.c_str(), response.size(), 0);
+	response = createHttpResponse(200, htmlListing, "text/html");
 }
 
 /* handles an HTTP GET request by serving the requested file
@@ -291,13 +281,11 @@ void	HttpConnectionHandler::handleGetRequest()
 	std::string filePath = path;
 
 	if (access(filePath.c_str(), F_OK) != 0) {
-		std::string response = createHttpResponse(404, "<h1>Not found</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 404;
 		return;
 	}
 	else if (access(filePath.c_str(), R_OK) != 0) {
-		std::string response = createHttpResponse(403, "<h1>Permission denied.</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 403;
 		return;
 	}
 	
@@ -305,15 +293,11 @@ void	HttpConnectionHandler::handleGetRequest()
 		handleGetDirectory();
 		return ;
 	}
-
-
 	if (std::filesystem::is_directory(filePath)) {
 		logInfo("Redirecting to " + path + "/");
-		std::string response = createHttpRedirectResponse(301, originalPath);
-		send(clientSocket, response.c_str(), response.size(), 0);
+		response = createHttpRedirectResponse(301, originalPath);
 		return;
 	}
-
 	checkFileToServe(filePath);
 }
 
@@ -480,9 +464,7 @@ bool	HttpConnectionHandler::handleFileUpload()
 	}
 
 	jsonResponse << "] }";
-
-	std::string response = createHttpResponse(200, jsonResponse.str(), "application/json");
-	send(clientSocket, response.c_str(), response.size(), 0);
+	response = createHttpResponse(200, jsonResponse.str(), "application/json");
 	return true;
 }
 
@@ -499,13 +481,13 @@ bool	HttpConnectionHandler::handleFileUpload()
 void	HttpConnectionHandler::handlePostRequest()
 {
 	if (body.empty()) {
-		std::string response = createHttpErrorResponse(400);
-		send(clientSocket, response.c_str(), response.size(), 0);
+		logError("Empty body in POST request");
+		errorCode = 400;
 		return;
 	}
 	if (!validateUploadRights()) {
-		std::string response = createHttpErrorResponse(500);
-		send(clientSocket, response.c_str(), response.size(), 0);
+		logError("No rights for upload");
+		errorCode = 500;
 		return;
 	}
 
@@ -523,8 +505,7 @@ void	HttpConnectionHandler::handlePostRequest()
 	// handle file uploads
 	else if (contentType.find("multipart/form-data") != std::string::npos) {
 		if (!handleFileUpload()) {
-			std::string response = createHttpResponse(400, "<h1>400 Bad Request (File Upload Failed)</h1>", "text/html");
-			send(clientSocket, response.c_str(), response.size(), 0);
+			errorCode = 400;
 			return;
 		}
 		return ;
@@ -532,12 +513,10 @@ void	HttpConnectionHandler::handlePostRequest()
     	// Unknown content type / for now atleast
 	else {
 		responseBody = "<h1>415 Unsupported Media Type</h1>";
-		std::string response = createHttpResponse(415, responseBody, "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 415;
 		return;
 	}
-	std::string response = createHttpResponse(200, responseBody, "text/html");
-	send(clientSocket, response.c_str(), response.size(), 0);
+	response = createHttpResponse(200, responseBody, "text/html");
 }
 
 /* handles DELETE request on /diretory or /directory/
@@ -556,34 +535,28 @@ void	HttpConnectionHandler::deleteDirectory()
 
 	if (path.empty() || path.back() != '/') {
 		logError("DELETE directory requested but path doesn't end with '/': " + path);
-		std::string response = createHttpRedirectResponse(301, path);
-		send(clientSocket, response.c_str(), response.size(), 0);
+		response = createHttpRedirectResponse(301, path);
 		return;
 	}
 	
 	if (access(path.c_str(), W_OK) != 0) {
 		logError("Permission denied to delete directory: " + path);
-		std::string response = createHttpResponse(403, "<h1>403 Forbidden: No write access</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 403;
 		return;
 	}
 
 	if (!std::filesystem::is_empty(path, ec)) {
-		logError("Cannot delete non-empty directory: " + path);
-		std::string response = createHttpResponse(409, "<h1>409 Conflict: Directory not empty</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		logError("Conflict: Delete attempt on non-empty directory: " + path);
+		errorCode = 409;
 		return;
 	}
 
 	if (!std::filesystem::remove(path, ec)) {
 		logError("Failed to delete directory: " + (ec ? ec.message() : "Unknown error"));
-		std::string response = createHttpResponse(500, "<h1>500 Internal Server Error: Cannot delete directory</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 500;
 		return;
 	}
-
-	std::string response = createHttpResponse(204, "", "text/html");
-	send(clientSocket, response.c_str(), response.size(), 0);
+	response = createHttpResponse(204, "", "text/html");
 }
 
 /* handles the HTTP DELETE
@@ -607,8 +580,7 @@ void	HttpConnectionHandler::handleDeleteRequest()
 	// file exists
     	if (!std::filesystem::exists(filePath, ec)) {
         	logError("DELETE requested but file not found: " + filePath);
-        	std::string response = createHttpResponse(404, "<h1>404 Not Found</h1>", "text/html");
-        	send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 404;
         	return;
 	}
 	//its directory or something unsupported
@@ -618,33 +590,28 @@ void	HttpConnectionHandler::handleDeleteRequest()
 	}
 	else if (!std::filesystem::is_regular_file(filePath, ec)) {
         	logError("DELETE request but file is not directory or regular file: " + filePath);
-        	std::string response = createHttpResponse(409, "<h1>409 Delete request on unknown file type</h1>", "text/html");
-        	send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 409;
         	return;
 	}
 
 	//handle regular file deletion
 	if (path.empty() || path.back() == '/') {
 		logError("DELETE file requested but path ends with '/': " + path);
-		std::string response = createHttpResponse(404, "<h1>404 File /filename/ not possbile</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		errorCode = 404;
 		return;
 	}
 	if (!std::filesystem::remove(filePath, ec)) {
 		logError("Failed to delete file: " + (ec ? ec.message() : "Unknown error"));
 		std::string response;
 		if (ec == std::errc::permission_denied) {
-			response = createHttpResponse(403, "<h1>403 Permission Denied</h1>", "text/html");
+			errorCode = 403;
 		}
 		else {
-			response = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
+			errorCode = 500;
 		}
-		send(clientSocket, response.c_str(), response.size(), 0);
 		return;
 	}
-
-	std::string response = createHttpResponse(200, "<h1>File Deleted Successfully</h1>", "text/html");
-	send(clientSocket, response.c_str(), response.size(), 0);
+	response = createHttpResponse(200, "<h1>File Deleted Successfully</h1>", "text/html");
 }
 
 /* checks for name matches in the following priority:
@@ -794,11 +761,14 @@ void	HttpConnectionHandler::handleRequest()
 		handleDeleteRequest();
 	}
 	else {
-		std::string response = createHttpResponse(501, "<h1>501 Method: " + method + "Not Implemented </h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		logError("Method " + method + " not implemented");
+		errorCode = 501;
 	}
 	/*check here whether error happened, post or delete was executed and we can send, or we need to file serv
 	  basic idea is either to send everything at once is possible, like redirections and short post/delete responses
 	  if error or serving get request then send headers and go to send body in chunks
 	 */
+	if (errorCode) {
+		response = createErrorResponse(errorCode);
+	}
 }

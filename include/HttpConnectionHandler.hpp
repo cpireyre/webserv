@@ -46,7 +46,7 @@ class HttpConnectionHandler
 		LocationBlock						*locBlock;
 
 		//response stuff
-		int							errorCode; //too lazy to rename?
+		int							errorCode;
 		string							PORT;
 		string 							IP;
 
