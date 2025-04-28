@@ -7,7 +7,7 @@ static int	start_servers(const std::vector<Configuration>,Endpoint*,int,int*);
 static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int, int *);
 static void	initEndpoint(int, std::string, std::string, Endpoint *);
 static bool endpointAlreadyBound(Endpoint *, int, std::string, std::string);
-static void	timeoutInactiveClients(Endpoint *, int, int);
+static void	timeoutInactiveClient(Endpoint *, int);
 static void sigcleanup(int);
 static void handlesignals(void(*)(int));
 
@@ -53,7 +53,8 @@ int	run(const std::vector<Configuration> config)
 	while (!g_ServerShoudClose)
 	{
 		assert(g_ServerShoudClose == false);
-		timeoutInactiveClients(endpoints, qfd, max_client_id);
+		for (int i = 0; i <= max_client_id; i++)
+			timeoutInactiveClient(&endpoints[i], qfd);
 		int nready = queue_wait(qfd, events, QUEUE_MAX_EVENTS);
 		error = nready < 0;
 		if (error != 0 && !g_ServerShoudClose)
@@ -248,40 +249,37 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	return &endpoints[i];
 }
 
-static void	timeoutInactiveClients(Endpoint *conns, int qfd, int max_client_id)
+static void	timeoutInactiveClient(Endpoint *conn, int qfd)
 {
-	for (int i = 0; i <= max_client_id; i++)
-	{
-		uint64_t idle_duration_ms = now_ms() - conns[i].last_heard_from_ms;
-		switch (conns[i].state)
+		uint64_t idle_duration_ms = now_ms() - conn->last_heard_from_ms;
+		switch (conn->state)
 		{
 			case CONNECTION_ACTUALLY_A_SERVER:
-				continue;
+				break;
 			case CONNECTION_DISCONNECTED:
-				continue;
+				break;
 			case CONNECTION_TIMED_OUT:
-				assert(conns[i].last_heard_from_ms != 0);
+				assert(conn->last_heard_from_ms != 0);
 				/* Hard timeout: forcibly disconnect */
 				if (idle_duration_ms > 3 * CLIENT_TIMEOUT_THRESHOLD_MS)
 				{
-					logDebug("Hard timeout: %d", conns[i].sockfd);
-					disconnectClient(&conns[i], qfd);
+					logDebug("Hard timeout: %d", conn->sockfd);
+					disconnectClient(conn, qfd);
 				}
-				continue;
+				break;
 			default:
-				assert(conns[i].last_heard_from_ms != 0);
-				if (conns[i].handler.getErrorCode() == 408)
-					continue;
+				assert(conn->last_heard_from_ms != 0);
+				if (conn->handler.getErrorCode() == 408)
+					break;
 				/* Soft timeout: mark client for 408 */
 				if (idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS)
 				{
-					logDebug("Soft timeout: %d", conns[i].sockfd);
-					conns[i].state = CONNECTION_TIMED_OUT;
-					queue_mod_fd(qfd, conns[i].handler.getClientSocket(),
-							QUEUE_EVENT_WRITE, &conns[i]);
+					logDebug("Soft timeout: %d", conn->sockfd);
+					conn->state = CONNECTION_TIMED_OUT;
+					queue_mod_fd(qfd, conn->handler.getClientSocket(),
+							QUEUE_EVENT_WRITE, conn);
 				}
 		}
-	}
 }
 
 static bool endpointAlreadyBound(Endpoint *endpoints, int count_to_check,
