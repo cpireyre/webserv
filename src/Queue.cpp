@@ -30,16 +30,16 @@ int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 {
 	assert(qfd >= 0);
 	assert(fd >= 0);
-	assert(t == QUEUE_EVENT_READ || t == QUEUE_EVENT_WRITE);
+	assert(t == READABLE || t == WRITABLE);
 
 #ifdef __linux__
 	struct epoll_event	e;
 	memset(&e, 0, sizeof(e));
 	switch (t) {
-		case QUEUE_EVENT_READ:
+		case READABLE:
 			e.events |= EPOLLIN;
 			break;
-		case QUEUE_EVENT_WRITE:
+		case WRITABLE:
 			e.events |= EPOLLOUT;
 			break;
 	}
@@ -54,10 +54,10 @@ int	queue_add_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	struct kevent	e;
 	int events = 0;
 	switch (t) {
-		case QUEUE_EVENT_READ:
+		case READABLE:
 			events |= EVFILT_READ;
 			break;
-		case QUEUE_EVENT_WRITE:
+		case WRITABLE:
 			events |= EVFILT_WRITE;
 			break;
 	}
@@ -76,7 +76,7 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 {
 	assert(qfd >= 0);
 	assert(fd >= 0);
-	assert(t == QUEUE_EVENT_READ || t == QUEUE_EVENT_WRITE);
+	assert(t == READABLE || t == WRITABLE);
 
 #ifdef __linux__
 	struct epoll_event e;
@@ -84,10 +84,10 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	e.events = 0;
 
 	switch (t) {
-		case QUEUE_EVENT_READ:
+		case READABLE:
 			e.events |= EPOLLIN;
 			break;
-		case QUEUE_EVENT_WRITE:
+		case WRITABLE:
 			e.events |= EPOLLOUT;
 			break;
 	}
@@ -102,11 +102,11 @@ int	queue_mod_fd(int qfd, int fd, enum queue_event_type t, const void *data)
 	int n = 0;
 
 	switch (t) {
-		case QUEUE_EVENT_READ:
+		case READABLE:
 			EV_SET(&ev[n++], fd, EVFILT_READ, EV_ADD, 0, 0, (void *)data);
 			EV_SET(&ev[n++], fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
 			break;
-		case QUEUE_EVENT_WRITE:
+		case WRITABLE:
 			EV_SET(&ev[n++], fd, EVFILT_WRITE, EV_ADD, 0, 0, (void *)data);
 			EV_SET(&ev[n++], fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 			break;
@@ -229,13 +229,13 @@ queue_event_type	queue_event_get_type(const queue_event *e)
 {
 #ifdef __linux__
 	if (e->events & EPOLLIN)
-		return (QUEUE_EVENT_READ);
+		return (READABLE);
 	else
-		return (QUEUE_EVENT_WRITE);
+		return (WRITABLE);
 #else
 	if (e->filter == EVFILT_READ)
-		return (QUEUE_EVENT_READ);
+		return (READABLE);
 	else
-		return (QUEUE_EVENT_WRITE);
+		return (WRITABLE);
 #endif
 }

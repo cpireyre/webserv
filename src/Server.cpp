@@ -7,7 +7,7 @@ static int	start_servers(const std::vector<Configuration>,Endpoint*,int,int*);
 static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int, int *);
 static void	initEndpoint(int, std::string, std::string, Endpoint *);
 static bool endpointAlreadyBound(Endpoint *, int, std::string, std::string);
-static void	timeoutInactiveClient(Endpoint *, int);
+static bool	isTimedOut(Endpoint *, int);
 static void sigcleanup(int);
 static void handlesignals(void(*)(int));
 
@@ -19,141 +19,124 @@ int	run(const std::vector<Configuration> config)
 	int	error = 1;
 
 	int qfd = queue_create();
-	if (qfd < 0)
-		return (1);
+	if (qfd < 0) return (1);
 
-	int	endpoints_count = 0;
+	int	servers_num = 0;
 	Endpoint	endpoints[MAXCONNS];
 	for (int n = 0; n < MAXCONNS; n++)
-		endpoints[n].state = CONNECTION_DISCONNECTED;
-	error = start_servers(config, endpoints, config.size(), &endpoints_count);
-	int max_client_id = endpoints_count;
-	if (error)
-		goto cleanup;
+		endpoints[n].state = C_DISCONNECTED;
+
+	error = start_servers(config, endpoints, config.size(), &servers_num);
+	int max_client_id = servers_num;
+	if (error) goto cleanup;
 
 	/* Register all server sockets for read events */
-	for (int i = 0; i < endpoints_count; i++)
-	{
-		assert(endpoints[i].state == CONNECTION_ACTUALLY_A_SERVER);
-		assert(endpoints[i].sockfd > 0);
-		error = queue_add_fd(qfd, endpoints[i].sockfd,
-				QUEUE_EVENT_READ, &endpoints[i]);
-		if (error)
-		{
-			logError("Error registering server socket events, "
-					"execution cannot proceed");
+	for (Endpoint *conn = endpoints; conn < endpoints + servers_num; conn++) {
+		assert(conn->state == C_ACTUALLY_A_SERVER);
+		error = queue_add_fd(qfd, conn->sockfd, READABLE, conn);
+		if (error) {
+			logError("Error registering server socket events");
 			goto cleanup;
 		}
 	}
 
 	queue_event events[QUEUE_MAX_EVENTS];
-	memset(events, 0, sizeof(events));
+	bzero(events, sizeof(events));
 
-	/* Main server event loop state machine */
-	while (!g_ServerShoudClose)
-	{
+	while (!g_ServerShoudClose) {
 		assert(g_ServerShoudClose == false);
-		for (int i = 0; i <= max_client_id; i++)
-			timeoutInactiveClient(&endpoints[i], qfd);
+
+		for (Endpoint *conn = endpoints; conn < endpoints + max_client_id; conn++) {
+			if (isLiveClient(conn) && isTimedOut(conn, qfd)) {
+				conn->state = C_TIMED_OUT;
+				watch(qfd, conn, WRITABLE);
+			}
+		}
+
 		int nready = queue_wait(qfd, events, QUEUE_MAX_EVENTS);
 		error = nready < 0;
-		if (error != 0 && !g_ServerShoudClose)
-			break;
-		for (int id = 0; id < nready; id++)
-		{
+		if (error != 0) break;
+
+		for (int id = 0; id < nready; id++) {
 			Endpoint *conn = (Endpoint*)queue_event_get_data(&events[id]);
 			assert(conn->sockfd > 0);
-			assert(conn->state != CONNECTION_DISCONNECTED);
-			if (queue_event_is_error(&events[id]))
-				disconnectClient(conn, qfd);
+
+			if (queue_event_is_error(&events[id])) disconnectClient(conn, qfd);
 			queue_event_type event_type = queue_event_get_type(&events[id]);
-			switch (conn->state)
-			{
-				case CONNECTION_TIMED_OUT:
-					conn->handler.setErrorCode(408);
-					conn->state = CONNECTION_SEND_RESPONSE;
-					break;
-				case CONNECTION_RECV_HEADER: 
-					assert(event_type == QUEUE_EVENT_READ);
-					receiveHeader(conn, qfd);
-					conn->last_heard_from_ms = now_ms();
-					break;
-				case CONNECTION_RECV_BODY:
-					assert(event_type == QUEUE_EVENT_READ);
-					receiveBody(conn, qfd);
-					conn->last_heard_from_ms = now_ms();
-					break;
-				case CONNECTION_SEND_RESPONSE:
-					assert(event_type == QUEUE_EVENT_WRITE);
-					if (conn->handler.getErrorCode() != 0)
-					{
-						/* depending on handler.getfileServ() we already have the whole response
-						 * or we are just sending everyhting but body */
-						logDebug("Error with %d", conn->sockfd);
-						std::string response = conn->handler
-							.createErrorResponse(conn->handler.getErrorCode());
-						send(conn->sockfd, response.c_str(), response.size(), 0);
-						//move to the file sercing section and serve the error age file
-						//need to still set the path for it somehow
-						if (conn->handler.getFileServ()) //update time stamp?
-							conn->state = CONNECTION_FILE_SERVE;
-						else
-							disconnectClient(conn, qfd);
-					}
-					else
-					{
-						conn->handler.handleRequest();
-						queue_mod_fd(qfd, conn->handler.getClientSocket(),
-								QUEUE_EVENT_READ, conn);
-						conn->state = CONNECTION_RECV_HEADER;
-						conn->handler.resetObject();
-						conn->began_sending_header_ms = now_ms();
-					}
-					break;
-				case CONNECTION_FILE_SERVE:
-					switch(conn->handler.serveFile())
-					{
-						case S_Done:
-							queue_mod_fd(qfd, conn->handler.getClientSocket(),
-								QUEUE_EVENT_READ, conn);
-							conn->state = CONNECTION_RECV_HEADER;
-							if (conn->handler.getErrorCode() != 0)
-								disconnectClient(conn, qfd);
-							conn->handler.resetObject();
-							break;
-						case S_Error:
-							disconnectClient(conn, qfd);
-							break;
-						default:
-							continue;
-					}
-					break;
-				case CONNECTION_ACTUALLY_A_SERVER:
-					assert(event_type == QUEUE_EVENT_READ);
-					{
-						Endpoint *client =
-							connectNewClient(endpoints, conn, qfd, &max_client_id);
-						if (client == nullptr)
-							continue;
-						queue_add_fd(qfd, client->handler.getClientSocket(),
-								QUEUE_EVENT_READ, client);
-						assert(client->sockfd ==
-								client->handler.getClientSocket());
-						assert(client->sockfd !=
-								conn->handler.getClientSocket());
-					}
-					break;
-				case CONNECTION_DISCONNECTED:
-					continue;
+
+			switch (conn->state) {
+				case C_TIMED_OUT: conn->state = C_SEND_RESPONSE; break;
+
+				case C_RECV_HEADER: assert(event_type == READABLE);
+													receiveHeader(conn, qfd);
+													conn->last_heard_from_ms = now_ms();
+													break;
+
+				case C_RECV_BODY: assert(event_type == READABLE);
+													receiveBody(conn, qfd);
+													break;
+
+				case C_SEND_RESPONSE: assert(event_type == WRITABLE);
+													if (conn->handler.getErrorCode() != 0) {
+														/* depending on handler.getfileServ() we already have the whole response
+														 * or we are just sending everything but body */
+														logDebug("Error with %d", conn->sockfd);
+														std::string response = conn->handler
+															.createErrorResponse(conn->handler.getErrorCode());
+														send(conn->sockfd, response.c_str(), response.size(), 0);
+														//move to the file sercing section and serve the error page file
+														//need to still set the path for it somehow
+														if (conn->handler.getFileServ()) //update time stamp?
+															conn->state = C_FILE_SERVE;
+														else
+															disconnectClient(conn, qfd);
+													}
+													else {
+														conn->handler.handleRequest();
+														watch(qfd, conn, READABLE);
+														conn->state = C_RECV_HEADER;
+														conn->handler.resetObject();
+														conn->began_sending_header_ms = now_ms();
+													}
+													break;
+
+				case C_FILE_SERVE: assert(event_type == WRITABLE);
+													switch(conn->handler.serveFile()) {
+														case S_Done:
+															watch(qfd, conn, READABLE);
+															conn->state = C_RECV_HEADER;
+															if (conn->handler.getErrorCode() != 0)
+																disconnectClient(conn, qfd);
+															conn->handler.resetObject();
+															break;
+														case S_Error: disconnectClient(conn, qfd);
+															break;
+														default: break;
+													}
+													break;
+
+				case C_ACTUALLY_A_SERVER: assert(event_type == READABLE);
+													{
+														Endpoint *client =
+															connectNewClient(endpoints, conn, qfd, &max_client_id);
+														if (client == nullptr) break;
+														queue_add_fd(qfd, client->sockfd,
+																READABLE, client);
+														assert(client->sockfd ==
+																client->handler.getClientSocket());
+														assert(client->sockfd !=
+																conn->handler.getClientSocket());
+													}
+													break;
+
+				case C_DISCONNECTED: break;
 			}
 		}
 	}
 
 cleanup:
-	for (int i = 0; i <= max_client_id; i++)
-	{
-		if (endpoints[i].state != CONNECTION_DISCONNECTED)
-		{
+	for (int i = 0; i <= max_client_id; i++) {
+		if (endpoints[i].state != C_DISCONNECTED) {
 			assert(endpoints[i].sockfd > 0);
 			logDebug("Closing socket %s:%s (%d)",
 					endpoints[i].IP,
@@ -186,7 +169,7 @@ static int	start_servers(const std::vector<Configuration> servers,
 			return (-1);
 		initEndpoint(sockfd, host, port, &endpoints[*count]);
 		servers[i].printCompact();
-		assert(endpoints[*count].state == CONNECTION_ACTUALLY_A_SERVER);
+		assert(endpoints[*count].state == C_ACTUALLY_A_SERVER);
 		*count += 1;
 	}
 	assert(*count > 0);
@@ -200,7 +183,7 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	assert(server->sockfd > 0);
 
 	int i = 0;
-	while (i < MAXCONNS && endpoints[i].state != CONNECTION_DISCONNECTED)
+	while (i < MAXCONNS && endpoints[i].state != C_DISCONNECTED)
 		i++;
 	if (i == MAXCONNS) /* Uh oh, we need to kick someone out */
 	{
@@ -211,7 +194,7 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 			uint64_t recv_header_duration_ms =
 				now_ms() - conn->began_sending_header_ms;
 			bool too_slow = recv_header_duration_ms > RECV_HEADER_TIMEOUT_MS;
-			if (conn->state == CONNECTION_RECV_HEADER && too_slow)
+			if (conn->state == C_RECV_HEADER && too_slow)
 			{
 				disconnectClient(conn, qfd);
 				break;
@@ -233,10 +216,10 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 		perror("client accept");
 		return nullptr;
 	}
-	endpoints[i].state = CONNECTION_RECV_HEADER;
+	endpoints[i].state = C_RECV_HEADER;
 	endpoints[i].sockfd = clientSocket;
-    memcpy(endpoints[i].IP, server->IP, INET6_ADDRSTRLEN);
-    memcpy(endpoints[i].port, server->port, PORT_STRLEN);
+	memcpy(endpoints[i].IP, server->IP, INET6_ADDRSTRLEN);
+	memcpy(endpoints[i].port, server->port, PORT_STRLEN);
 	endpoints[i].handler.setClientSocket(clientSocket);
 	endpoints[i].handler.setIP(server->IP);
 	endpoints[i].handler.setPORT(server->port);
@@ -249,37 +232,26 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	return &endpoints[i];
 }
 
-static void	timeoutInactiveClient(Endpoint *conn, int qfd)
+static bool	isTimedOut(Endpoint *conn, int qfd)
 {
-		uint64_t idle_duration_ms = now_ms() - conn->last_heard_from_ms;
-		switch (conn->state)
-		{
-			case CONNECTION_ACTUALLY_A_SERVER:
-				break;
-			case CONNECTION_DISCONNECTED:
-				break;
-			case CONNECTION_TIMED_OUT:
-				assert(conn->last_heard_from_ms != 0);
-				/* Hard timeout: forcibly disconnect */
-				if (idle_duration_ms > 3 * CLIENT_TIMEOUT_THRESHOLD_MS)
-				{
-					logDebug("Hard timeout: %d", conn->sockfd);
-					disconnectClient(conn, qfd);
-				}
-				break;
-			default:
-				assert(conn->last_heard_from_ms != 0);
-				if (conn->handler.getErrorCode() == 408)
-					break;
-				/* Soft timeout: mark client for 408 */
-				if (idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS)
-				{
-					logDebug("Soft timeout: %d", conn->sockfd);
-					conn->state = CONNECTION_TIMED_OUT;
-					queue_mod_fd(qfd, conn->handler.getClientSocket(),
-							QUEUE_EVENT_WRITE, conn);
-				}
-		}
+	assert(conn->last_heard_from_ms != 0);
+
+	uint64_t idle_duration_ms = now_ms() - conn->last_heard_from_ms;
+
+	if (conn->handler.getErrorCode() != 408
+			&&  idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS) {
+		conn->handler.setErrorCode(408);
+		logDebug("Soft timeout: %d", conn->sockfd);
+		return (true);
+	}
+
+	if (conn->state == C_TIMED_OUT
+			&&  idle_duration_ms > 3 * CLIENT_TIMEOUT_THRESHOLD_MS) {
+		logDebug("Hard timeout: %d", conn->sockfd);
+		disconnectClient(conn, qfd);
+	}
+
+	return (false);
 }
 
 static bool endpointAlreadyBound(Endpoint *endpoints, int count_to_check,
@@ -304,7 +276,7 @@ static void	initEndpoint(int sockfd, std::string host, std::string port,
 	assert(endpoint != nullptr);
 	endpoint->sockfd = sockfd;
 	endpoint->handler = HttpConnectionHandler();
-	endpoint->state = CONNECTION_ACTUALLY_A_SERVER;
+	endpoint->state = C_ACTUALLY_A_SERVER;
 	int i = 0;
 	for (char c : host)
 		endpoint->IP[i++] = c;
@@ -337,4 +309,9 @@ static void handlesignals(void(*hdl)(int))
 	sigaction(SIGHUP, &sa, nullptr);
 	sigaction(SIGINT, &sa, nullptr);
 	sigaction(SIGQUIT, &sa, nullptr);
+}
+
+int		watch(int qfd, Endpoint *conn, enum queue_event_type t)
+{
+	return (queue_mod_fd(qfd, conn->sockfd, t, conn));
 }
