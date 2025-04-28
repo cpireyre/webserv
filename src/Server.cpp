@@ -54,8 +54,7 @@ int	run(const std::vector<Configuration> config)
 		}
 
 		int nready = queue_wait(qfd, events, QUEUE_MAX_EVENTS);
-		error = nready < 0;
-		if (error != 0) break;
+		if ((error = nready < 0) != 0) break;
 
 		for (int id = 0; id < nready; id++) {
 			Endpoint *conn = (Endpoint*)queue_event_get_data(&events[id]);
@@ -65,87 +64,84 @@ int	run(const std::vector<Configuration> config)
 			queue_event_type event_type = queue_event_get_type(&events[id]);
 
 			switch (conn->state) {
-				case C_TIMED_OUT: conn->state = C_SEND_RESPONSE; break;
+				case C_TIMED_OUT:
+					conn->state = C_SEND_RESPONSE;
+					break;
 
 				case C_RECV_HEADER: assert(event_type == READABLE);
-													receiveHeader(conn, qfd);
-													conn->last_heard_from_ms = now_ms();
-													break;
+					receiveHeader(conn, qfd);
+					conn->last_heard_from_ms = now_ms();
+					break;
 
 				case C_RECV_BODY: assert(event_type == READABLE);
-													receiveBody(conn, qfd);
-													break;
+					receiveBody(conn, qfd);
+					break;
 
 				case C_SEND_RESPONSE: assert(event_type == WRITABLE);
-													if (conn->handler.getErrorCode() != 0) {
-														/* depending on handler.getfileServ() we already have the whole response
-														 * or we are just sending everything but body */
-														logDebug("Error with %d", conn->sockfd);
-														std::string response = conn->handler
-															.createErrorResponse(conn->handler.getErrorCode());
-														send(conn->sockfd, response.c_str(), response.size(), 0);
-														//move to the file sercing section and serve the error page file
-														//need to still set the path for it somehow
-														if (conn->handler.getFileServ()) //update time stamp?
-															conn->state = C_FILE_SERVE;
-														else
-															disconnectClient(conn, qfd);
-													}
-													else {
-														conn->handler.handleRequest();
-														watch(qfd, conn, READABLE);
-														conn->state = C_RECV_HEADER;
-														conn->handler.resetObject();
-														conn->began_sending_header_ms = now_ms();
-													}
-													break;
+				  if (conn->handler.getErrorCode() != 0) {
+					  /* depending on handler.getfileServ() we already have the whole response
+					   * or we are just sending everything but body */
+					  logDebug("Error with %d", conn->sockfd);
+					  std::string response = conn->handler
+						  .createErrorResponse(conn->handler.getErrorCode());
+					  send(conn->sockfd, response.c_str(), response.size(), 0);
+					  //move to the file sercing section and serve the error page file
+					  //need to still set the path for it somehow
+					  if (conn->handler.getFileServ()) //update time stamp?
+						  conn->state = C_FILE_SERVE;
+					  else
+						  disconnectClient(conn, qfd);
+				  } else {
+					  conn->handler.handleRequest();
+					  watch(qfd, conn, READABLE);
+					  conn->state = C_RECV_HEADER;
+					  conn->handler.resetObject();
+					  conn->began_sending_header_ms = now_ms();
+				  }
+				  break;
 
 				case C_FILE_SERVE: assert(event_type == WRITABLE);
-													switch(conn->handler.serveFile()) {
-														case S_Done:
-															watch(qfd, conn, READABLE);
-															conn->state = C_RECV_HEADER;
-															if (conn->handler.getErrorCode() != 0)
-																disconnectClient(conn, qfd);
-															conn->handler.resetObject();
-															break;
-														case S_Error: disconnectClient(conn, qfd);
-															break;
-														default: break;
-													}
-													break;
+				  switch(conn->handler.serveFile()) {
+				   case S_Done:
+					   watch(qfd, conn, READABLE);
+					   conn->state = C_RECV_HEADER;
+					   if (conn->handler.getErrorCode() != 0) disconnectClient(conn, qfd);
+					   conn->handler.resetObject();
+					   break;
+
+				   case S_Error: disconnectClient(conn, qfd);
+						 break;
+
+				   default:
+						 break;
+				  }
+				  break;
 
 				case C_ACTUALLY_A_SERVER: assert(event_type == READABLE);
-													{
-														Endpoint *client =
-															connectNewClient(endpoints, conn, qfd, &max_client_id);
-														if (client == nullptr) break;
-														queue_add_fd(qfd, client->sockfd,
-																READABLE, client);
-														assert(client->sockfd ==
-																client->handler.getClientSocket());
-														assert(client->sockfd !=
-																conn->handler.getClientSocket());
-													}
-													break;
+				  {
+					  Endpoint *client =
+						  connectNewClient(endpoints, conn, qfd, &max_client_id);
+					  if (client == nullptr) break;
+					  queue_add_fd(qfd, client->sockfd, READABLE, client);
+					  assert(client->sockfd == client->handler.getClientSocket());
+					  assert(client->sockfd != conn->handler.getClientSocket());
+				  }
+				  break;
 
-				case C_DISCONNECTED: break;
+				case C_DISCONNECTED:
+					break;
 			}
 		}
 	}
 
 cleanup:
-	for (int i = 0; i <= max_client_id; i++) {
-		if (endpoints[i].state != C_DISCONNECTED) {
-			assert(endpoints[i].sockfd > 0);
-			logDebug("Closing socket %s:%s (%d)",
-					endpoints[i].IP,
-					endpoints[i].port,
-					endpoints[i].sockfd);
-			close(endpoints[i].sockfd);
+	for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
+		if (conn->state != C_DISCONNECTED) {
+			logDebug("Closing socket %s:%s (%d)", conn->IP, conn->port, conn->sockfd);
+			assert(conn->sockfd > 0);
+			close(conn->sockfd);
 		}
 	}
-	logDebug("Deleting endpoints array");
 	close(qfd);
 	if (error)
 		return (1);
