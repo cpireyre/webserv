@@ -145,6 +145,33 @@ bool	HttpConnectionHandler::checkLocation()
 	return true;
 }
 
+HandlerStatus	HttpConnectionHandler::serveFile()
+{
+	logInfo("serving file");
+	std::ifstream file(path, std::ios::binary);
+	if (!file.is_open()) {
+		//what to do if file serving fails middle of sending body
+		return S_Error;
+	} 
+
+	char buffer[8192];
+	file.seekg(bSent); //error handling for reading out of scope
+	file.read(buffer, sizeof(buffer)); //how to error check?
+	/*if (file.bad() || file.fail())
+	{
+		logError("Reading error?");
+		return S_Error;
+	}*/
+	int sent = send(clientSocket, buffer, file.gcount(), 0);
+	if (sent < 0)
+		return S_Error;
+	bSent += sent;
+	//file.close();
+	if (file.eof())
+		return S_Done;
+	return S_Again;
+}
+
 /* function to serve file in GET requested
  *
  * if file is ok to be served, this fucntion is called.
@@ -152,7 +179,7 @@ bool	HttpConnectionHandler::checkLocation()
  * opens file, checks size for content len, and sends appropriate http response with
  * the file content. sens headers first and then file content in chunks of 8kb
  */
-void	HttpConnectionHandler::serveFile(std::string &filePath)
+void	HttpConnectionHandler::checkFileToServe(std::string &filePath)
 {
 	std::ifstream file(filePath, std::ios::binary);
 	if (!file.is_open()) {
@@ -204,7 +231,7 @@ void	HttpConnectionHandler::handleGetDirectory()
 	while (indexStream >> token) {
 		std::string current = path + token;
 		if (std::filesystem::exists(current) && std::filesystem::is_regular_file(current)) {
-			serveFile(current);
+			checkFileToServe(current);
 			return ;
 		}
 	}
@@ -287,7 +314,7 @@ void	HttpConnectionHandler::handleGetRequest()
 		return;
 	}
 
-	serveFile(filePath);
+	checkFileToServe(filePath);
 }
 
 /* checks the path to directory and validates its able to handle POST request
@@ -742,7 +769,7 @@ void	HttpConnectionHandler::handleRequest()
 	}
 	if (checkCgi() != NONE) {
 		CgiHandler cgiHandler(*this);
-		cgiHandler.printCgiInfo(); // Comment out when not needed
+		//cgiHandler.printCgiInfo(); // Comment out when not needed
 		cgiHandler.executeCgi();
 		char buffer[1024];
 		memset(buffer, 0, 1024);
@@ -770,4 +797,8 @@ void	HttpConnectionHandler::handleRequest()
 		std::string response = createHttpResponse(501, "<h1>501 Method: " + method + "Not Implemented </h1>", "text/html");
 		send(clientSocket, response.c_str(), response.size(), 0);
 	}
+	/*check here whether error happened, post or delete was executed and we can send, or we need to file serv
+	  basic idea is either to send everything at once is possible, like redirections and short post/delete responses
+	  if error or serving get request then send headers and go to send body in chunks
+	 */
 }

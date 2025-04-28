@@ -155,3 +155,63 @@ string HttpConnectionHandler::createHttpErrorResponse(int error)
 	
 	return serializeResponse(error, h, body);
 }
+
+string HttpConnectionHandler::createErrorResponse(int error)
+{
+	fileServ = true;
+	HeadersMap h = createDefaultHeaders();
+	h["Content-Type"] = "text/html";
+	h["Connection"] = "close";
+
+	if (error == 405 && locBlock)
+	{
+		string allowValue;
+		for (const auto &method : locBlock->methods)
+		{
+			if (!allowValue.empty())
+				allowValue += " ";
+			allowValue += method;
+		}
+		h["Allow"] = allowValue;
+	}
+
+	if (!conf)
+	{
+		//send hard coded 400 back
+		fileServ = false;
+		return "<html><head><title>400 Bad request</title></head>"
+		"<body><h1>400 Bad request</h1>"
+		"<p>Sorry, something went wrong while handling your request.</p>"
+		"</body></html>";
+	}
+	std::map<int, string> errorPages = conf->getErrorPages();
+	string errorPath;
+
+	if (errorPages.count(error))
+	{
+		errorPath = "." + errorPages[error];
+		std::ifstream file(errorPath.c_str());
+		if (file.is_open()) {
+			file.seekg (0, file.end);
+			std::streamsize conLen = file.tellg();
+			std::stringstream buffer;
+			buffer << "HTTP/1.1 " << error << " " << getReasonPhrase(error) << "\r\n";
+			for (const auto& [key, value] : headers)
+				buffer << key << ": " << value << "\r\n";
+			buffer << "Content-Length: " << conLen << "\r\n";
+			buffer << "\r\n";
+			path = errorPath;
+			return buffer.str();
+		}
+		else {
+			logError("Can't open error page location " + errorPath);
+		}
+	}
+	else
+		logError("Error page " + std::to_string(error) + " Not found, need to be added to configs defaults!!!!!");
+	fileServ = false;
+	return "<html><head><title>500 Internal Server Error</title></head>"
+		"<body><h1>500 Internal Server Error</h1>"
+		"<p>Sorry, something went wrong while handling your request.</p>"
+		"</body></html>";
+}

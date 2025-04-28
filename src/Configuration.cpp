@@ -101,6 +101,7 @@ void Configuration::createBarebonesBlock() {
 	_errorPages.emplace(411, "/default-error-pages/411.html");
 	_errorPages.emplace(413, "/default-error-pages/413.html");
 	_errorPages.emplace(414, "/default-error-pages/414.html");
+	_errorPages.emplace(415, "/default-error-pages/415.html");
 	_errorPages.emplace(431, "/default-error-pages/431.html");
 	_errorPages.emplace(500, "/default-error-pages/500.html");
 	_errorPages.emplace(501, "/default-error-pages/501.html");
@@ -205,7 +206,7 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 	std::regex serverNamesRegex(R"(^server_name ([^\s;]+(?: [^\s;]+)*)\s*;$)");
 	std::regex maxClientBodyRegex(R"(^max_client_body_size (\d+)\s*;$)");
 	std::regex maxClientHeaderRegex(R"(^max_client_header_size (\d+)\s*;$)");
-	std::regex errorPageRegex(R"(^error_page (400|403|404|405|408|409|411|413|414|431|500|501|503|505) (/home/\S+\.html)\s*;$)");
+	std::regex errorPageRegex(R"(^error_page (400|403|404|405|408|409|411|413|414|415|431|500|501|503|505) (/home/\S+\.html)\s*;$)");
 	std::regex indexRegex(R"(^index ([^\s]+)\s*;$)");
 	std::regex locationRegex(R"(^location ([^\s]+)\s*$)");
 
