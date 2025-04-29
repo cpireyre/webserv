@@ -63,6 +63,7 @@ class HttpConnectionHandler
 		std::string	getContentType(const std::string &path);
 		HandlerStatus	handleFirstChunks(std::string &chunkData);
 		bool		hexStringToSizeT(const std::string& hexStr, size_t& out);
+		bool		pathPercentDecoding(std::string &decodedPath);
 
 		//Creating HTTP response
 		string	getDefaultErrorPage500();
@@ -97,6 +98,8 @@ class HttpConnectionHandler
 		~HttpConnectionHandler();
 		HttpConnectionHandler(const HttpConnectionHandler&) = delete;
 		void resetObject();
+
+		void		findInitialConfig();
 
 		string	rawRequest;
 
