@@ -87,7 +87,8 @@ class HttpConnectionHandler
 		bool		isMethodAllowed(LocationBlock *block, string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
-		CgiTypes	checkCgi();
+		CgiTypes		checkCgi();
+		HandlerStatus	serveCgi();
 		
 	public:
 		//Basics
