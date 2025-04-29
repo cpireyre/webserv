@@ -31,6 +31,10 @@ HandlerStatus HttpConnectionHandler::serveCgi() {
     char buffer[8192];
     ssize_t n = read(fromFd, buffer, sizeof(buffer));
 	
+	// Per read man page: "When attempting to read from an empty pipe,
+	// if some process has the pipe open for writing and O_NONBLOCK is set, read() will return -1."
+	// So the following check will lead to false positives in error check when there is nothing to read.
+	// How to fix it?
 	if (n < 0) {
 		close(fromFd);
 		return S_Error;
