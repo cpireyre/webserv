@@ -153,6 +153,34 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 	return S_Done;
 }
 
+/*
+ */
+bool	isHexa(char c)
+{
+	return std::isxdigit(static_cast<unsigned char>(c));
+}
+
+bool	HttpConnectionHandler::pathPercentDecoding(std::string &decodedPath)
+{
+	decodedPath.clear();
+	size_t size = path.size();
+	for (size_t i = 0; i < size; i++)
+	{
+		if (path[i] == '%') {
+			if (i + 2 >= size || !isHexa(path[i + 1]) || !isHexa(path[i + 2])) {
+				return false;
+			}
+			std::string hexStr = path.substr(i + 1, 2);
+			char decodedChar = static_cast<char>(std::stoi(hexStr, nullptr, 16));
+			decodedPath += decodedChar;
+			i += 2;
+		} else {
+			decodedPath += path[i];
+		}
+	}
+	return true;
+}
+
 /* parses the first line of the HTTP request to get the HTTP method, path, and version
  * 
  * reads the first line of the request and uses regex to match the 
@@ -166,6 +194,7 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
  * - true if the first line is successfully parsed and the method is valid.
  * - false if parsing fails, the format is invalid, or the method is unsupported.
  */
+
 bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStream)
 {
 	std::string	firstLine;
@@ -204,6 +233,15 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 		errorCode = 505;
 		return false;
 	}
+
+	std::string decodedPath;
+	if (!pathPercentDecoding(decodedPath))
+	{
+		logError("Error in path decoding syntax");
+		errorCode = 400;
+		return false;
+	}
+	path = decodedPath;
 	return true;
 }
 
