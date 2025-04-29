@@ -46,7 +46,7 @@ int	run(const std::vector<Configuration> config)
 	while (!g_ServerShoudClose) {
 		assert(g_ServerShoudClose == false);
 
-		for (Endpoint *conn = endpoints; conn < endpoints + max_client_id; conn++) {
+		for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
 			if (isLiveClient(conn) && isTimedOut(conn, qfd)) {
 				conn->state = C_TIMED_OUT;
 				watch(qfd, conn, WRITABLE);
