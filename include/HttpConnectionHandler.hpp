@@ -99,6 +99,8 @@ class HttpConnectionHandler
 		HttpConnectionHandler(const HttpConnectionHandler&) = delete;
 		void resetObject();
 
+		void		findInitialConfig();
+
 		string	rawRequest;
 
 		HandlerStatus	parseRequest();

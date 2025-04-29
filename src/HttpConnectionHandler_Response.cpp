@@ -686,11 +686,8 @@ void	HttpConnectionHandler::findConfig()
 	{
 		logError("Can't find host header, bug in code with current logic");
 	}
-	logInfo("Trying too find config for " + IP + ":" + PORT + " Host: " + header);
-	// loop through all the confs
 	for (auto &server : serverMap)
 	{
-		// check ip and port match
 		if (IP == server.getHost() && PORT == server.getPort())
 		{
 			//default first match
@@ -708,6 +705,27 @@ void	HttpConnectionHandler::findConfig()
 				}
 			}
 		}
+	}
+	if (!result) {
+		logError("No match for request IP:PORT, defaulting to servermap[0]");
+		conf = &serverMap[0];
+	}
+	else {
+		conf = result;
+	}
+	logInfo("Final config using server " + conf->getServerNames());
+}
+
+void	HttpConnectionHandler::findInitialConfig()
+{
+	Configuration	*result = nullptr;
+
+	logInfo("Trying to find config before header " + IP + ":" + PORT);
+	for (auto &server : serverMap)
+	{
+		if (IP == server.getHost() && PORT == server.getPort())
+			if (!result)
+				result = &server;
 	}
 	if (!result) {
 		logError("No match for request IP:PORT, defaulting to servermap[0]");

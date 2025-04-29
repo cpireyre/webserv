@@ -36,8 +36,10 @@
 HandlerStatus	HttpConnectionHandler::parseRequest()
 {
 	char		buffer[8192];
-	int			bRead;
+	int		bRead;
 
+	if (!conf)
+		findInitialConfig();
 	logInfo("Parsing connection on socket " + std::to_string(clientSocket));
 	bRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 	if (bRead == 0)
