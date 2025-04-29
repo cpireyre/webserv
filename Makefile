@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/23 18:35:06 by upolat           ###   ########.fr        #
+#    Updated: 2025/04/28 11:02:00 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -53,6 +53,10 @@ test: all
 .PHONY: val
 val: all
 	valgrind ./$(NAME) test.conf
+
+.PHONY: pytest
+pytest: all
+	python3 -m pytest -v python_unit_tests.py
 
 
 -include $(obj:.o=.d)

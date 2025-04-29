@@ -3,6 +3,7 @@
 # include "Configuration.hpp"
 # include "Socket.hpp"
 # include "Logger.hpp"
+# include "Queue.hpp"
 # include "HttpConnectionHandler.hpp"
 # include "Timeout.hpp"
 # include <csignal>
@@ -25,13 +26,13 @@ static_assert(MAXCONNS <= 2000); /* cf. `ulimit -a` for the bottleneck */
 
 
 enum ConnectionState {
-	CONNECTION_DISCONNECTED,
-	CONNECTION_RECV_HEADER,
-	CONNECTION_SEND_RESPONSE,
-	CONNECTION_FILE_SERVE,
-	CONNECTION_RECV_BODY,
-	CONNECTION_TIMED_OUT,
-	CONNECTION_ACTUALLY_A_SERVER,
+	C_DISCONNECTED,
+	C_RECV_HEADER,
+	C_SEND_RESPONSE,
+	C_FILE_SERVE,
+	C_RECV_BODY,
+	C_TIMED_OUT,
+	C_ACTUALLY_A_SERVER,
 };
 
 constexpr int 		PORT_STRLEN = 12;
@@ -46,8 +47,9 @@ class Endpoint {
 		HttpConnectionHandler	handler; // Client-only
 };
 
-
 extern int	run(const std::vector<Configuration> config);
 void		receiveHeader(Endpoint *client, int qfd);
 void		receiveBody(Endpoint *client, int qfd);
 void		disconnectClient(Endpoint *client, int qfd);
+bool		isLiveClient(Endpoint *conn);
+int			watch(int qfd, Endpoint *conn, enum queue_event_type t);
