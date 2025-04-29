@@ -15,6 +15,8 @@
 extern std::vector<Configuration> serverMap;
 using std::string;
 
+#define MAX_URI_LENGTH 1024
+
 typedef enum {
 	S_Error,
 	S_Again,
@@ -46,7 +48,7 @@ class HttpConnectionHandler
 		LocationBlock						*locBlock;
 
 		//response stuff
-		int							errorCode; //too lazy to rename?
+		int							errorCode;
 		string							PORT;
 		string 							IP;
 
@@ -61,6 +63,7 @@ class HttpConnectionHandler
 		std::string	getContentType(const std::string &path);
 		HandlerStatus	handleFirstChunks(std::string &chunkData);
 		bool		hexStringToSizeT(const std::string& hexStr, size_t& out);
+		bool		pathPercentDecoding(std::string &decodedPath);
 
 		//Creating HTTP response
 		string	getDefaultErrorPage500();
@@ -96,6 +99,8 @@ class HttpConnectionHandler
 		~HttpConnectionHandler();
 		HttpConnectionHandler(const HttpConnectionHandler&) = delete;
 		void resetObject();
+
+		void		findInitialConfig();
 
 		string	rawRequest;
 

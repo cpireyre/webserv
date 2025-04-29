@@ -179,10 +179,18 @@ string HttpConnectionHandler::createErrorResponse(int error)
 	{
 		//send hard coded 400 back
 		fileServ = false;
-		return "<html><head><title>400 Bad request</title></head>"
-		"<body><h1>400 Bad request</h1>"
-		"<p>Sorry, something went wrong while handling your request.</p>"
-		"</body></html>";
+		return  "HTTP/1.1 400 Bad Request\r\n"
+			"Content-Type: text/html; charset=UTF-8\r\n"
+			"Content-Length: 162\r\n"
+			"Connection: close\r\n"
+			"\r\n"
+			"<html>"
+			"<head><title>400 Bad Request</title></head>"
+			"<body>"
+			"<h1>400 Bad Request</h1>\r\n"
+			"<p>Your browser sent a request that this server could not understand.</p>"
+			"</body>"
+			"</html>";
 	}
 	std::map<int, string> errorPages = conf->getErrorPages();
 	string errorPath;
@@ -210,8 +218,16 @@ string HttpConnectionHandler::createErrorResponse(int error)
 	else
 		logError("Error page " + std::to_string(error) + " Not found, need to be added to configs defaults!!!!!");
 	fileServ = false;
-	return "<html><head><title>500 Internal Server Error</title></head>"
-		"<body><h1>500 Internal Server Error</h1>"
+	return  "HTTP/1.1 500 Internal Server Error\r\n"
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Content-Length: 178\r\n"
+		"Connection: close\r\n"
+		"\r\n"
+		"<html>"
+		"<head><title>500 Internal Server Error</title></head>"
+		"<body>"
+		"<h1>500 Internal Server Error</h1>\r\n"
 		"<p>Sorry, something went wrong while handling your request.</p>"
-		"</body></html>";
+		"</body>"
+		"</html>";
 }
