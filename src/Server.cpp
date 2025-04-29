@@ -76,29 +76,34 @@ int	run(const std::vector<Configuration> config)
 				case C_RECV_BODY: assert(event_type == READABLE);
 					receiveBody(conn, qfd);
 					break;
-
-				case C_SEND_RESPONSE: assert(event_type == WRITABLE);
-				  if (conn->handler.getErrorCode() != 0) {
-					  /* depending on handler.getfileServ() we already have the whole response
-					   * or we are just sending everything but body */
-					  logDebug("Error with %d", conn->sockfd);
-					  std::string response = conn->handler
-						  .createErrorResponse(conn->handler.getErrorCode());
-					  send(conn->sockfd, response.c_str(), response.size(), 0);
-					  //move to the file sercing section and serve the error page file
-					  //need to still set the path for it somehow
-					  if (conn->handler.getFileServ()) //update time stamp?
-						  conn->state = C_FILE_SERVE;
-					  else
-						  disconnectClient(conn, qfd);
-				  } else {
-					  conn->handler.handleRequest();
-					  watch(qfd, conn, READABLE);
-					  conn->state = C_RECV_HEADER;
-					  conn->handler.resetObject();
-					  conn->began_sending_header_ms = now_ms();
-				  }
-				  break;
+				case C_SEND_RESPONSE:
+					assert(event_type == WRITABLE);
+					if (conn->handler.getErrorCode() != 0)
+					{
+						/* depending on handler.getfileServ() we already have the whole response
+						 * or we are just sending everyhting but body */
+						logDebug("Error with %d", conn->sockfd);
+						std::string response = conn->handler
+							.createErrorResponse(conn->handler.getErrorCode());
+						send(conn->sockfd, response.c_str(), response.size(), 0);
+						if (conn->handler.getFileServ()) //update time stamp?
+							conn->state = C_FILE_SERVE;
+						else
+							disconnectClient(conn, qfd);
+					}
+					else
+					{
+						conn->handler.handleRequest();
+						send(conn->sockfd, conn->handler.getResponse().c_str(), conn->handler.getResponse().size(), 0);
+						if (conn->handler.getFileServ()) {
+							conn->state = C_FILE_SERVE;
+							break;
+						}
+						watch(qfd, conn, READABLE);
+						conn->state = C_RECV_HEADER;
+						conn->handler.resetObject();
+						conn->began_sending_header_ms = now_ms();
+					}
 
 				case C_FILE_SERVE: assert(event_type == WRITABLE);
 				  switch(conn->handler.serveFile()) {
