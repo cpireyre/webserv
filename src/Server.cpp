@@ -76,8 +76,8 @@ int	run(const std::vector<Configuration> config)
 				case C_RECV_BODY: assert(event_type == READABLE);
 					receiveBody(conn, qfd);
 					break;
-				case CONNECTION_SEND_RESPONSE:
-					assert(event_type == QUEUE_EVENT_WRITE);
+				case C_SEND_RESPONSE:
+					assert(event_type == WRITABLE);
 					if (conn->handler.getErrorCode() != 0)
 					{
 						/* depending on handler.getfileServ() we already have the whole response
@@ -87,7 +87,7 @@ int	run(const std::vector<Configuration> config)
 							.createErrorResponse(conn->handler.getErrorCode());
 						send(conn->sockfd, response.c_str(), response.size(), 0);
 						if (conn->handler.getFileServ()) //update time stamp?
-							conn->state = CONNECTION_FILE_SERVE;
+							conn->state = C_FILE_SERVE;
 						else
 							disconnectClient(conn, qfd);
 					}
@@ -96,12 +96,11 @@ int	run(const std::vector<Configuration> config)
 						conn->handler.handleRequest();
 						send(conn->sockfd, conn->handler.getResponse().c_str(), conn->handler.getResponse().size(), 0);
 						if (conn->handler.getFileServ()) {
-							conn->state = CONNECTION_FILE_SERVE;
+							conn->state = C_FILE_SERVE;
 							break;
 						}
-						queue_mod_fd(qfd, conn->handler.getClientSocket(),
-								QUEUE_EVENT_READ, conn);
-						conn->state = CONNECTION_RECV_HEADER;
+						watch(qfd, conn, READABLE);
+						conn->state = C_RECV_HEADER;
 						conn->handler.resetObject();
 						conn->began_sending_header_ms = now_ms();
 					}
