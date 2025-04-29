@@ -15,6 +15,8 @@
 extern std::vector<Configuration> serverMap;
 using std::string;
 
+#define MAX_URI_LENGTH 1024
+
 typedef enum {
 	S_Error,
 	S_Again,

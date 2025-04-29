@@ -194,12 +194,16 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 		errorCode = 501;
 		return false;
 	}
+	else if (path.size() > MAX_URI_LENGTH) {
+		logError("URI too long");
+		errorCode = 414;
+		return false;
+	}
 	else if (httpVersion != "HTTP/1.1") {
 		logError("Unsupported HTTP version: " + httpVersion);
 		errorCode = 505;
 		return false;
 	}
-
 	return true;
 }
 
