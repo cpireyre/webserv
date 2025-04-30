@@ -162,22 +162,50 @@ bool	isHexa(char c)
 	return std::isxdigit(static_cast<unsigned char>(c));
 }
 
-bool	HttpConnectionHandler::pathPercentDecoding(std::string &decodedPath)
+bool	allowedDecodeValues(int value)
 {
-	decodedPath.clear();
-	size_t size = path.size();
+	if (value >= '0' && value <= '9') return true;
+	if (value >= 'A' && value <= 'Z') return true;
+	if (value >= 'a' && value <= 'z') return true;
+
+	switch (value) {
+		case ':': case '/': case '?': case '#':
+		case '[': case ']': case '@':
+		case '!': case '$': case '&': case '\'':
+		case '(': case ')': case '*': case '+':
+		case ',': case ';': case '=':
+		case '%':
+			return true;
+		default:
+			break;
+	}
+	// reject other control characters and non printable
+	return false;
+}
+
+bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, std::string &decoded)
+{
+	decoded.clear();
+	size_t size = original.size();
 	for (size_t i = 0; i < size; i++)
 	{
-		if (path[i] == '%') {
-			if (i + 2 >= size || !isHexa(path[i + 1]) || !isHexa(path[i + 2])) {
+		if (original[i] == '%') {
+			if (i + 2 >= size || !isHexa(original[i + 1]) || !isHexa(original[i + 2])) {
 				return false;
 			}
-			std::string hexStr = path.substr(i + 1, 2);
-			char decodedChar = static_cast<char>(std::stoi(hexStr, nullptr, 16));
-			decodedPath += decodedChar;
+			std::string hexStr = original.substr(i + 1, 2);
+			try {
+				int decodedValue = std::stoi(hexStr, nullptr, 16);
+				if (!allowedDecodeValues(decodedValue))
+					return false;
+				decoded += static_cast<unsigned char>(decodedValue);
+			}
+			catch (...) {
+				return false;
+			}
 			i += 2;
 		} else {
-			decodedPath += path[i];
+			decoded += original[i];
 		}
 	}
 	return true;
@@ -237,7 +265,7 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 	}
 
 	std::string decodedPath;
-	if (!pathPercentDecoding(decodedPath))
+	if (!stringPercentDecoding(path,decodedPath))
 	{
 		logError("Error in path decoding syntax");
 		errorCode = 400;
@@ -335,8 +363,7 @@ bool	HttpConnectionHandler::hexStringToSizeT(const std::string &hexStr, size_t &
             return false;
         }
     }
-
-	std::stringstream ss(trimmed);
+    std::stringstream ss(trimmed);
     size_t result;
     ss >> std::hex >> result;
 
