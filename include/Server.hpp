@@ -16,14 +16,13 @@ constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 60 * 1000; // One minute, like 
 constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 #endif
 
-#ifdef __linux__
 constexpr int MAXCONNS = 1000;
-static_assert(MAXCONNS <= 1000); /* cf. `ulimit -a` for the bottleneck */
-#else
-constexpr int MAXCONNS = 2000;
-static_assert(MAXCONNS <= 2000); /* cf. `ulimit -a` for the bottleneck */
-#endif
+static_assert(MAXCONNS <= 1000, "cf. `ulimit -a`");
 
+enum Kind {
+	Client,
+	Server
+};
 
 enum ConnectionState {
 	C_DISCONNECTED,
@@ -32,12 +31,11 @@ enum ConnectionState {
 	C_FILE_SERVE,
 	C_RECV_BODY,
 	C_TIMED_OUT,
-	C_ACTUALLY_A_SERVER,
 };
 
 constexpr int 		PORT_STRLEN = 12;
-class Endpoint {
-	public:
+typedef struct {
+		enum Kind			kind;
 		int						sockfd;
 		char					IP[INET6_ADDRSTRLEN];
 		char					port[PORT_STRLEN];
@@ -45,9 +43,10 @@ class Endpoint {
 		uint64_t				began_sending_header_ms; // Client-only
 		uint64_t				last_heard_from_ms; // Client-only
 		HttpConnectionHandler	handler; // Client-only
-};
+} Endpoint;
 
 extern int	run(const std::vector<Configuration> config);
+extern void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type);
 void		receiveHeader(Endpoint *client, int qfd);
 void		receiveBody(Endpoint *client, int qfd);
 void		disconnectClient(Endpoint *client, int qfd);

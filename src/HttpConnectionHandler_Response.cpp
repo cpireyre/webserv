@@ -16,31 +16,31 @@
  *   std::string contentType = getContentType("/path/to/file.jpg");
  *   // contentType will be "image/jpeg".
  */
-std::string HttpConnectionHandler::getContentType(const std::string &path)
+std::string HttpConnectionHandler::getContentType(const std::string &filepath)
 {
-	size_t dotPos = path.find_last_of(".");
+	size_t dotPos = filepath.find_last_of(".");
 	if (dotPos == std::string::npos) {
 		return "application/octet-stream";
 	}
 
-	std::string extension = path.substr(dotPos);
+	std::string fileExtension = filepath.substr(dotPos);
 
-	if (extension == ".html") return "text/html";
-	if (extension == ".css") return "text/css";
-	if (extension == ".js") return "application/javascript";
-	if (extension == ".png") return "image/png";
-	if (extension == ".jpg" || extension == ".jpeg") return "image/jpeg";
-	if (extension == ".gif") return "image/gif";
-	if (extension == ".svg") return "image/svg+xml";
-	if (extension == ".ico") return "image/x-icon";
-	if (extension == ".json") return "application/json";
-	if (extension == ".xml") return "application/xml";
-	if (extension == ".pdf") return "application/pdf";
-	if (extension == ".zip") return "application/zip";
-	if (extension == ".txt") return "text/plain";
-	if (extension == ".mp3") return "audio/mpeg";
-	if (extension == ".mp4") return "video/mp4";
-	if (extension == ".webp") return "image/webp";
+	if (fileExtension == ".html") return "text/html";
+	if (fileExtension == ".css") return "text/css";
+	if (fileExtension == ".js") return "application/javascript";
+	if (fileExtension == ".png") return "image/png";
+	if (fileExtension == ".jpg" || fileExtension == ".jpeg") return "image/jpeg";
+	if (fileExtension == ".gif") return "image/gif";
+	if (fileExtension == ".svg") return "image/svg+xml";
+	if (fileExtension == ".ico") return "image/x-icon";
+	if (fileExtension == ".json") return "application/json";
+	if (fileExtension == ".xml") return "application/xml";
+	if (fileExtension == ".pdf") return "application/pdf";
+	if (fileExtension == ".zip") return "application/zip";
+	if (fileExtension == ".txt") return "text/plain";
+	if (fileExtension == ".mp3") return "audio/mpeg";
+	if (fileExtension == ".mp4") return "video/mp4";
+	if (fileExtension == ".webp") return "image/webp";
 
 	return "application/octet-stream";
 }
@@ -81,9 +81,9 @@ LocationBlock *HttpConnectionHandler::findLocationBlock(std::vector<LocationBloc
  *
  * return true if method allowed,  flase otherwise
  */
-bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &method)
+bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &str)
 {
-	if (std::find(block->methods.begin(), block->methods.end(), method) != block->methods.end()) {
+	if (std::find(block->methods.begin(), block->methods.end(), str) != block->methods.end()) {
 		return true;
 	}
 	else {
@@ -109,22 +109,22 @@ bool	HttpConnectionHandler::checkLocation()
 	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
 	if (!block) {
 		logError("No locaton block matched (should't happen?)");
-		std::string response = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		std::string output = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
+		send(clientSocket, output.c_str(), output.size(), 0);
 		return false;
 	}
 	locBlock = block;
 	//check redirections
 	if (block->returnCode == 307) {
-		std::string response = createHttpRedirectResponse(307, block->returnURL);
-		send(clientSocket, response.c_str(), response.size(), 0);
+		std::string output = createHttpRedirectResponse(307, block->returnURL);
+		send(clientSocket, output.c_str(), output.size(), 0);
 		return false;
 	}
 
 	if (!isMethodAllowed(block, method)) {
 		logError("Method " + method + " not allowed in location " + block->path);
-		std::string response = createHttpErrorResponse(405);
-		send(clientSocket, response.c_str(), response.size(), 0);
+		std::string output = createHttpErrorResponse(405);
+		send(clientSocket, output.c_str(), output.size(), 0);
 		return false;
 	}
 	if (method == "POST" && !block->uploadDir.empty())
@@ -138,8 +138,8 @@ bool	HttpConnectionHandler::checkLocation()
 
 	if (path.find("/..") != std::string::npos) {
 		logError("Path: " + path + "contains escape sequence /..");
-		std::string response = createHttpResponse(403, "<h1>403 Forbidden</h1>", "text/html");
-		send(clientSocket, response.c_str(), response.size(), 0);
+		std::string output = createHttpResponse(403, "<h1>403 Forbidden</h1>", "text/html");
+		send(clientSocket, output.c_str(), output.size(), 0);
 		return false;
 	}
 	return true;
@@ -179,9 +179,9 @@ HandlerStatus	HttpConnectionHandler::serveFile()
  * opens file, checks size for content len, and sends appropriate http response with
  * the file content. sens headers first and then file content in chunks of 8kb
  */
-void	HttpConnectionHandler::checkFileToServe(std::string &filePath)
+void	HttpConnectionHandler::checkFileToServe(std::string &str)
 {
-	std::ifstream file(filePath, std::ios::binary);
+	std::ifstream file(str, std::ios::binary);
 	if (!file.is_open()) {
 		errorCode = 404;
 		return;
@@ -193,7 +193,7 @@ void	HttpConnectionHandler::checkFileToServe(std::string &filePath)
 	file.seekg(0, std::ios::beg);
 
 	// Get content type
-	std::string contentType = getContentType(filePath);
+	std::string contentType = getContentType(str);
 
 	// Send HTTP headers
 	std::ostringstream headerStream;
@@ -205,7 +205,7 @@ void	HttpConnectionHandler::checkFileToServe(std::string &filePath)
 
 	response = headerStream.str();
 	fileServ = true;
-	path = filePath;
+	path = str;
 	file.close();
 }
 
@@ -258,8 +258,8 @@ void	HttpConnectionHandler::handleGetDirectory()
 		htmlListing += "<li><a href=\"../\">../</a></li>\n";
 	}
 	for (const auto &file : dirListing) {
-		std::string filePath = path + file;
-		std::string fileLink = (std::filesystem::is_directory(filePath)) ? file + "/" : file;
+		std::string currentFile = path + file;
+		std::string fileLink = (std::filesystem::is_directory(currentFile)) ? file + "/" : file;
 		htmlListing += "<li><a href=\"" + fileLink + "\">" + file + "</a></li>\n";
 	}
 	htmlListing += "</ul>\r\n<hr>\r\n</body>\r\n</html>\r\n";
@@ -278,13 +278,13 @@ void	HttpConnectionHandler::handleGetDirectory()
  */
 void	HttpConnectionHandler::handleGetRequest()
 {
-	std::string filePath = path;
+	std::string fileToServe = path;
 
-	if (access(filePath.c_str(), F_OK) != 0) {
+	if (access(fileToServe.c_str(), F_OK) != 0) {
 		errorCode = 404;
 		return;
 	}
-	else if (access(filePath.c_str(), R_OK) != 0) {
+	else if (access(fileToServe.c_str(), R_OK) != 0) {
 		errorCode = 403;
 		return;
 	}
@@ -293,12 +293,12 @@ void	HttpConnectionHandler::handleGetRequest()
 		handleGetDirectory();
 		return ;
 	}
-	if (std::filesystem::is_directory(filePath)) {
+	if (std::filesystem::is_directory(fileToServe)) {
 		logInfo("Redirecting to " + path + "/");
 		response = createHttpRedirectResponse(301, originalPath);
 		return;
 	}
-	checkFileToServe(filePath);
+	checkFileToServe(fileToServe);
 }
 
 /* checks the path to directory and validates its able to handle POST request
@@ -574,22 +574,22 @@ void	HttpConnectionHandler::deleteDirectory()
  */
 void	HttpConnectionHandler::handleDeleteRequest()
 {
-	std::string filePath = path;
+	std::string fileToDelete = path;
 	std::error_code ec;
 
 	// file exists
-    	if (!std::filesystem::exists(filePath, ec)) {
-        	logError("DELETE requested but file not found: " + filePath);
+    	if (!std::filesystem::exists(fileToDelete, ec)) {
+        	logError("DELETE requested but file not found: " + fileToDelete);
 		errorCode = 404;
         	return;
 	}
 	//its directory or something unsupported
-	if (std::filesystem::is_directory(filePath, ec)) {
+	if (std::filesystem::is_directory(fileToDelete, ec)) {
 		deleteDirectory();
 		return;
 	}
-	else if (!std::filesystem::is_regular_file(filePath, ec)) {
-        	logError("DELETE request but file is not directory or regular file: " + filePath);
+	else if (!std::filesystem::is_regular_file(fileToDelete, ec)) {
+        	logError("DELETE request but file is not directory or regular file: " + fileToDelete);
 		errorCode = 409;
         	return;
 	}
@@ -600,9 +600,8 @@ void	HttpConnectionHandler::handleDeleteRequest()
 		errorCode = 404;
 		return;
 	}
-	if (!std::filesystem::remove(filePath, ec)) {
+	if (!std::filesystem::remove(fileToDelete, ec)) {
 		logError("Failed to delete file: " + (ec ? ec.message() : "Unknown error"));
-		std::string response;
 		if (ec == std::errc::permission_denied) {
 			errorCode = 403;
 		}

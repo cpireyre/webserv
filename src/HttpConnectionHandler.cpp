@@ -75,14 +75,14 @@ HeadersMap HttpConnectionHandler::createDefaultHeaders()
 
 /* Will calculate and append Content-Length header with the right value. */
 string HttpConnectionHandler::
-serializeResponse(int status, HeadersMap& headers, const string& body)
+serializeResponse(int status, HeadersMap& responseHeaders, const string& responseBody)
 {
-	std::ostringstream	response;
+	std::ostringstream	output;
 
-	headers["Content-Length"] = std::to_string(body.size());
-	response << "HTTP/1.1 " << status << " " << getReasonPhrase(status) << "\r\n";
-	for (const auto& [key, value] : headers)
-		response << key << ": " << value << "\r\n";
-	response << "\r\n" << body;
-	return (response.str());
+	responseHeaders["Content-Length"] = std::to_string(responseBody.size());
+	output << "HTTP/1.1 " << status << " " << getReasonPhrase(status) << "\r\n";
+	for (const auto& [key, value] : responseHeaders)
+		output << key << ": " << value << "\r\n";
+	output << "\r\n" << responseBody;
+	return (output.str());
 }
