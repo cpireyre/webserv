@@ -174,7 +174,7 @@ bool	allowedDecodeValues(int value)
 		case '!': case '$': case '&': case '\'':
 		case '(': case ')': case '*': case '+':
 		case ',': case ';': case '=':
-		case '%':
+		case '%': case ' ':
 			return true;
 		default:
 			break;
@@ -198,11 +198,17 @@ bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, s
 			std::string hexStr = original.substr(i + 1, 2);
 			try {
 				int decodedValue = std::stoi(hexStr, nullptr, 16);
-				if (decodedValue == '/' && slashCollapse) {
-					i += 2;
-					continue;
+				if (decodedValue == '/') {
+					if (slashCollapse) {
+						i += 2;
+						continue;
+					}
+					slashCollapse = true;
 				}
-				else if (!allowedDecodeValues(decodedValue))
+				else {
+					slashCollapse = false;
+				}
+				if (!allowedDecodeValues(decodedValue))
 					return false;
 				decoded += static_cast<unsigned char>(decodedValue);
 			}
@@ -210,7 +216,6 @@ bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, s
 				return false;
 			}
 			i += 2;
-			slashCollapse = false;
 		}
 		else if(original[i] == '/') {
 			if (slashCollapse) {
