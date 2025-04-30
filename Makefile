@@ -6,14 +6,14 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/28 11:02:00 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/29 15:34:13 by upolat           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
 CC := c++
 CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
-debug := -O0 -DDEBUG -g3 #-Wshadow
+debug := -O0 -DDEBUG -g3 # -Wshadow
 # opt := -O2
 CPPFLAGS := -I./include/ $(debug) $(opt)
 NAME := webserv
