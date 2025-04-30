@@ -35,7 +35,6 @@ class HttpConnectionHandler
 		string							httpVersion;
 		string							body;
 		std::map<string, string>				headers;
-		HeadersMap						responseHeaders;
 		std::string						chunkRemainder;
 		int							clientSocket;
 

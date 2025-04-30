@@ -3,6 +3,10 @@
 
 void	disconnectClient(Endpoint *client, int qfd);
 
+void	serveConnection()
+{
+}
+
 void	receiveHeader(Endpoint *client, int qfd)
 {
 	HandlerStatus status = client->handler.parseRequest();

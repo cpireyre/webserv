@@ -72,12 +72,12 @@ string HttpConnectionHandler::getReasonPhrase(int statusCode)
  * Example:
  *   string response = createHttpResponse(200, "<h1>Success</h1>", "text/html");
  */
-string	HttpConnectionHandler::createHttpResponse(int statusCode, const string &body, const string &contentType)
+string	HttpConnectionHandler::createHttpResponse(int statusCode, const string &responseBody, const string &contentType)
 {
 	HeadersMap h = createDefaultHeaders();
 	h["Content-Type"] = contentType;
 
-	return serializeResponse(statusCode, h, body);
+	return serializeResponse(statusCode, h, responseBody);
 }
 
 /* handles creating HTTP response when DELETE or GET request gets 301 for example
@@ -136,7 +136,7 @@ string HttpConnectionHandler::getErrorPageBody(int error)
 
 string HttpConnectionHandler::createHttpErrorResponse(int error)
 {
-	string body = getErrorPageBody(error);
+	string responseBody = getErrorPageBody(error);
 	HeadersMap h = createDefaultHeaders();
 	h["Content-Type"] = "text/html";
 	h["Connection"] = "close";
@@ -144,16 +144,16 @@ string HttpConnectionHandler::createHttpErrorResponse(int error)
 	if (error == 405 && locBlock)
 	{
 		string allowValue;
-		for (const auto &method : locBlock->methods)
+		for (const auto &currentMethod : locBlock->methods)
 		{
 			if (!allowValue.empty())
 				allowValue += " ";
-			allowValue += method;
+			allowValue += currentMethod;
 		}
 		h["Allow"] = allowValue;
 	}
 	
-	return serializeResponse(error, h, body);
+	return serializeResponse(error, h, responseBody);
 }
 
 string HttpConnectionHandler::createErrorResponse(int error)
@@ -166,11 +166,11 @@ string HttpConnectionHandler::createErrorResponse(int error)
 	if (error == 405 && locBlock)
 	{
 		string allowValue;
-		for (const auto &method : locBlock->methods)
+		for (const auto &currentMethod : locBlock->methods)
 		{
 			if (!allowValue.empty())
 				allowValue += " ";
-			allowValue += method;
+			allowValue += currentMethod;
 		}
 		h["Allow"] = allowValue;
 	}
