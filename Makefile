@@ -6,14 +6,14 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/30 13:49:00 by copireyr         ###   ########.fr        #
+#    Updated: 2025/04/30 15:32:15 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 .DEFAULT_GOAL := all
 CC := c++
 CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
-CFLAGS += -Wimplicit-fallthrough -Wshadow
+CFLAGS += -Wimplicit-fallthrough -Wshadow -Wswitch-enum
 debug := -O0 -DDEBUG -g3
 # opt := -O2
 CPPFLAGS := -I./include/ $(debug) $(opt)

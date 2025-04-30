@@ -32,7 +32,7 @@ int	run(const std::vector<Configuration> config)
 
 	/* Register all server sockets for read events */
 	for (Endpoint *conn = endpoints; conn < endpoints + servers_num; conn++) {
-		assert(conn->state == C_ACTUALLY_A_SERVER);
+		assert(conn->kind == Server);
 		error = queue_add_fd(qfd, conn->sockfd, READABLE, conn);
 		if (error) {
 			logError("Error registering server socket events");
@@ -61,79 +61,23 @@ int	run(const std::vector<Configuration> config)
 			assert(conn->sockfd > 0);
 
 			if (queue_event_is_error(&events[id])) disconnectClient(conn, qfd);
+
 			queue_event_type event_type = queue_event_get_type(&events[id]);
 
-				if (conn->state == C_ACTUALLY_A_SERVER)
-				{
-					assert(event_type == READABLE);
-					Endpoint *client =
-						connectNewClient(endpoints, conn, qfd, &max_client_id);
-					if (client == nullptr) break;
-					queue_add_fd(qfd, client->sockfd, READABLE, client);
-					assert(client->sockfd == client->handler.getClientSocket());
-					assert(client->sockfd != conn->handler.getClientSocket());
-				}
-
-			switch (conn->state) {
-				case C_TIMED_OUT:
-					conn->state = C_SEND_RESPONSE;
+			switch (conn->kind)
+			{
+				case Client: serveConnection(conn, qfd, event_type);
 					break;
 
-				case C_RECV_HEADER: assert(event_type == READABLE);
-					receiveHeader(conn, qfd);
-					conn->last_heard_from_ms = now_ms();
+				case Server: assert(event_type == READABLE);
+				 {
+					 Endpoint *client = connectNewClient(endpoints, conn, qfd, &max_client_id);
+					 if (client == nullptr) break;
+					 queue_add_fd(qfd, client->sockfd, READABLE, client);
+					 assert(client->sockfd == client->handler.getClientSocket());
+					 assert(client->sockfd != conn->handler.getClientSocket());
+				 }
 					break;
-
-				case C_RECV_BODY: assert(event_type == READABLE);
-					receiveBody(conn, qfd);
-					break;
-				case C_SEND_RESPONSE:
-					assert(event_type == WRITABLE);
-					if (conn->handler.getErrorCode() != 0)
-					{
-						/* depending on handler.getfileServ() we already have the whole response
-						 * or we are just sending everyhting but body */
-						logDebug("Error with %d", conn->sockfd);
-						std::string response = conn->handler
-							.createErrorResponse(conn->handler.getErrorCode());
-						send(conn->sockfd, response.c_str(), response.size(), 0);
-						if (conn->handler.getFileServ()) //update time stamp?
-							conn->state = C_FILE_SERVE;
-						else
-							disconnectClient(conn, qfd);
-					}
-					else
-					{
-						conn->handler.handleRequest();
-						send(conn->sockfd, conn->handler.getResponse().c_str(), conn->handler.getResponse().size(), 0);
-						if (conn->handler.getFileServ()) {
-							conn->state = C_FILE_SERVE;
-							break;
-						}
-						watch(qfd, conn, READABLE);
-						conn->state = C_RECV_HEADER;
-						conn->handler.resetObject();
-						conn->began_sending_header_ms = now_ms();
-					}
-					break;
-				case C_FILE_SERVE: assert(event_type == WRITABLE);
-				  switch(conn->handler.serveFile()) {
-				   case S_Done:
-					   watch(qfd, conn, READABLE);
-					   conn->state = C_RECV_HEADER;
-					   if (conn->handler.getErrorCode() != 0) disconnectClient(conn, qfd);
-					   conn->handler.resetObject();
-					   break;
-
-				   case S_Error: disconnectClient(conn, qfd);
-						 break;
-
-				   default:
-						 break;
-				  }
-				  break;
-
-				default: break;
 			}
 		}
 	}
@@ -169,7 +113,7 @@ static int	start_servers(const std::vector<Configuration> servers,
 			return (-1);
 		initEndpoint(sockfd, host, port, &endpoints[*count]);
 		servers[i].printCompact();
-		assert(endpoints[*count].state == C_ACTUALLY_A_SERVER);
+		assert(endpoints[*count].kind == Server);
 		*count += 1;
 	}
 	assert(*count > 0);
@@ -183,6 +127,8 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	assert(server->sockfd > 0);
 
 	int i = 0;
+	while (endpoints[i].kind == Server && i < MAXCONNS)
+		i++;
 	while (i < MAXCONNS && endpoints[i].state != C_DISCONNECTED)
 		i++;
 	if (i == MAXCONNS) /* Uh oh, we need to kick someone out */
@@ -190,14 +136,17 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 		i = 0;
 		while (i < MAXCONNS)
 		{
-			Endpoint *conn = &endpoints[i];
-			uint64_t recv_header_duration_ms =
-				now_ms() - conn->began_sending_header_ms;
-			bool too_slow = recv_header_duration_ms > RECV_HEADER_TIMEOUT_MS;
-			if (conn->state == C_RECV_HEADER && too_slow)
+			if (endpoints[i].kind == Client)
 			{
-				disconnectClient(conn, qfd);
-				break;
+				Endpoint *conn = &endpoints[i];
+				uint64_t recv_header_duration_ms =
+					now_ms() - conn->began_sending_header_ms;
+				bool too_slow = recv_header_duration_ms > RECV_HEADER_TIMEOUT_MS;
+				if (conn->state == C_RECV_HEADER && too_slow)
+				{
+					disconnectClient(conn, qfd);
+					break;
+				}
 			}
 			i++;
 		}
@@ -225,6 +174,7 @@ static Endpoint	*connectNewClient(Endpoint *endpoints,
 	endpoints[i].handler.setPORT(server->port);
 	endpoints[i].began_sending_header_ms = now_ms();
 	endpoints[i].last_heard_from_ms = now_ms();
+	endpoints[i].kind = Client;
 	logDebug("Connected client, socket: %d", clientSocket);
 
 	if (i > *max_client_id)
@@ -276,7 +226,7 @@ static void	initEndpoint(int sockfd, std::string host, std::string port,
 	assert(endpoint != nullptr);
 	endpoint->sockfd = sockfd;
 	endpoint->handler = HttpConnectionHandler();
-	endpoint->state = C_ACTUALLY_A_SERVER;
+	endpoint->kind = Server;
 	int i = 0;
 	for (char c : host)
 		endpoint->IP[i++] = c;

@@ -170,87 +170,6 @@ def test_bad_http_request():
     # Depending on the implementation of your server, the exact wording might vary.
     assert "400" in status_line, f"Expected a 400 Bad Request response, got: {status_line}"
     
-@pytest.mark.skip(reason="Slow and broken anyway")
-def test_idle_disconnect():
-    """
-    Test that the server disconnects an idle connection by
-    1) sending an HTTP 408 Request Timeout response, and then
-    2) closing the connection (EOF on recv).
-
-    We send a partial HTTP request, wait for the server's idle
-    timeout to expire, then read whatever comes back:
-      - The first recv should contain a 408 status line.
-      - A subsequent recv should return b'' to signal EOF.
-    """
-    import socket, time, pytest
-
-    # This must exceed your server's idle/keep-alive timeout.
-    idle_wait = 15  # seconds
-
-    with socket.create_connection(("127.0.0.1", 8080), timeout=idle_wait + 2) as sock:
-        sock.settimeout(idle_wait + 2)
-
-        # Send a partial HTTP request (no terminating CRLF).
-        partial_request = (
-            "GET /index.html HTTP/1.1\r\n"
-            "Host: 127.0.0.1\r\n"
-        )
-        sock.sendall(partial_request.encode())
-
-        # Wait for the server to hit its idle timeout.
-        time.sleep(idle_wait)
-
-        # Read the server's response (should be the 408 status).
-        resp = sock.recv(1024)
-        assert resp, "Expected a 408 response, but recv() returned no data"
-        # Check the status line starts with HTTP/1.1 408
-        status_line = resp.split(b"\r\n", 1)[0]
-        assert status_line.startswith(b"HTTP/1.1 408"), (
-            f"Expected status 'HTTP/1.1 408', got {status_line!r}"
-        )
-
-        # After the response, the server should close the connection:
-        eof = sock.recv(1024)
-        assert eof == b'', f"Expected EOF (b''), but got {eof!r}"
-
-
-def test_idle_disconnect_incomplete_body():
-    """
-    Test that the server disconnects when the client sends
-    a complete header block with a Content-Length but then
-    never finishes the body:
-
-      1) server should respond with HTTP/1.1 408
-      2) then close the connection (EOF on recv).
-    """
-    import socket, time, pytest
-
-    # This must exceed your server's idle/keep-alive timeout.
-    idle_wait = 15  # seconds
-
-    with socket.create_connection(("127.0.0.1", 8080), timeout=idle_wait + 2) as sock:
-        sock.settimeout(idle_wait + 2)
-
-        partial_request = (
-            "GET /index.html HTTP/1.1\r\n"
-            "Host: 127.0.0.1\r\nContent-Length: 10\r\n\r\nhello"
-        )
-        sock.sendall(partial_request.encode())
-
-        # Wait for the server to hit its idle timeout.
-        time.sleep(idle_wait)
-
-        # Read the server's 408 response
-        resp = sock.recv(2048)
-        assert resp, "Expected a 408 response, but recv() returned no data"
-        status_line = resp.split(b"\r\n", 1)[0]
-        assert status_line.startswith(b"HTTP/1.1 408"), (
-            f"Expected status 'HTTP/1.1 408', got {status_line!r}"
-        )
-
-        # After the 408, the server should close the connection
-        eof = sock.recv(1024)
-        assert eof == b'', f"Expected EOF (b''), but got {eof!r}"
 
 
 def test_good_http_request():
@@ -491,3 +410,85 @@ async def test_concurrent_get_and_post():
             )
         # Ensure proper cleanup of response objects.
         await resp.release()
+
+@pytest.mark.skip(reason="Slow and broken anyway")
+def test_idle_disconnect():
+    """
+    Test that the server disconnects an idle connection by
+    1) sending an HTTP 408 Request Timeout response, and then
+    2) closing the connection (EOF on recv).
+
+    We send a partial HTTP request, wait for the server's idle
+    timeout to expire, then read whatever comes back:
+      - The first recv should contain a 408 status line.
+      - A subsequent recv should return b'' to signal EOF.
+    """
+    import socket, time, pytest
+
+    # This must exceed your server's idle/keep-alive timeout.
+    idle_wait = 15  # seconds
+
+    with socket.create_connection(("127.0.0.1", 8080), timeout=idle_wait + 2) as sock:
+        sock.settimeout(idle_wait + 2)
+
+        # Send a partial HTTP request (no terminating CRLF).
+        partial_request = (
+            "GET /index.html HTTP/1.1\r\n"
+            "Host: 127.0.0.1\r\n"
+        )
+        sock.sendall(partial_request.encode())
+
+        # Wait for the server to hit its idle timeout.
+        time.sleep(idle_wait)
+
+        # Read the server's response (should be the 408 status).
+        resp = sock.recv(1024)
+        assert resp, "Expected a 408 response, but recv() returned no data"
+        # Check the status line starts with HTTP/1.1 408
+        status_line = resp.split(b"\r\n", 1)[0]
+        assert status_line.startswith(b"HTTP/1.1 408"), (
+            f"Expected status 'HTTP/1.1 408', got {status_line!r}"
+        )
+
+        # After the response, the server should close the connection:
+        eof = sock.recv(1024)
+        assert eof == b'', f"Expected EOF (b''), but got {eof!r}"
+
+
+def test_idle_disconnect_incomplete_body():
+    """
+    Test that the server disconnects when the client sends
+    a complete header block with a Content-Length but then
+    never finishes the body:
+
+      1) server should respond with HTTP/1.1 408
+      2) then close the connection (EOF on recv).
+    """
+    import socket, time, pytest
+
+    # This must exceed your server's idle/keep-alive timeout.
+    idle_wait = 15  # seconds
+
+    with socket.create_connection(("127.0.0.1", 8080), timeout=idle_wait + 2) as sock:
+        sock.settimeout(idle_wait + 2)
+
+        partial_request = (
+            "GET /index.html HTTP/1.1\r\n"
+            "Host: 127.0.0.1\r\nContent-Length: 10\r\n\r\nhello"
+        )
+        sock.sendall(partial_request.encode())
+
+        # Wait for the server to hit its idle timeout.
+        time.sleep(idle_wait)
+
+        # Read the server's 408 response
+        resp = sock.recv(2048)
+        assert resp, "Expected a 408 response, but recv() returned no data"
+        status_line = resp.split(b"\r\n", 1)[0]
+        assert status_line.startswith(b"HTTP/1.1 408"), (
+            f"Expected status 'HTTP/1.1 408', got {status_line!r}"
+        )
+
+        # After the 408, the server should close the connection
+        eof = sock.recv(1024)
+        assert eof == b'', f"Expected EOF (b''), but got {eof!r}"

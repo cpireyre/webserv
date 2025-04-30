@@ -144,7 +144,7 @@ void	Configuration::printCompact() const
 		<< "⌂ "
 		<< underline
 		<< _serverNames << " @ " << _host << ":" << _port << reset << " "
-		<< "(" << "maxbody: " << _maxClientBodySize / 10e6 << "M"
+		<< "(" << "maxbody: " << _maxClientBodySize / 1e6 << "M"
 		<< ", maxheader: " << _maxClientHeaderSize / 1e3 << "K" << ")"
 		<< green << " ✓"  << reset
 		<< "\n";
