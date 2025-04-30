@@ -117,6 +117,7 @@ int	run(const std::vector<Configuration> config)
 					}
 					break;
 				case C_FILE_SERVE: assert(event_type == WRITABLE);
+								   assert(conn->handler.getFileServ() == true);
 				  switch(conn->handler.serveFile()) {
 				   case S_Done:
 					   watch(qfd, conn, READABLE);
