@@ -753,21 +753,22 @@ void	HttpConnectionHandler::handleRequest()
 		return;
 	}
 	if (checkCgi() != NONE) {
-		CgiHandler cgiHandler(*this);
-		//cgiHandler.printCgiInfo(); // Comment out when not needed
-		cgiHandler.executeCgi();
-		char buffer[1024];
-		memset(buffer, 0, 1024);
-		int* pipeFromCgi = cgiHandler.getPipeFromCgi();
-		int size = read(pipeFromCgi[0], buffer, 1024);
-		if (size < 0)
-			perror("read from cgi:");
-		assert(size >= 0);
-		write(1, buffer, size);
-		std::string response = createHttpResponse(200, buffer, "text/html");
-		logDebug("%s", response.c_str());
-		send(clientSocket, response.c_str(), response.size(), 0);
-		return;
+		// CgiHandler cgiHandler(*this);
+		// //cgiHandler.printCgiInfo(); // Comment out when not needed
+		// cgiHandler.executeCgi();
+		// char buffer[1024];
+		// memset(buffer, 0, 1024);
+		// int* pipeFromCgi = cgiHandler.getPipeFromCgi();
+		// int size = read(pipeFromCgi[0], buffer, 1024);
+		// if (size < 0)
+		// 	perror("read from cgi:");
+		// assert(size >= 0);
+		// write(1, buffer, size);
+		// std::string response = createHttpResponse(200, buffer, "text/html");
+		// logDebug("%s", response.c_str());
+		// send(clientSocket, response.c_str(), response.size(), 0);
+		// return;
+		serveCgi();
 	}
 	if (method == "GET") {
 		handleGetRequest();
@@ -775,7 +776,7 @@ void	HttpConnectionHandler::handleRequest()
 	else if (method == "POST") {
 		handlePostRequest();
 	}
-	else if (method == "DELETE") {
+	else if (method == "DELETE") { 
 		handleDeleteRequest();
 	}
 	else {
