@@ -1,56 +1,114 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/07 14:00:08 by copireyr         ###   ########.fr        #
-#                                                                              #
-# **************************************************************************** #
-
-.DEFAULT_GOAL := all
-CC := c++
-CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
-debug := -DDEBUG
-CPPFLAGS := -I./include/ $(debug)
-NAME := webserv
-
-src_files := CgiHandler.cpp Configuration.cpp HttpConnectionHandler_CGI.cpp HttpConnectionHandler_Parsing.cpp HttpConnectionHandler_Response.cpp Logger.cpp main.cpp Parser.cpp Queue.cpp Server.cpp Socket.cpp
-NAME := webserv
-
-src = $(addprefix ./src/, $(src_files))
-obj := $(addprefix ./obj/, $(src:%.cpp=%.o))
-
-
-./obj/%.o: %.cpp
-	@mkdir -p $(@D)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-$(NAME): $(obj)
-	$(CC) $(obj) -o $@
-
-all: $(NAME)
-
-.PHONY: clean
-clean:
-	$(RM) -r ./obj/
-
-.PHONY: fclean
-fclean: clean
-	$(RM) $(NAME)
-
-.PHONY: re
-re: fclean
-	make -j
-
-.PHONY: test
-test: all
-	./$(NAME) test.conf &
-	sleep 0.1
-	curl 127.0.0.1:8010/index.html
-	pkill webserv 
-
-
--include $(obj:.o=.d)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome to WebServ</title>
+  <style>
+    :root {
+      --primary: #2C3E50;
+      --secondary: #18BC9C;
+      --bg: #ECF0F1;
+      --text: #2C3E50;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 8rem 1rem;
+      text-align: center;
+    }
+    header h1 {
+      margin-bottom: 0.5rem;
+      font-size: 5rem;
+    }
+    header p {
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    .group-photos {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .group-photo {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--secondary);
+    }
+    .team {
+      margin-top: 0.5rem;
+      font-size: 1.1rem;
+    }
+    .team span {
+      display: inline-block;
+      margin: 0 0.5rem;
+      font-weight: 600;
+    }
+    .btn {
+      margin-top: 2rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      background: var(--secondary);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.3s ease;
+    }
+    .btn:hover {
+      background: #15A589;
+    }
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Welcome to WebServ</h1>
+    <p>Your occasionally reliable file server</p>
+  </header>
+  <main>
+    <div class="group-photos">
+		<img src="images/copireyr_intra.jpg"  alt="copireyr"  class="group-photo">
+		<img src="images/jhirvone_intra.jpg" alt="jhirvone" class="group-photo">
+		<img src="images/upolat_intra.jpg"   alt="upolat"   class="group-photo">
+    </div>
+    <p class="team">Created by <span>copireyr</span><span>jhirvone</span><span>upolat</span></p>
+    <a href="/images/" class="btn">Go to Images</a>
+  </main>
+  <footer>
+    &copy; 2025 copireyr, jhirvone &amp; upolat
+  </footer>
+</body>
+</html>

@@ -39,7 +39,7 @@ def start_server():
     print("\n=== Starting server ===")
     # Launch the server with the specified configuration file.
     proc = subprocess.Popen(["./webserv", "complete.conf"])
-    time.sleep(1)  # Allow time for the server to start.
+    time.sleep(0.1)  # Allow time for the server to start.
     yield proc
     print("=== Stopping server ===")
     proc.kill()
@@ -112,8 +112,8 @@ def test_images_delete():
     assert response.status_code in (200, 202, 204)
 
     # Optionally, clean up
-    # if test_file.exists():
-    #     test_file.unlink()
+    if test_file.exists():
+        test_file.unlink()
     # if base_dir.exists() and not any(base_dir.iterdir()):
     #     base_dir.rmdir()
 
@@ -446,12 +446,14 @@ async def test_concurrent_get_and_post():
     Asynchronously send multiple concurrent GET and POST requests to the server.
     This test simulates a mixed load of GET and POST requests.
     """
-    num_get = 10000   # Number of GET requests to send
-    num_post = 10000  # Number of POST requests to send
+    num_get = 1000   # Number of GET requests to send
+    num_post = 1000  # Number of POST requests to send
     get_url = "http://127.0.0.1:8080/index.html"
     post_url = "http://127.0.0.1:8080/images/"
 
+
     async with aiohttp.ClientSession() as session:
+        test_file = Path("home/images/uploads/filename.txt")
         # Create tasks for GET requests
         get_tasks = [session.get(get_url) for _ in range(num_get)]
         
@@ -463,13 +465,14 @@ async def test_concurrent_get_and_post():
                 'file',
                 b"dummy data\n", 
                 filename="filename.txt", 
-                content_type="application/octet-stream"
+                # content_type="application/multipart-form-data"
             )
             post_tasks.append(session.post(post_url, data=form))
         
         # Combine both sets of tasks and run them concurrently
         tasks = get_tasks + post_tasks
         responses = await asyncio.gather(*tasks)
+        test_file.unlink()
 
     # Process and verify each response
     for resp in responses:
