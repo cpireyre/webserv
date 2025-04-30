@@ -63,6 +63,17 @@ int	run(const std::vector<Configuration> config)
 			if (queue_event_is_error(&events[id])) disconnectClient(conn, qfd);
 			queue_event_type event_type = queue_event_get_type(&events[id]);
 
+				if (conn->state == C_ACTUALLY_A_SERVER)
+				{
+					assert(event_type == READABLE);
+					Endpoint *client =
+						connectNewClient(endpoints, conn, qfd, &max_client_id);
+					if (client == nullptr) break;
+					queue_add_fd(qfd, client->sockfd, READABLE, client);
+					assert(client->sockfd == client->handler.getClientSocket());
+					assert(client->sockfd != conn->handler.getClientSocket());
+				}
+
 			switch (conn->state) {
 				case C_TIMED_OUT:
 					conn->state = C_SEND_RESPONSE;
@@ -104,7 +115,7 @@ int	run(const std::vector<Configuration> config)
 						conn->handler.resetObject();
 						conn->began_sending_header_ms = now_ms();
 					}
-
+					break;
 				case C_FILE_SERVE: assert(event_type == WRITABLE);
 				  switch(conn->handler.serveFile()) {
 				   case S_Done:
@@ -122,19 +133,7 @@ int	run(const std::vector<Configuration> config)
 				  }
 				  break;
 
-				case C_ACTUALLY_A_SERVER: assert(event_type == READABLE);
-				  {
-					  Endpoint *client =
-						  connectNewClient(endpoints, conn, qfd, &max_client_id);
-					  if (client == nullptr) break;
-					  queue_add_fd(qfd, client->sockfd, READABLE, client);
-					  assert(client->sockfd == client->handler.getClientSocket());
-					  assert(client->sockfd != conn->handler.getClientSocket());
-				  }
-				  break;
-
-				case C_DISCONNECTED:
-					break;
+				default: break;
 			}
 		}
 	}
