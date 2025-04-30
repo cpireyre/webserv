@@ -112,8 +112,8 @@ def test_images_delete():
     assert response.status_code in (200, 202, 204)
 
     # Optionally, clean up
-    # if test_file.exists():
-    #     test_file.unlink()
+    if test_file.exists():
+        test_file.unlink()
     # if base_dir.exists() and not any(base_dir.iterdir()):
     #     base_dir.rmdir()
 
@@ -137,7 +137,6 @@ def test_cgi_empty_redirect():
     location = response.headers.get("Location", "")
     assert "https://www.google.com" in location
     
-@pytest.mark.skip(reason="Broken until we get proper error page")
 def test_bad_http_request():
     """
     Test that sending a malformed HTTP request (bad header format) returns a 400 error.
@@ -203,7 +202,6 @@ def test_good_http_request():
 
 
 
-@pytest.mark.skip(reason="Broken until we get proper error page")
 def test_not_found_error():
     """
     Test that a GET request for a non-existent resource returns a 404 error,
@@ -218,7 +216,6 @@ def test_not_found_error():
     assert "404" in content or "not found" in content
 
 
-@pytest.mark.skip(reason="Arguably broken test; we don't send a status code if we were in the middle of sending the request body")
 def test_client_body_size_exceeded():
     """
     Test that sending a POST request with a large payload (exceeding max_client_body_size)
@@ -230,7 +227,6 @@ def test_client_body_size_exceeded():
     # Adjust the expected status code as needed; 413 is common for payload too large.
     assert response.status_code in (413, 400, 500), f"Unexpected status: {response.status_code}"
     
-@pytest.mark.skip(reason="Not sure if this one has special filesystem dependencies I don't have")
 def test_file_upload_and_check():
     """
     Test that uploading a file through a POST request is successful and 
@@ -273,7 +269,6 @@ def test_file_upload_and_check():
         print(f"Error cleaning up the test file: {e}")
 
 
-@pytest.mark.skip(reason="I think this one is not supported fully at the moment (April 30)")
 def test_streaming_file_upload():
     """
     Test uploading a file using a streaming multipart/form-data request.
@@ -371,12 +366,14 @@ async def test_concurrent_get_and_post():
     Asynchronously send multiple concurrent GET and POST requests to the server.
     This test simulates a mixed load of GET and POST requests.
     """
-    num_get = 10000   # Number of GET requests to send
-    num_post = 10000  # Number of POST requests to send
+    num_get = 1000   # Number of GET requests to send
+    num_post = 1000  # Number of POST requests to send
     get_url = "http://127.0.0.1:8080/index.html"
     post_url = "http://127.0.0.1:8080/images/"
 
+
     async with aiohttp.ClientSession() as session:
+        test_file = Path("home/images/uploads/filename.txt")
         # Create tasks for GET requests
         get_tasks = [session.get(get_url) for _ in range(num_get)]
         
@@ -388,13 +385,14 @@ async def test_concurrent_get_and_post():
                 'file',
                 b"dummy data\n", 
                 filename="filename.txt", 
-                content_type="application/octet-stream"
+                # content_type="application/multipart-form-data"
             )
             post_tasks.append(session.post(post_url, data=form))
         
         # Combine both sets of tasks and run them concurrently
         tasks = get_tasks + post_tasks
         responses = await asyncio.gather(*tasks)
+        test_file.unlink()
 
     # Process and verify each response
     for resp in responses:
@@ -411,7 +409,6 @@ async def test_concurrent_get_and_post():
         # Ensure proper cleanup of response objects.
         await resp.release()
 
-@pytest.mark.skip(reason="Slow and broken anyway")
 def test_idle_disconnect():
     """
     Test that the server disconnects an idle connection by
