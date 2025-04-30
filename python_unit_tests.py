@@ -199,7 +199,7 @@ def test_idle_disconnect():
         time.sleep(idle_wait)
 
         # Read the server's response (should be the 408 status).
-        resp = sock.recv(1024)
+        resp = sock.recv(4096)
         assert resp, "Expected a 408 response, but recv() returned no data"
         # Check the status line starts with HTTP/1.1 408
         status_line = resp.split(b"\r\n", 1)[0]
