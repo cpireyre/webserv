@@ -186,7 +186,9 @@ bool	allowedDecodeValues(int value)
 bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, std::string &decoded)
 {
 	decoded.clear();
-	size_t size = original.size();
+	size_t	size = original.size();
+	bool	slashCollapse = false;
+
 	for (size_t i = 0; i < size; i++)
 	{
 		if (original[i] == '%') {
@@ -196,7 +198,11 @@ bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, s
 			std::string hexStr = original.substr(i + 1, 2);
 			try {
 				int decodedValue = std::stoi(hexStr, nullptr, 16);
-				if (!allowedDecodeValues(decodedValue))
+				if (decodedValue == '/' && slashCollapse) {
+					i += 2;
+					continue;
+				}
+				else if (!allowedDecodeValues(decodedValue))
 					return false;
 				decoded += static_cast<unsigned char>(decodedValue);
 			}
@@ -204,10 +210,22 @@ bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, s
 				return false;
 			}
 			i += 2;
-		} else {
+			slashCollapse = false;
+		}
+		else if(original[i] == '/') {
+			if (slashCollapse) {
+				continue;
+			}
 			decoded += original[i];
+			slashCollapse = true;
+
+		} 
+		else {
+			decoded += original[i];
+			slashCollapse = false;
 		}
 	}
+	logInfo("after decoding: " + decoded);
 	return true;
 }
 
