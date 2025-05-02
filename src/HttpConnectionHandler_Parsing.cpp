@@ -230,7 +230,6 @@ bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, s
 			slashCollapse = false;
 		}
 	}
-	logInfo("after decoding: " + decoded);
 	return true;
 }
 
