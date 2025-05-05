@@ -44,6 +44,8 @@ std::ostream& operator<<(std::ostream& os, const HttpConnectionHandler& handler)
 	for (const auto& [key, value] : handler.getHeaders())
 		os << key << ": " << value << "\n";
 	os << "--- Body ---\n" << handler.getBody() << "\n";
+	os << "bSent: " << handler.getBSent() << "\n";
+	os << "Body size: " << handler.getBody().size() << "\n";
 	os << "Error Code: " << handler.getErrorCode() << "\n";
 	os << "Client Socket: " << handler.getClientSocket() << "\n";
 	os << "Original Path: " << handler.getOriginalPath() << "\n";

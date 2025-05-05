@@ -140,6 +140,7 @@ class HttpConnectionHandler
 		// Getters
 		int						getErrorCode() const { return errorCode; }
 		int						getClientSocket() const { return clientSocket; }
+		int						getBSent() const { return bSent; }
 		const string				&getMethod() const { return method; }
 		const string				&getPath() const { return path; }
 		const string				&getOriginalPath() const { return originalPath; }
