@@ -1,22 +1,5 @@
 #include "HttpConnectionHandler.hpp"
-
-struct ParsedPartInfo
-{
-    bool		isFile = false;
-    std::string		contentDispositionFilename; // filename from header, might be empty
-    std::string_view	data;
-};
-
-// Holds the result of attempting to upload a file
-struct FileUploadResult
-{
-    bool success = false;
-    std::string originalFilename;
-    std::string finalFilename;
-    std::string savedPath;
-    size_t fileSize = 0;
-    std::string message;
-};
+#include "Logger.hpp"
 
 /* not used but if we need to generate name when one is missing
   */
@@ -97,6 +80,68 @@ ParsedPartInfo	parsePart(std::string_view partView)
         return info;
 }
 
+/*
+ */
+FileUploadResult HttpConnectionHandler::uploadFile(ParsedPartInfo partInfo)
+{
+	FileUploadResult result;
+
+	result.originalFilename = partInfo.contentDispositionFilename;
+	result.fileSize = partInfo.data.size();
+	result.savedPath = path + result.originalFilename;
+
+	std::ifstream testFile(result.savedPath, std::ios::binary);
+	if (testFile.is_open()) {
+		result.success = false;
+		result.message = "File already exists: " + result.originalFilename;
+		logError("File already exists: " + result.savedPath);
+		return result;
+	}
+
+	// Save the file
+	std::ofstream outFile(result.savedPath, std::ios::binary | std::ios::trunc);
+	if (!outFile) {
+		result.success = false;
+		result.message = "Could not create or open file for writing: " + result.savedPath;
+		logError("Couldn't open file to upload: " + result.savedPath);
+		return result;
+	}
+
+	try {
+		outFile.write(partInfo.data.data(), partInfo.data.size());
+		if (!outFile) {
+			result.success = false;
+			result.message = "Error writing file data: " + result.savedPath;
+			outFile.close();
+			std::filesystem::remove(result.savedPath);
+			logError("Error writing to outfile: " + result.savedPath);
+		}
+		else {
+			outFile.close();
+			if (!outFile) {
+				result.success = false;
+				result.message = "Error closing file after write: " + result.originalFilename;
+				logError("Error: " + result.message + " at path " + result.savedPath);
+			}
+			else {
+				result.success = true;
+				result.message = "File uploaded successfully.";
+				logInfo(result.message + " Path: " + result.savedPath + ", Size: " + std::to_string(result.fileSize));
+			}
+		}
+	}
+	catch (const std::exception& e) {
+
+		result.success = false;
+		result.message = "Exception during file write: " + std::string(e.what());
+		logError("Error: " + result.message + " for file "+ result.savedPath);
+		if (outFile.is_open())
+			outFile.close();
+		std::filesystem::remove(result.savedPath);
+	}
+	return result;
+}
+
 /* handles the file upload process in a multipart/form-data request
  *
  * extracts the multipart data from the request body, processes each part using
@@ -156,63 +201,11 @@ bool	HttpConnectionHandler::handleFileUpload()
 		ParsedPartInfo partInfo = parsePart(partView);
 
 		if (partInfo.isFile) {
-			FileUploadResult result;
-
-			result.originalFilename = partInfo.contentDispositionFilename;
-			result.fileSize = partInfo.data.size();
-			result.savedPath = path + result.originalFilename;
-
-			// check if exists already
-			if (std::filesystem::exists(result.savedPath)) {
-				result.success = false;
-				result.message = "File already exists: " + result.originalFilename;
-				std::cerr << "Error: " << result.message << " at path " << result.savedPath << std::endl;
-			}
-			else {
-				// Save the file
-				std::ofstream outFile(result.savedPath, std::ios::binary | std::ios::trunc);
-				if (!outFile) {
-					result.success = false;
-					result.message = "Could not create or open file for writing: " + result.savedPath;
-					std::cerr << "Error: " << result.message << " at path " << result.savedPath << std::endl;
-				}
-				else {
-					try {
-						outFile.write(partInfo.data.data(), partInfo.data.size());
-						if (!outFile) { // Check stream state after write
-							result.success = false;
-							result.message = "Error writing file data: " + result.savedPath;
-							outFile.close(); // Attempt to close
-							std::filesystem::remove(result.savedPath); // Clean up partial file
-						}
-						else {
-							outFile.close(); // Close the file
-							if (!outFile) { // Check state *after* close
-								result.success = false;
-								result.message = "Error closing file after write: " + result.originalFilename;
-								std::cerr << "Error: " << result.message << " at path " << result.savedPath << std::endl;
-								// File might be partially written but closed state is bad
-							}
-							else {
-								result.success = true;
-								result.message = "File uploaded successfully.";
-								std::cout << result.message << " Path: " << result.savedPath << ", Size: " << result.fileSize << std::endl;
-							}
-						}
-					} catch (const std::exception& e) {
-						result.success = false;
-						result.message = "Exception during file write: " + std::string(e.what());
-						std::cerr << "Error: " << result.message << " for file " << result.savedPath << std::endl;
-						if (outFile.is_open())
-							outFile.close();
-						std::filesystem::remove(result.savedPath); // Clean up
-					}
-				}
-			}
+			FileUploadResult result = uploadFile(partInfo);
 			uploadResults.push_back(result);
 		}
 		else {
-                 std::cout << "Skipping non-file upload part" << std::endl;
+			std::cout << "Skipping non-file upload part" << std::endl;
 		}
 
 		// Move startPos to the beginning of the next part
