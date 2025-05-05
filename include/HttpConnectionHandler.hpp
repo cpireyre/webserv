@@ -26,6 +26,24 @@ typedef enum {
 } HandlerStatus;
 
 typedef std::map<string, string> HeadersMap;
+
+struct ParsedPartInfo
+{
+    bool		isFile = false;
+    std::string		contentDispositionFilename;
+    std::string_view	data;
+};
+
+struct FileUploadResult
+{
+    bool success = false;
+    std::string originalFilename;
+    std::string finalFilename;
+    std::string savedPath;
+    size_t fileSize = 0;
+    std::string message;
+};
+
 class HttpConnectionHandler
 {
 	private:
@@ -81,7 +99,7 @@ class HttpConnectionHandler
 		void		handlePostRequest();
 		bool		validateUploadRights();
 		bool		handleFileUpload();
-		bool		processMultipartPart(const string& part, string &responseBody);
+		FileUploadResult uploadFile(ParsedPartInfo partInfo);
 
 		bool		checkLocation();
 		int			matchServerName(const std::string& pattern, const std::string& host);
