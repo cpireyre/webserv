@@ -5,7 +5,7 @@ HttpConnectionHandler::HttpConnectionHandler()
 	: method(""), path(""), originalPath(""), httpVersion(""), body(""),
 	clientSocket(-1), filePath(""), queryString(""), extension(""),
 	cgiType(NONE), conf(nullptr), locBlock(nullptr), errorCode(0),
-	PORT("0000"), IP("0000"), response(""), fileServ(false), bSent(0) {}
+	PORT("0000"), IP("0000"), response(""), fileServ(false), bSent(0), rawRequest("") {}
 
 //add socket closing to destructor if needed
 HttpConnectionHandler::~HttpConnectionHandler() {}

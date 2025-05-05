@@ -51,7 +51,7 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 		return S_Error;
 	}
 	buffer[bRead] = '\0';
-	rawRequest += buffer;
+	rawRequest.append(buffer, bRead);
 	if (rawRequest.find("\r\n\r\n") == std::string::npos) {
 		return S_Again;
 	}
