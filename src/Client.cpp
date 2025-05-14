@@ -160,6 +160,11 @@ void	disconnectClient(Endpoint *client, int qfd)
 	client->last_heard_from_ms = 0;
 	client->handler.setClientSocket(-1);
 	client->handler.resetObject();
+	if (client->cgiHandler.cgiPid != 0)
+	{
+		kill(client->cgiHandler.cgiPid, SIGKILL);
+		logDebug("SIGKILL -> %d", client->cgiHandler.cgiPid);
+	}
 }
 
 bool	isLiveClient(Endpoint *conn)

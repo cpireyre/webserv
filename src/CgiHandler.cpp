@@ -11,8 +11,9 @@ std::string	CgiHandler::getPostData() { return _postData; };
 size_t		CgiHandler::getPostDataOffset() { return _postDataOffset; };
 int			CgiHandler::getWaitpidRes() { return _waitpidRes; };
 
-CgiHandler::CgiHandler() { }
+CgiHandler::CgiHandler() { cgiPid = 0; }
 CgiHandler::CgiHandler(const HttpConnectionHandler &conn) {
+	cgiPid = 0;
 	if (conn.getCgiType() == PYTHON)
 		_pathToInterpreter = conn.getLocationBlock()->cgiPathPython + "/python3";
 	else if (conn.getCgiType() == PHP)
