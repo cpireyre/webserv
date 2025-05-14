@@ -104,8 +104,18 @@ void	receiveHeader(Endpoint *client, int qfd)
 			if (client->handler.checkLocation() == true) {
 				if (client->handler.checkCgi() != NONE) {
 					client->cgiHandler = CgiHandler(client->handler);
-					client->cgiHandler.executeCgi();
-					client->state = C_EXEC_CGI;
+					if (!std::filesystem::exists(client->cgiHandler._pathToScript)
+							|| !std::filesystem::is_regular_file(client->cgiHandler._pathToScript)
+)
+					{
+						client->handler.setErrorCode(404);
+						client->state = C_SEND_RESPONSE;
+					}
+					else
+					{
+						client->cgiHandler.executeCgi();
+						client->state = C_EXEC_CGI;
+					}
 				}
 			}
 			break;

@@ -34,7 +34,6 @@ class CgiHandler
 		std::string _serverProtocol;
 
 		std::string _pathToInterpreter;
-		std::string _pathToScript;
 
 		char 		*_execveArgs[3] = {};
 		char 		*_execveEnv[16] = {};
@@ -46,6 +45,7 @@ class CgiHandler
 		int			_waitpidRes;
 
 	public:
+		std::string _pathToScript;
 		pid_t		cgiPid;
 		CgiHandler();
 		int*		getPipeToCgi();
