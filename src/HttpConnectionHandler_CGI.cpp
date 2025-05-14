@@ -34,7 +34,7 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 		memcpy(buffer, header, strlen(header));
 		offset += strlen(header);
 		cgiHandler.hasSentHeader = true;
-		send(clientSocket, buffer, strlen(header));
+		send(clientSocket, buffer, strlen(header), 0);
 		return S_Again;
 	}
 
@@ -52,7 +52,7 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	output << std::hex << n << "\r\n";
 	output << buffer << "\r\n";
 	n += offset;
-	send(clientSocket, output.c_str(), output.size(), 0);
+	send(clientSocket, output.str().c_str(), output.str().size(), 0);
 	write(2, buffer, n);
 	if (!n) {
 		close(fromFd);
