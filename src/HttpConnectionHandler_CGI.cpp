@@ -1,6 +1,7 @@
 #include "HttpConnectionHandler.hpp"
 #include "CgiHandler.hpp"
 #include "Logger.hpp"
+#include <sys/wait.h>
 
 CgiTypes HttpConnectionHandler::checkCgi() {
 
@@ -24,22 +25,20 @@ CgiTypes HttpConnectionHandler::checkCgi() {
 }
 
 HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
-    // cgiHandler.executeCgi();
-    int fromFd = cgiHandler.getPipeFromCgi()[0];
-	int offset = 0;
-	char buffer[8192];
-	if (cgiHandler.hasSentHeader == false)
+	int status = waitpid(cgiHandler.cgiPid, &status, WNOHANG);
+	if (status == 0)
 	{
-		char header[] = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n";
-		memcpy(buffer, header, strlen(header));
-		offset += strlen(header);
-		cgiHandler.hasSentHeader = true;
-		send(clientSocket, buffer, strlen(header), 0);
+		usleep(250);
 		return S_Again;
 	}
+	// cgiHandler.executeCgi();
+	int fromFd = cgiHandler.getPipeFromCgi()[0];
+	char buffer[8192];
+	bzero(buffer, sizeof(buffer));
+	logDebug("Serving CGI");
 
-    ssize_t n = read(fromFd, buffer + offset, sizeof(buffer) - offset);
-
+	ssize_t n = read(fromFd, buffer, sizeof(buffer));
+	logDebug("Read %d bytes", n);
 	// Per read man page: "When attempting to read from an empty pipe,
 	// if some process has the pipe open for writing and O_NONBLOCK is set, read() will return -1."
 	// So the following check will lead to false positives in error check when there is nothing to read.
@@ -48,13 +47,11 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 		close(fromFd);
 		return S_Error;
 	}
-	std::stringstream output;
-	output << std::hex << n << "\r\n";
-	output << buffer << "\r\n";
-	n += offset;
-	send(clientSocket, output.str().c_str(), output.str().size(), 0);
-	write(2, buffer, n);
+	response.append(buffer, n);
 	if (!n) {
+		std::string header = "HTTP/1.1 200 OK\r\n";
+		header += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
+		response.insert(0, header);
 		close(fromFd);
 		return S_Done;
 	}

@@ -41,12 +41,12 @@ class CgiHandler
 
 		int  		_pipeToCgi[2];
 		int  		_pipeFromCgi[2];
-		pid_t		_cgiPid;
 		std::string _postData;  // data to send to CGI process, if any
 		size_t		_postDataOffset = 0; // How many bytes have been written so far
 		int			_waitpidRes;
 
 	public:
+		pid_t		cgiPid;
 		CgiHandler();
 		int*		getPipeToCgi();
 		int*		getPipeFromCgi();

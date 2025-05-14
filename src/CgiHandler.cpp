@@ -6,7 +6,7 @@
 
 int*		CgiHandler::getPipeToCgi() { return _pipeToCgi; };
 int*		CgiHandler::getPipeFromCgi() { return _pipeFromCgi; };
-pid_t		CgiHandler::getCgiPid() { return _cgiPid; };
+pid_t		CgiHandler::getCgiPid() { return cgiPid; };
 std::string	CgiHandler::getPostData() { return _postData; };
 size_t		CgiHandler::getPostDataOffset() { return _postDataOffset; };
 int			CgiHandler::getWaitpidRes() { return _waitpidRes; };
@@ -93,8 +93,8 @@ void CgiHandler::executeCgi() {
         return;
     }
 
-    _cgiPid = fork();
-    if (_cgiPid < 0) {
+    cgiPid = fork();
+    if (cgiPid < 0) {
         std::cerr << "Error forking process" << std::endl;
         close(_pipeToCgi[0]);
 		_pipeToCgi[0] = -1;
@@ -107,7 +107,7 @@ void CgiHandler::executeCgi() {
         return;
     }
 
-    if (_cgiPid == 0) {
+    if (cgiPid == 0) {
         close(_pipeToCgi[1]);   // child doesn't write to pipeToCgi.
 		_pipeToCgi[1] = -1;
         close(_pipeFromCgi[0]); // child doesn't read from pipeFromCgi.
@@ -172,7 +172,7 @@ void CgiHandler::executeCgi() {
             _pipeToCgi[1] = -1;
         }
 
-		int status;
-		_waitpidRes = waitpid(_cgiPid, &status, 0);
+		/* int status; */
+		/* _waitpidRes = waitpid(cgiPid, &status, WNOHANG); */
     }
 }
