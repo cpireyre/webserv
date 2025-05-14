@@ -69,6 +69,22 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 			 }
 			 break;
 
+		case C_EXEC_CGI:
+			switch (conn->handler.serveCgi(conn->cgiHandler))
+			{
+				case S_Error: disconnectClient(conn, qfd);
+					 break;
+				case S_Again: break;
+
+				case S_Done:
+					watch(qfd, conn, READABLE);
+					conn->state = C_RECV_HEADER;
+					break;
+				case S_ClosedConnection: break;
+				case S_ReadBody: break;
+			}
+		break;
+
 		case C_DISCONNECTED:
 		  break;
 	}
@@ -84,6 +100,13 @@ void	receiveHeader(Endpoint *client, int qfd)
 		case S_Done:
 			watch(qfd, client, WRITABLE);
 			client->state = C_SEND_RESPONSE;
+			if (client->handler.checkLocation() == true) {
+				if (client->handler.checkCgi() != NONE) {
+					client->cgiHandler = CgiHandler(client->handler);
+					client->cgiHandler.executeCgi();
+					client->state = C_EXEC_CGI;
+				}
+			}
 			break;
 		case S_ClosedConnection:
 			disconnectClient(client, qfd);

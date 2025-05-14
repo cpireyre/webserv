@@ -45,7 +45,9 @@ class CgiHandler
 		std::string _postData;  // data to send to CGI process, if any
 		size_t		_postDataOffset = 0; // How many bytes have been written so far
 		int			_waitpidRes;
+
 	public:
+		CgiHandler();
 		int*		getPipeToCgi();
 		int*		getPipeFromCgi();
 		pid_t		getCgiPid();
@@ -55,4 +57,5 @@ class CgiHandler
 		CgiHandler(const HttpConnectionHandler &conn);
 		void executeCgi();
 		void printCgiInfo();
+		bool		hasSentHeader;
 };

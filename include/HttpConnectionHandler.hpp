@@ -83,14 +83,12 @@ class HttpConnectionHandler
 		bool		handleFileUpload();
 		bool		processMultipartPart(const string& part, string &responseBody);
 
-		bool		checkLocation();
+
 		int			matchServerName(const std::string& pattern, const std::string& host);
 		void		findConfig();
 		bool		isMethodAllowed(LocationBlock *block, string &method);
 		LocationBlock	*findLocationBlock(std::vector<LocationBlock> &blocks, LocationBlock *current);
 
-		CgiTypes		checkCgi();
-		HandlerStatus	serveCgi();
 		
 	public:
 		//Basics
@@ -106,6 +104,9 @@ class HttpConnectionHandler
 		HandlerStatus	parseRequest();
 		HandlerStatus	readBody();
 		void	handleRequest();
+		bool		checkLocation();
+		CgiTypes		checkCgi();
+		HandlerStatus	serveCgi(CgiHandler &cgiHandler);
 
 		//creating HTTP response
 		string	createHttpErrorResponse(int error);

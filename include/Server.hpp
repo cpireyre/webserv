@@ -31,6 +31,7 @@ enum ConnectionState {
 	C_FILE_SERVE,
 	C_RECV_BODY,
 	C_TIMED_OUT,
+	C_EXEC_CGI
 };
 
 constexpr int 		PORT_STRLEN = 12;
@@ -43,6 +44,7 @@ typedef struct {
 		uint64_t				began_sending_header_ms; // Client-only
 		uint64_t				last_heard_from_ms; // Client-only
 		HttpConnectionHandler	handler; // Client-only
+		CgiHandler				cgiHandler;
 } Endpoint;
 
 extern int	run(const std::vector<Configuration> config);
