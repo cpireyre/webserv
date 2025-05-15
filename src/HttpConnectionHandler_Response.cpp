@@ -107,6 +107,8 @@ bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &s
 bool	HttpConnectionHandler::checkLocation()
 {
 	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
+  logDebug("inside checkLocation");
+	originalPath = path;
 	if (!block) {
 		logError("No locaton block matched (should't happen?)");
 		errorCode = 400; //?
@@ -604,10 +606,12 @@ void	HttpConnectionHandler::findInitialConfig()
  */
 void	HttpConnectionHandler::handleRequest() 
 {
-	originalPath = path;
-	if (!checkLocation()) {
-		return;
-	}
+  if (!response.empty())
+    return ;
+	/* originalPath = path; */
+	// if (!checkLocation()) {
+	// 	return;
+	// }
 	if (checkCgi() != NONE) {
 		// CgiHandler cgiHandler(*this);
 		// //cgiHandler.printCgiInfo(); // Comment out when not needed
@@ -624,7 +628,8 @@ void	HttpConnectionHandler::handleRequest()
 		// logDebug("%s", response.c_str());
 		// send(clientSocket, response.c_str(), response.size(), 0);
 		// return;
-		serveCgi();
+		//serveCgi();
+
 	}
 	if (method == "GET") {
 		handleGetRequest();

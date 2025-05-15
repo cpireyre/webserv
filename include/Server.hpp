@@ -9,7 +9,7 @@
 # include <csignal>
 
 #ifdef DEBUG
-constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 10 * 1000; // Ten (10) seconds
+constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 15 * 1000; // Ten (10) seconds
 constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 #else
 constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 60 * 1000; // One minute, like Nginx
@@ -31,6 +31,7 @@ enum ConnectionState {
 	C_FILE_SERVE,
 	C_RECV_BODY,
 	C_TIMED_OUT,
+	C_EXEC_CGI
 };
 
 constexpr int 		PORT_STRLEN = 12;
@@ -43,6 +44,7 @@ typedef struct {
 		uint64_t				began_sending_header_ms; // Client-only
 		uint64_t				last_heard_from_ms; // Client-only
 		HttpConnectionHandler	handler; // Client-only
+		CgiHandler				cgiHandler;
 } Endpoint;
 
 extern int	run(const std::vector<Configuration> config);

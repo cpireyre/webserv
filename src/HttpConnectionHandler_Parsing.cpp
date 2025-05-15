@@ -100,7 +100,7 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 			else if (conf && static_cast<unsigned int>(contentLengthInt) > conf->getMaxClientBodySize())
 			{
 				logError("Request Body size bigger than max client body size");
-				errorCode = 415;
+				errorCode = 413;
 				return S_Error;
 			}
 		}

@@ -27,7 +27,7 @@ int	run(const std::vector<Configuration> config)
 		endpoints[n].state = C_DISCONNECTED;
 
 	error = start_servers(config, endpoints, config.size(), &servers_num);
-	int max_client_id = servers_num;
+	int max_client_id = servers_num - 1;
 	if (error) goto cleanup;
 
 	/* Register all server sockets for read events */

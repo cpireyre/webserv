@@ -60,14 +60,28 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				 case S_Error: disconnectClient(conn, qfd);
 					 break;
 
-				 case S_Again:
-				 	break;
-				 case S_ClosedConnection:
-				 	break;
-				 case S_ReadBody:
-					break;
+				 case S_Again: 						break;
+				 case S_ClosedConnection: break;
+				 case S_ReadBody: 				break;
 			 }
 			 break;
+
+		case C_EXEC_CGI:
+			switch (conn->handler.serveCgi(conn->cgiHandler))
+			{
+				case S_Error: disconnectClient(conn, qfd);
+					 break;
+				case S_Again: break;
+
+				case S_Done:
+					write(conn->handler.getClientSocket(), conn->handler.getResponse().c_str(), conn->handler.getResponse().size());
+					watch(qfd, conn, READABLE);
+					conn->state = C_RECV_HEADER;
+					break;
+				case S_ClosedConnection: break;
+				case S_ReadBody: break;
+			}
+		break;
 
 		case C_DISCONNECTED:
 		  break;
@@ -82,8 +96,26 @@ void	receiveHeader(Endpoint *client, int qfd)
 		case S_Again:
 			break;
 		case S_Done:
+      logDebug("Done receiving header");
 			watch(qfd, client, WRITABLE);
 			client->state = C_SEND_RESPONSE;
+			if (client->handler.checkLocation() == true) {
+				if (client->handler.checkCgi() != NONE) {
+					client->cgiHandler = CgiHandler(client->handler);
+					if (!std::filesystem::exists(client->cgiHandler._pathToScript)
+							|| !std::filesystem::is_regular_file(client->cgiHandler._pathToScript)
+)
+					{
+						client->handler.setErrorCode(404);
+						client->state = C_SEND_RESPONSE;
+					}
+					else
+					{
+						client->cgiHandler.executeCgi();
+						client->state = C_EXEC_CGI;
+					}
+				}
+			}
 			break;
 		case S_ClosedConnection:
 			disconnectClient(client, qfd);
@@ -112,6 +144,20 @@ void	receiveBody(Endpoint *client, int qfd)
 		case S_Done:
 			watch(qfd, client, WRITABLE);
 			client->state = C_SEND_RESPONSE;
+			if (client->handler.checkLocation() == true && client->handler.checkCgi() != NONE)
+            {
+                client->cgiHandler = CgiHandler(client->handler);
+                if (!std::filesystem::exists(client->cgiHandler._pathToScript) || !std::filesystem::is_regular_file(client->cgiHandler._pathToScript))
+                {
+                    client->handler.setErrorCode(404);
+                    client->state = C_SEND_RESPONSE;
+                }
+                else
+                {
+                    client->cgiHandler.executeCgi();
+                    client->state = C_EXEC_CGI;
+                }
+            }
 			break;
 		case S_ClosedConnection:
 			disconnectClient(client, qfd);
@@ -136,12 +182,18 @@ void	disconnectClient(Endpoint *client, int qfd)
 	client->last_heard_from_ms = 0;
 	client->handler.setClientSocket(-1);
 	client->handler.resetObject();
+	if (client->cgiHandler.cgiPid != 0)
+	{
+		kill(client->cgiHandler.cgiPid, SIGKILL);
+		logDebug("SIGKILL -> %d", client->cgiHandler.cgiPid);
+	}
+	client->cgiHandler = CgiHandler();
 }
 
 bool	isLiveClient(Endpoint *conn)
 {
 	bool	isServer = conn->kind == Server;
 	bool	isOffline = conn->state == C_DISCONNECTED;
-
+  
 	return (!isServer && !isOffline);
 }

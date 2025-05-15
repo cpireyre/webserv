@@ -34,18 +34,20 @@ class CgiHandler
 		std::string _serverProtocol;
 
 		std::string _pathToInterpreter;
-		std::string _pathToScript;
 
 		char 		*_execveArgs[3] = {};
 		char 		*_execveEnv[16] = {};
 
 		int  		_pipeToCgi[2];
 		int  		_pipeFromCgi[2];
-		pid_t		_cgiPid;
 		std::string _postData;  // data to send to CGI process, if any
 		size_t		_postDataOffset = 0; // How many bytes have been written so far
 		int			_waitpidRes;
+
 	public:
+		std::string _pathToScript;
+		pid_t		cgiPid;
+		CgiHandler();
 		int*		getPipeToCgi();
 		int*		getPipeFromCgi();
 		pid_t		getCgiPid();
@@ -55,4 +57,5 @@ class CgiHandler
 		CgiHandler(const HttpConnectionHandler &conn);
 		void executeCgi();
 		void printCgiInfo();
+		bool		hasSentHeader;
 };
