@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebServ Image Gallery</title>
+  <style>
+    :root {
+      --primary: #34495e;
+      --accent: #e67e22;
+      --bg: #f8f9fa;
+      --text: #2c3e50;
+      --border-radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    main {
+      flex: 1;
+      padding: 1rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    /* Gallery grid */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .image-item {
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+      text-align: center;
+    }
+    .image-item img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+      height: 150px;
+    }
+    .image-item a {
+      display: block;
+      padding: 0.5rem;
+      text-decoration: none;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+    /* Upload form */
+    .upload {
+      background: white;
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .upload h2 {
+      margin-top: 0;
+      color: var(--primary);
+    }
+    .upload form {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .upload input[type="file"] {
+      flex: 1;
+    }
+    .upload button {
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .upload button:hover {
+      background: #d35400;
+    }
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background: var(--primary);
+      color: white;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Image Gallery</h1>
+  </header>
+  <main>
+    <section id="gallery" class="gallery">
+      <!-- Thumbnails will be injected here -->
+    </section>
+    <section class="upload">
+      <h2>Upload New Image</h2>
+      <form id="uploadForm" action="/images/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*" required>
+        <button type="submit">Upload</button>
+      </form>
+    </section>
+  </main>
+  <footer>
+    &copy; 2025 WebServ
+  </footer>
+  <script>
+    // Fetch list of images (expects a JSON array at /images/list.json)
+    async function loadGallery() {
+      try {
+        const res = await fetch('./list.json');
+        if (!res.ok) throw new Error('Could not fetch list');
+        const files = await res.json();
+        const gallery = document.getElementById('gallery');
+        files.forEach(file => {
+          const item = document.createElement('div');
+          item.className = 'image-item';
+          item.innerHTML = `
+            <img src="${encodeURI('./' + file)}" alt="${file}">
+            <a href="${encodeURI('./' + file)}" download>Download</a>
+          `;
+          gallery.appendChild(item);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', loadGallery);
+  </script>
+</body>
+</html>

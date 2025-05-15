@@ -11,3 +11,4 @@ __pycache__/
 test/bench
 test/slow
 test/ddos
+/venv/
