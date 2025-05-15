@@ -262,6 +262,7 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 	if (std::regex_match(firstLine, matches, httpRegex)) {
 		method = matches[1];
 		path = matches[2];
+		originalPath = path;
 		httpVersion = matches[3];
 	}
 	else {
