@@ -16,7 +16,7 @@ int	run(const std::vector<Configuration> config)
 	assert(!config.empty());
   if (config.size() > MAX_SERVERS)
   {
-    std::cerr << "Error: webserv: too many virtual hosts\n";
+    std::cerr << "Error: webserv: Too many virtual hosts\n";
     return 1;
   }
 
