@@ -179,6 +179,6 @@ bool	isLiveClient(Endpoint *conn)
 {
 	bool	isServer = conn->kind == Server;
 	bool	isOffline = conn->state == C_DISCONNECTED;
-
+  
 	return (!isServer && !isOffline);
 }
