@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/04/30 15:32:15 by copireyr         ###   ########.fr        #
+#    Updated: 2025/05/02 16:19:49 by jhirvone         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,7 +19,7 @@ debug := -O0 -DDEBUG -g3
 CPPFLAGS := -I./include/ $(debug) $(opt)
 NAME := webserv
 
-src_files := CgiHandler.cpp Configuration.cpp Parser.cpp HttpConnectionHandler.cpp HttpConnectionHandler_CGI.cpp HttpConnectionHandler_Parsing.cpp HttpConnectionHandler_Response.cpp HttpConnectionHandler_MSG.cpp Logger.cpp main.cpp Queue.cpp Server.cpp Socket.cpp Client.cpp
+src_files := CgiHandler.cpp Configuration.cpp Parser.cpp HttpConnectionHandler.cpp HttpConnectionHandler_CGI.cpp HttpConnectionHandler_Parsing.cpp HttpConnectionHandler_Response.cpp HttpConnectionHandler_MSG.cpp Logger.cpp main.cpp Queue.cpp Server.cpp Socket.cpp Client.cpp HttpConnectionHandler_Post.cpp
 NAME := webserv
 
 src = $(addprefix ./src/, $(src_files))
