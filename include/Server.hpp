@@ -9,7 +9,7 @@
 # include <csignal>
 
 #ifdef DEBUG
-constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 60 * 1000; // Ten (10) seconds
+constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 15 * 1000; // Ten (10) seconds
 constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 #else
 constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 60 * 1000; // One minute, like Nginx
