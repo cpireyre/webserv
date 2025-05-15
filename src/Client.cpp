@@ -102,18 +102,18 @@ void	receiveHeader(Endpoint *client, int qfd)
 			if (client->handler.checkLocation() == true) {
 				if (client->handler.checkCgi() != NONE) {
 					client->cgiHandler = CgiHandler(client->handler);
-					if (!std::filesystem::exists(client->cgiHandler._pathToScript)
-							|| !std::filesystem::is_regular_file(client->cgiHandler._pathToScript)
-)
-					{
-						client->handler.setErrorCode(404);
-						client->state = C_SEND_RESPONSE;
-					}
-					else
-					{
-						client->cgiHandler.executeCgi();
-						client->state = C_EXEC_CGI;
-					}
+          if (access(client->cgiHandler._pathToScript.c_str(), F_OK) == 0
+              && access(client->cgiHandler._pathToScript.c_str(), R_OK) == 0)
+          {
+            logDebug("We have all permissions");
+            client->cgiHandler.executeCgi();
+            client->state = C_EXEC_CGI;
+          }
+          else
+          {
+            client->handler.setErrorCode(404);
+            client->state = C_SEND_RESPONSE;
+          }
 				}
 			}
 			break;
@@ -147,15 +147,17 @@ void	receiveBody(Endpoint *client, int qfd)
 			if (client->handler.checkLocation() == true && client->handler.checkCgi() != NONE)
             {
                 client->cgiHandler = CgiHandler(client->handler);
-                if (!std::filesystem::exists(client->cgiHandler._pathToScript) || !std::filesystem::is_regular_file(client->cgiHandler._pathToScript))
+                if (access(client->cgiHandler._pathToScript.c_str(), F_OK) == 0
+                && access(client->cgiHandler._pathToScript.c_str(), R_OK) == 0)
                 {
-                    client->handler.setErrorCode(404);
-                    client->state = C_SEND_RESPONSE;
+                    logDebug("We have all permissions");
+                    client->cgiHandler.executeCgi();
+                    client->state = C_EXEC_CGI;
                 }
                 else
                 {
-                    client->cgiHandler.executeCgi();
-                    client->state = C_EXEC_CGI;
+                    client->handler.setErrorCode(404);
+                    client->state = C_SEND_RESPONSE;
                 }
             }
 			break;

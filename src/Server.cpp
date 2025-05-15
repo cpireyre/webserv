@@ -14,6 +14,12 @@ static void handlesignals(void(*)(int));
 int	run(const std::vector<Configuration> config)
 {
 	assert(!config.empty());
+  if (config.size() > MAX_SERVERS)
+  {
+    std::cerr << "Error: webserv: Too many virtual hosts\n";
+    return 1;
+  }
+
 	handlesignals(sigcleanup);
 
 	int	error = 1;
@@ -27,7 +33,7 @@ int	run(const std::vector<Configuration> config)
 		endpoints[n].state = C_DISCONNECTED;
 
 	error = start_servers(config, endpoints, config.size(), &servers_num);
-	int max_client_id = servers_num - 1;
+	int max_client_id = servers_num;
 	if (error) goto cleanup;
 
 	/* Register all server sockets for read events */
@@ -46,7 +52,7 @@ int	run(const std::vector<Configuration> config)
 	while (!g_ServerShoudClose) {
 		assert(g_ServerShoudClose == false);
 
-		for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
+		for (Endpoint *conn = endpoints; conn < endpoints + max_client_id; conn++) {
 			if (isLiveClient(conn) && isTimedOut(conn, qfd)) {
 				conn->state = C_TIMED_OUT;
 				watch(qfd, conn, WRITABLE);
@@ -83,8 +89,9 @@ int	run(const std::vector<Configuration> config)
 	}
 
 cleanup:
+  logDebug("max client id: %d", max_client_id);
 	for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
-		if (conn->state != C_DISCONNECTED) {
+		if (conn->state != C_DISCONNECTED || conn->kind == Server) {
 			logDebug("Closing socket %s:%s (%d)", conn->IP, conn->port, conn->sockfd);
 			assert(conn->sockfd > 0);
 			close(conn->sockfd);

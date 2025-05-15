@@ -18,6 +18,8 @@ constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 
 constexpr int MAXCONNS = 1000;
 static_assert(MAXCONNS <= 1000, "cf. `ulimit -a`");
+constexpr int MAX_SERVERS = 100;
+static_assert(MAX_SERVERS < MAXCONNS, "have to leave room for client FDs!");
 
 enum Kind {
 	Client,
