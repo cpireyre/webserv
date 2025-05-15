@@ -109,22 +109,19 @@ bool	HttpConnectionHandler::checkLocation()
 	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
 	if (!block) {
 		logError("No locaton block matched (should't happen?)");
-		std::string output = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
-		send(clientSocket, output.c_str(), output.size(), 0);
+		errorCode = 400; //?
 		return false;
 	}
 	locBlock = block;
 	//check redirections
 	if (block->returnCode == 307) {
-		std::string output = createHttpRedirectResponse(307, block->returnURL);
-		send(clientSocket, output.c_str(), output.size(), 0);
+		response = createHttpRedirectResponse(307, block->returnURL);
 		return false;
 	}
 
 	if (!isMethodAllowed(block, method)) {
 		logError("Method " + method + " not allowed in location " + block->path);
-		std::string output = createHttpErrorResponse(405);
-		send(clientSocket, output.c_str(), output.size(), 0);
+		errorCode = 405;
 		return false;
 	}
 	if (method == "POST" && !block->uploadDir.empty())
@@ -138,8 +135,7 @@ bool	HttpConnectionHandler::checkLocation()
 
 	if (path.find("/..") != std::string::npos) {
 		logError("Path: " + path + "contains escape sequence /..");
-		std::string output = createHttpResponse(403, "<h1>403 Forbidden</h1>", "text/html");
-		send(clientSocket, output.c_str(), output.size(), 0);
+		errorCode = 403;
 		return false;
 	}
 	return true;
@@ -606,9 +602,6 @@ void	HttpConnectionHandler::findInitialConfig()
  * to the appropriate method handleGetRequest or handlePostRequest
  * If the method is not supported, it responds with a 405 Method Not Allowed error.
  */
-#include <string.h>
-#include <cassert>
-#include "Logger.hpp"
 void	HttpConnectionHandler::handleRequest() 
 {
 	originalPath = path;
