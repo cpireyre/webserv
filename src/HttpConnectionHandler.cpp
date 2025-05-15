@@ -5,7 +5,7 @@ HttpConnectionHandler::HttpConnectionHandler()
 	: method(""), path(""), originalPath(""), httpVersion(""), body(""),
 	clientSocket(-1), filePath(""), queryString(""), extension(""),
 	cgiType(NONE), conf(nullptr), locBlock(nullptr), errorCode(0),
-	PORT("0000"), IP("0000"), response(""), fileServ(false), bSent(0) {}
+	PORT("0000"), IP("0000"), response(""), fileServ(false), bSent(0), rawRequest("") {}
 
 //add socket closing to destructor if needed
 HttpConnectionHandler::~HttpConnectionHandler() {}
@@ -44,6 +44,8 @@ std::ostream& operator<<(std::ostream& os, const HttpConnectionHandler& handler)
 	for (const auto& [key, value] : handler.getHeaders())
 		os << key << ": " << value << "\n";
 	os << "--- Body ---\n" << handler.getBody() << "\n";
+	os << "bSent: " << handler.getBSent() << "\n";
+	os << "Body size: " << handler.getBody().size() << "\n";
 	os << "Error Code: " << handler.getErrorCode() << "\n";
 	os << "Client Socket: " << handler.getClientSocket() << "\n";
 	os << "Original Path: " << handler.getOriginalPath() << "\n";

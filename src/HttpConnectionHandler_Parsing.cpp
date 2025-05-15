@@ -51,7 +51,7 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 		return S_Error;
 	}
 	buffer[bRead] = '\0';
-	rawRequest += buffer;
+	rawRequest.append(buffer, bRead);
 	if (rawRequest.find("\r\n\r\n") == std::string::npos) {
 		return S_Again;
 	}
@@ -230,7 +230,6 @@ bool	HttpConnectionHandler::stringPercentDecoding(const std::string &original, s
 			slashCollapse = false;
 		}
 	}
-	logInfo("after decoding: " + decoded);
 	return true;
 }
 
@@ -263,6 +262,7 @@ bool	HttpConnectionHandler::getMethodPathVersion(std::istringstream &requestStre
 	if (std::regex_match(firstLine, matches, httpRegex)) {
 		method = matches[1];
 		path = matches[2];
+		originalPath = path;
 		httpVersion = matches[3];
 	}
 	else {

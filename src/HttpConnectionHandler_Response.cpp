@@ -109,22 +109,19 @@ bool	HttpConnectionHandler::checkLocation()
 	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
 	if (!block) {
 		logError("No locaton block matched (should't happen?)");
-		std::string output = createHttpResponse(500, "<h1>500 Internal Server Error</h1>", "text/html");
-		send(clientSocket, output.c_str(), output.size(), 0);
+		errorCode = 400; //?
 		return false;
 	}
 	locBlock = block;
 	//check redirections
 	if (block->returnCode == 307) {
-		std::string output = createHttpRedirectResponse(307, block->returnURL);
-		send(clientSocket, output.c_str(), output.size(), 0);
+		response = createHttpRedirectResponse(307, block->returnURL);
 		return false;
 	}
 
 	if (!isMethodAllowed(block, method)) {
 		logError("Method " + method + " not allowed in location " + block->path);
-		std::string output = createHttpErrorResponse(405);
-		send(clientSocket, output.c_str(), output.size(), 0);
+		errorCode = 405;
 		return false;
 	}
 	if (method == "POST" && !block->uploadDir.empty())
@@ -138,8 +135,7 @@ bool	HttpConnectionHandler::checkLocation()
 
 	if (path.find("/..") != std::string::npos) {
 		logError("Path: " + path + "contains escape sequence /..");
-		std::string output = createHttpResponse(403, "<h1>403 Forbidden</h1>", "text/html");
-		send(clientSocket, output.c_str(), output.size(), 0);
+		errorCode = 403;
 		return false;
 	}
 	return true;
@@ -329,142 +325,6 @@ bool	HttpConnectionHandler::validateUploadRights()
 	}
 	fd.close();
 	std::filesystem::remove(tmp);
-	return true;
-}
-
-/* processes a single part of a multipart/form-data body, typically used for file uploads
- *
- * extracts the filename and file data from a given part of the multipart body,
- * saves the file to the disk, and returns whether the processing was successful
- *
- * The part is expected to follow the format of a multipart file upload, which includes a filename
- * and the file content. The function extracts the file data and saves it to the uploads/ directory
- * atm theres no check for uploads directory existing and fails if it doesnt
- *
- * @param part The part of the multipart body, typically containing a file and associated metadata
- *
- * @return true if part was processed successfully, false otherwise
- */
-bool	HttpConnectionHandler::processMultipartPart(const std::string& part,
-		std::string &responseBody)
-{
-	// filename
-    	size_t filenamePos = part.find("filename=\"");
-    	if (filenamePos == std::string::npos) {
-		return true; // Ignore non file parts for now?
-	}
-	size_t filenameEnd = part.find("\"", filenamePos + 10);
-    	if (filenameEnd == std::string::npos) {
-		return false;
-	}
-	std::string filename = part.substr(filenamePos + 10, filenameEnd - (filenamePos + 10));
-
-    	// start of file data
-    	size_t dataStart = part.find("\r\n\r\n", filenameEnd);
-    	if (dataStart == std::string::npos) {
-		return false;
-	}
-    	dataStart += 4;
-
-    	// end of file data
-    	size_t dataEnd = part.find("\r\n", dataStart);
-    	if (dataEnd == std::string::npos) {
-		return false;
-	}
-
-    	std::string fileData = part.substr(dataStart, dataEnd - dataStart);
-	if (access((path + filename).c_str(), F_OK) == 0) {
-		responseBody = "{ \"status\": \"error\", \"message\": \"File already exists: " + filename + "\" }";
-		return false;
-	}
-
-    	// save the file
-    	std::ofstream outFile(path + filename, std::ios::binary);
-    	if (!outFile) {
-		responseBody = "{ \"status\": \"error\", \"message\": \"No permission to save file: " + filename + "\" }";
-        	std::cerr << "Error: Could not create file: " << filename << std::endl;
-        	return false;
-    	}
-    	outFile.write(fileData.c_str(), fileData.size());
-    	outFile.close();
-
-    	std::cout << "File uploaded: " << filename << std::endl;
-
-    	std::ostringstream jsonResponse;
-    	jsonResponse << "{ \"status\": \"success\", \"filename\": \""
-	    << filename << "\", \"size\": " << fileData.size() << " }";
-	responseBody = jsonResponse.str();
-
-	return true;
-}
-
-/* handles the file upload process in a multipart/form-data request
- *
- * extracts the multipart data from the request body, processes each part using
- * processMultipartPart(), and saves uploaded files to the server
- *
- * @return true if all parts are successfully processed, false otherwise
- *
- * example of post handled by this:
- * 
- * POST /upload HTTP/1.1
- * Host: example.com
- * Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
- * Content-Length: 112
- * 
- * ------WebKitFormBoundary7MA4YWxkTrZu0gW
- * Content-Disposition: form-data; name="file"; filename="example.txt"
- * Content-Type: text/plain
- *
- * Hello, this is the content of the example file.
- *
- * ------WebKitFormBoundary7MA4YWxkTrZu0gW--
- */
-bool	HttpConnectionHandler::handleFileUpload()
-{
-	std::string contentType = headers["Content-Type"];
-	size_t	boundaryPos = contentType.find("boundary=");
-	if (boundaryPos == std::string::npos) {
-		std::cout << "Error: No boundary found in multipart/form-data" << std::endl;
-		return false;
-	}
-
-	std::string boundary = "--" + contentType.substr(boundaryPos + 9);
-	size_t	startPos = body.find(boundary);
-	if (startPos == std::string::npos) {
-		std::cout << "Error: No boundary found in body" << std::endl;
-		return false;
-	}
-
-	startPos += boundary.length();
-	std::ostringstream jsonResponse;
-	jsonResponse << "{ \"uploads\": [";
-
-	bool	firstFile = true;
-	while (true)
-	{
-		// locate next boundary
-		size_t nextBoundary = body.find(boundary, startPos);
-		if (nextBoundary == std::string::npos) {
-			break;
-		}
-		// extract part data
-		std::string part = body.substr(startPos, nextBoundary - startPos);
-		startPos = nextBoundary + boundary.length();
-		// process each part
-		std::string fileResponse;
-
-		processMultipartPart(part, fileResponse);
-
-		if (!firstFile) {
-			jsonResponse << ",";
-		}
-        	jsonResponse << fileResponse;
-        	firstFile = false;
-	}
-
-	jsonResponse << "] }";
-	response = createHttpResponse(200, jsonResponse.str(), "application/json");
 	return true;
 }
 
@@ -742,9 +602,6 @@ void	HttpConnectionHandler::findInitialConfig()
  * to the appropriate method handleGetRequest or handlePostRequest
  * If the method is not supported, it responds with a 405 Method Not Allowed error.
  */
-#include <string.h>
-#include <cassert>
-#include "Logger.hpp"
 void	HttpConnectionHandler::handleRequest() 
 {
 	originalPath = path;
