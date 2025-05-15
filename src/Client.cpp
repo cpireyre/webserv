@@ -96,6 +96,7 @@ void	receiveHeader(Endpoint *client, int qfd)
 		case S_Again:
 			break;
 		case S_Done:
+      logDebug("Done receiving header");
 			watch(qfd, client, WRITABLE);
 			client->state = C_SEND_RESPONSE;
 			if (client->handler.checkLocation() == true) {
@@ -143,6 +144,20 @@ void	receiveBody(Endpoint *client, int qfd)
 		case S_Done:
 			watch(qfd, client, WRITABLE);
 			client->state = C_SEND_RESPONSE;
+			if (client->handler.checkLocation() == true && client->handler.checkCgi() != NONE)
+            {
+                client->cgiHandler = CgiHandler(client->handler);
+                if (!std::filesystem::exists(client->cgiHandler._pathToScript) || !std::filesystem::is_regular_file(client->cgiHandler._pathToScript))
+                {
+                    client->handler.setErrorCode(404);
+                    client->state = C_SEND_RESPONSE;
+                }
+                else
+                {
+                    client->cgiHandler.executeCgi();
+                    client->state = C_EXEC_CGI;
+                }
+            }
 			break;
 		case S_ClosedConnection:
 			disconnectClient(client, qfd);

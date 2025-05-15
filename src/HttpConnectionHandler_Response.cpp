@@ -107,6 +107,7 @@ bool	HttpConnectionHandler::isMethodAllowed(LocationBlock *block, std::string &s
 bool	HttpConnectionHandler::checkLocation()
 {
 	LocationBlock *block = findLocationBlock(conf->getLocationBlocks(), nullptr);
+  logDebug("inside checkLocation");
 	originalPath = path;
 	if (!block) {
 		logError("No locaton block matched (should't happen?)");
