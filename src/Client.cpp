@@ -60,12 +60,9 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				 case S_Error: disconnectClient(conn, qfd);
 					 break;
 
-				 case S_Again:
-				 	break;
-				 case S_ClosedConnection:
-				 	break;
-				 case S_ReadBody:
-					break;
+				 case S_Again: 						break;
+				 case S_ClosedConnection: break;
+				 case S_ReadBody: 				break;
 			 }
 			 break;
 
@@ -175,6 +172,7 @@ void	disconnectClient(Endpoint *client, int qfd)
 		kill(client->cgiHandler.cgiPid, SIGKILL);
 		logDebug("SIGKILL -> %d", client->cgiHandler.cgiPid);
 	}
+	client->cgiHandler = CgiHandler();
 }
 
 bool	isLiveClient(Endpoint *conn)

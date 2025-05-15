@@ -3,6 +3,8 @@
 #include "Logger.hpp"
 #include <sys/wait.h>
 
+static std::string	removePhpCgiHeaders(std::string cgiResponse);
+
 CgiTypes HttpConnectionHandler::checkCgi() {
 
 	cgiType = NONE;
@@ -49,6 +51,7 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	}
 	response.append(buffer, n);
 	if (!n) {
+		if (cgiType == PHP) response = removePhpCgiHeaders(response);
 		std::string header = "HTTP/1.1 200 OK\r\n";
 		header += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
 		response.insert(0, header);
@@ -56,4 +59,12 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 		return S_Done;
 	}
 	return S_Again;
+}
+
+static std::string	removePhpCgiHeaders(std::string cgiResponse)
+{
+  const size_t sep = cgiResponse.find("\r\n\r\n");
+  if (sep == string::npos)
+    return (cgiResponse);
+  return cgiResponse.substr(sep + 4, cgiResponse.size());
 }
