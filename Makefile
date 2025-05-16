@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/05/15 16:57:37 by copireyr         ###   ########.fr        #
+#    Updated: 2025/05/16 13:04:44 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -53,7 +53,7 @@ test: all
 
 .PHONY: val
 val: all
-	valgrind ./$(NAME) test.conf
+	valgrind -s --track-fds=yes ./$(NAME) complete.conf
 
 .PHONY: pytest
 pytest: all

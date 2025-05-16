@@ -30,7 +30,10 @@ int	run(const std::vector<Configuration> config)
 	int	servers_num = 0;
 	Endpoint	endpoints[MAXCONNS];
 	for (int n = 0; n < MAXCONNS; n++)
-		endpoints[n].state = C_DISCONNECTED;
+  {
+    endpoints[n].state = C_DISCONNECTED;
+    endpoints[n].kind = None;
+  }
 
 	error = start_servers(config, endpoints, config.size(), &servers_num);
 	int max_client_id = servers_num;
@@ -84,6 +87,8 @@ int	run(const std::vector<Configuration> config)
 					 assert(client->sockfd != conn->handler.getClientSocket());
 				 }
 					break;
+
+        case None: break;
 			}
 		}
 	}
@@ -91,7 +96,8 @@ int	run(const std::vector<Configuration> config)
 cleanup:
   logDebug("max client id: %d", max_client_id);
 	for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
-		if (conn->state != C_DISCONNECTED || conn->kind == Server) {
+    if (conn->kind == None) continue;
+		if (conn->kind == Server || conn->state != C_DISCONNECTED ) {
 			logDebug("Closing socket %s:%s (%d)", conn->IP, conn->port, conn->sockfd);
 			assert(conn->sockfd > 0);
 			close(conn->sockfd);
