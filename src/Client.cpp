@@ -31,7 +31,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				if (conn->handler.getFileServ()) //update time stamp?
 					conn->state = C_FILE_SERVE;
 				else
-					disconnectClient(conn, qfd);
+          conn->state = C_MARKED_FOR_DISCONNECTION;
 			}
 			else
 			{
@@ -53,11 +53,10 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				 case S_Done:
 					 watch(qfd, conn, READABLE);
 					 conn->state = C_RECV_HEADER;
-					 if (conn->handler.getErrorCode() != 0) disconnectClient(conn, qfd);
-					 conn->handler.resetObject();
+					 if (conn->handler.getErrorCode() != 0) conn->state = C_MARKED_FOR_DISCONNECTION;
 					 break;
 
-				 case S_Error: disconnectClient(conn, qfd);
+				 case S_Error: conn->state = C_MARKED_FOR_DISCONNECTION;
 					 break;
 
 				 case S_Again: 						break;
@@ -69,7 +68,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 		case C_EXEC_CGI:
 			switch (conn->handler.serveCgi(conn->cgiHandler))
 			{
-				case S_Error: disconnectClient(conn, qfd);
+				case S_Error: conn->state = C_MARKED_FOR_DISCONNECTION;
 					 break;
 				case S_Again: break;
 
@@ -85,6 +84,9 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 
 		case C_DISCONNECTED:
 		  break;
+
+    case C_MARKED_FOR_DISCONNECTION:
+      break;
 	}
 }
 
@@ -118,7 +120,7 @@ void	receiveHeader(Endpoint *client, int qfd)
 			}
 			break;
 		case S_ClosedConnection:
-			disconnectClient(client, qfd);
+			client->state = C_MARKED_FOR_DISCONNECTION;
 			break;
 		case S_Error:
 			assert(watch(qfd, client, WRITABLE) == 0);
@@ -162,7 +164,7 @@ void	receiveBody(Endpoint *client, int qfd)
             }
 			break;
 		case S_ClosedConnection:
-			disconnectClient(client, qfd);
+			client->state = C_MARKED_FOR_DISCONNECTION;
 			break;
 		case S_ReadBody:
 			assert(false); /* Unreachable */
@@ -194,8 +196,5 @@ void	disconnectClient(Endpoint *client, int qfd)
 
 bool	isLiveClient(Endpoint *conn)
 {
-	bool	isServer = conn->kind == Server;
-	bool	isOffline = conn->state == C_DISCONNECTED;
-  
-	return (!isServer && !isOffline);
+  return (conn->kind == Client && conn->state != C_DISCONNECTED);
 }

@@ -28,11 +28,7 @@ CgiTypes HttpConnectionHandler::checkCgi() {
 
 HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	int status = waitpid(cgiHandler.cgiPid, &status, WNOHANG);
-	if (status == 0)
-	{
-		usleep(250);
-		return S_Again;
-	}
+	if (status == 0) return S_Again;
 	// cgiHandler.executeCgi();
 	int fromFd = cgiHandler.getPipeFromCgi()[0];
 	char buffer[8192];

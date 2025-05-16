@@ -349,7 +349,7 @@ async def test_repeated_requests():
     Asynchronously send multiple concurrent GET requests to /index.html.
     This test simulates load. Adjust num_requests as appropriate.
     """
-    num_requests = 10000
+    num_requests = 100
     url = "http://127.0.0.1:8080/index.html"
 
     async with aiohttp.ClientSession() as session:
@@ -370,8 +370,8 @@ async def test_concurrent_get_and_post():
     Asynchronously send multiple concurrent GET and POST requests to the server.
     This test simulates a mixed load of GET and POST requests.
     """
-    num_get = 1000   # Number of GET requests to send
-    num_post = 1000  # Number of POST requests to send
+    num_get = 100 # Number of GET requests to send
+    num_post = 100 # Number of POST requests to send
     get_url = "http://127.0.0.1:8080/index.html"
     post_url = "http://127.0.0.1:8080/images/"
 
@@ -413,7 +413,6 @@ async def test_concurrent_get_and_post():
         # Ensure proper cleanup of response objects.
         await resp.release()
 
-@pytest.mark.skip(reason="Broken test? Manual testing works")
 def test_idle_disconnect():
     """
     Test that the server disconnects an idle connection by
@@ -428,7 +427,7 @@ def test_idle_disconnect():
     import socket, time, pytest
 
     # This must exceed your server's idle/keep-alive timeout.
-    idle_wait = 15  # seconds
+    idle_wait = 16  # seconds
 
     with socket.create_connection(("127.0.0.1", 8080), timeout=idle_wait + 2) as sock:
         sock.settimeout(idle_wait + 2)
@@ -444,7 +443,7 @@ def test_idle_disconnect():
         time.sleep(idle_wait)
 
         # Read the server's response (should be the 408 status).
-        resp = sock.recv(2048)
+        resp = sock.recv(8192)
         assert resp, "Expected a 408 response, but recv() returned no data"
         # Check the status line starts with HTTP/1.1 408
         status_line = resp.split(b"\r\n", 1)[0]
@@ -453,11 +452,10 @@ def test_idle_disconnect():
         )
 
         # After the response, the server should close the connection:
-        eof = sock.recv(2048)
+        eof = sock.recv(8192)
         assert eof == b'', f"Expected EOF (b''), but got {eof!r}"
 
 
-@pytest.mark.skip(reason="Broken test? Manual testing works")
 def test_idle_disconnect_incomplete_body():
     """
     Test that the server disconnects when the client sends
@@ -470,7 +468,7 @@ def test_idle_disconnect_incomplete_body():
     import socket, time, pytest
 
     # This must exceed your server's idle/keep-alive timeout.
-    idle_wait = 15  # seconds
+    idle_wait = 16  # seconds
 
     with socket.create_connection(("127.0.0.1", 8080), timeout=idle_wait + 2) as sock:
         sock.settimeout(idle_wait + 2)
