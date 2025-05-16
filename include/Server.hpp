@@ -23,7 +23,8 @@ static_assert(MAX_SERVERS < MAXCONNS, "have to leave room for client FDs!");
 
 enum Kind {
 	Client,
-	Server
+	Server,
+  None
 };
 
 enum ConnectionState {

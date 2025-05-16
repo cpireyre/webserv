@@ -1,15 +1,13 @@
 #include "Server.hpp"
 #include "Queue.hpp"
 
-volatile sig_atomic_t g_ServerShoudClose = false;
+extern sig_atomic_t g_ShouldStop;
 
 static int	start_servers(const std::vector<Configuration>,Endpoint*,int,int*);
 static Endpoint	*connectNewClient(Endpoint *, const Endpoint *, int, int *);
 static void	initEndpoint(int, std::string, std::string, Endpoint *);
 static bool endpointAlreadyBound(Endpoint *, int, std::string, std::string);
 static bool	isTimedOut(Endpoint *, int);
-static void sigcleanup(int);
-static void handlesignals(void(*)(int));
 
 int	run(const std::vector<Configuration> config)
 {
@@ -20,8 +18,6 @@ int	run(const std::vector<Configuration> config)
     return 1;
   }
 
-	handlesignals(sigcleanup);
-
 	int	error = 1;
 
 	int qfd = queue_create();
@@ -30,7 +26,10 @@ int	run(const std::vector<Configuration> config)
 	int	servers_num = 0;
 	Endpoint	endpoints[MAXCONNS];
 	for (int n = 0; n < MAXCONNS; n++)
-		endpoints[n].state = C_DISCONNECTED;
+  {
+    endpoints[n].state = C_DISCONNECTED;
+    endpoints[n].kind = None;
+  }
 
 	error = start_servers(config, endpoints, config.size(), &servers_num);
 	int max_client_id = servers_num;
@@ -49,8 +48,8 @@ int	run(const std::vector<Configuration> config)
 	queue_event events[QUEUE_MAX_EVENTS];
 	bzero(events, sizeof(events));
 
-	while (!g_ServerShoudClose) {
-		assert(g_ServerShoudClose == false);
+	while (!g_ShouldStop) {
+		assert(g_ShouldStop == false);
 
 		for (Endpoint *conn = endpoints; conn < endpoints + max_client_id; conn++) {
 			if (isLiveClient(conn) && isTimedOut(conn, qfd)) {
@@ -84,6 +83,9 @@ int	run(const std::vector<Configuration> config)
 					 assert(client->sockfd != conn->handler.getClientSocket());
 				 }
 					break;
+
+        case None: assert(false); /* Unreachable */
+          break;
 			}
 		}
 	}
@@ -91,7 +93,8 @@ int	run(const std::vector<Configuration> config)
 cleanup:
   logDebug("max client id: %d", max_client_id);
 	for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
-		if (conn->state != C_DISCONNECTED || conn->kind == Server) {
+    if (conn->kind == None) continue;
+		if (conn->kind == Server || conn->state != C_DISCONNECTED ) {
 			logDebug("Closing socket %s:%s (%d)", conn->IP, conn->port, conn->sockfd);
 			assert(conn->sockfd > 0);
 			close(conn->sockfd);
@@ -246,26 +249,6 @@ static void	initEndpoint(int sockfd, std::string host, std::string port,
 	assert(strlen(endpoint->port) >= 1);
 	assert(strlen(endpoint->IP) >= 7);
 	assert(strlen(endpoint->IP) <= 16);
-}
-
-static void sigcleanup(int sig)
-{
-	(void)sig;
-	g_ServerShoudClose = true;
-}
-
-static void handlesignals(void(*hdl)(int))
-{
-	struct sigaction sa;
-
-	signal(SIGPIPE, SIG_IGN);
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = hdl;
-	sigemptyset(&sa.sa_mask);
-	sigaction(SIGTERM, &sa, nullptr);
-	sigaction(SIGHUP, &sa, nullptr);
-	sigaction(SIGINT, &sa, nullptr);
-	sigaction(SIGQUIT, &sa, nullptr);
 }
 
 int		watch(int qfd, Endpoint *conn, enum queue_event_type t)
