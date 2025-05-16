@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/04/23 20:44:24 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/05/16 13:21:30 by copireyr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,12 +15,18 @@
 #include "Queue.hpp"
 #include "Logger.hpp"
 
+volatile sig_atomic_t g_ShouldStop = false;
+static void stop(int sig) { (void)sig; g_ShouldStop = true; }
+static void handlesignals(void(*hdl)(int));
+
 std::vector<Configuration> serverMap;
 
 std::vector<Configuration> parser(std::string fileName);
 
 int	main(int argc, char **argv)
 {
+	handlesignals(stop);
+
 	if (argc != 2)
 	{
 		std::cerr << "./webserv [configuration file]" << std::endl;
@@ -35,6 +41,21 @@ int	main(int argc, char **argv)
 		return 1;
 	}
 	
+  if (g_ShouldStop) return (0);
 	int status = run(serverMap);
 	return (status);
+}
+
+static void handlesignals(void(*hdl)(int))
+{
+	struct sigaction sa;
+
+	signal(SIGPIPE, SIG_IGN);
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = hdl;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGTERM, &sa, nullptr);
+	sigaction(SIGHUP, &sa, nullptr);
+	sigaction(SIGINT, &sa, nullptr);
+	sigaction(SIGQUIT, &sa, nullptr);
 }

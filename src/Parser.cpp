@@ -1,4 +1,7 @@
 #include "../include/Parser.hpp"
+#include <signal.h>
+
+extern sig_atomic_t g_ShouldStop;
 
 int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	int brace = 0;
@@ -13,6 +16,7 @@ int getRawFile(std::string& fileName, std::vector<std::string>& rawFile) {
 	
 	std::string line;
 	while (std::getline(file, line)) {
+    if (g_ShouldStop == true) return 0;
 		size_t comment = line.find('#');
 		// remove comments
 		if (comment != std::string::npos)
@@ -51,6 +55,7 @@ void populateConfigMap(const std::vector<std::string>& rawFile, std::vector<Conf
 	std::regex regex(R"((\w+)\s*:\s*(.+);)");
 
 	for (const auto& line : rawFile) {
+    if (g_ShouldStop == true) return;
 		std::smatch match;
 		if (regex_search(line, match, std::regex("^server$"))) {
 			serverBlock.push_back(line);
