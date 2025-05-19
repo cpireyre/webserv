@@ -41,6 +41,7 @@
       margin-bottom: 2rem;
     }
     .image-item {
+      position: relative;
       background: white;
       border-radius: var(--border-radius);
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -59,6 +60,20 @@
       text-decoration: none;
       color: var(--accent);
       font-size: 0.9rem;
+    }
+    .delete-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(255,255,255,0.8);
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 24px;
+      text-align: center;
     }
     .upload {
       background: white;
@@ -118,35 +133,46 @@
   <script>
     async function loadGallery() {
       try {
-        // Fetch the directory listing of this folder
-        const res = await fetch('./');
-        const html = await res.text();
         const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        // Extract image links (jpg, png, gif) not in uploads/ listing
-        let links = Array.from(doc.querySelectorAll('a'))
-          .map(a => a.getAttribute('href'))
-          .filter(href => href.match(/\.(jpe?g|png|gif)$/i));
-        // Also include uploads folder images
-        const resUp = await fetch('./uploads/');
-        const htmlUp = await resUp.text();
-        const docUp = parser.parseFromString(htmlUp, 'text/html');
-        const upLinks = Array.from(docUp.querySelectorAll('a'))
-          .map(a => 'uploads/' + a.getAttribute('href'))
-          .filter(href => href.match(/\.(jpe?g|png|gif)$/i));
-        links = links.concat(upLinks);
+        const results = [];
+        // Top-level images
+        let res = await fetch('./');
+        let html = await res.text();
+        let doc = parser.parseFromString(html, 'text/html');
+        let top = Array.from(doc.querySelectorAll('a')).map(a => a.href)
+          .filter(h => h.match(/\.(jpe?g|png|gif)$/i));
+        results.push(...top.map(h => new URL(h).pathname.replace(/^/, './')));
+        // Uploads folder
+        res = await fetch('./uploads/');
+        html = await res.text();
+        doc = parser.parseFromString(html, 'text/html');
+        let ups = Array.from(doc.querySelectorAll('a')).map(a => 'uploads/' + a.getAttribute('href'))
+          .filter(h => h.match(/\.(jpe?g|png|gif)$/i));
+        results.push(...ups);
         const gallery = document.getElementById('gallery');
-        links.forEach(file => {
+        results.forEach(file => {
           const item = document.createElement('div');
           item.className = 'image-item';
           item.innerHTML = `
+            <button class="delete-btn" data-file="${file}">&times;</button>
             <img src="${file}" alt="${file}">
             <a href="${file}" download>Download</a>
           `;
+          item.querySelector('.delete-btn').addEventListener('click', async e => {
+            e.stopPropagation();
+            if (!confirm('Delete this image?')) return;
+            const filePath = e.currentTarget.getAttribute('data-file');
+            try {
+              const del = await fetch(filePath, { method: 'DELETE' });
+              if (del.ok) item.remove(); else alert('Delete failed');
+            } catch {
+              alert('Error deleting');
+            }
+          });
           gallery.appendChild(item);
         });
       } catch (e) {
-        console.error('Failed to load gallery:', e);
+        console.error(e);
       }
     }
     document.addEventListener('DOMContentLoaded', loadGallery);
