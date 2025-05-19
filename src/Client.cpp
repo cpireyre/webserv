@@ -77,6 +77,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 					write(conn->handler.getClientSocket(), conn->handler.getResponse().c_str(), conn->handler.getResponse().size());
 					watch(qfd, conn, READABLE);
 					conn->state = C_RECV_HEADER;
+          conn->handler.resetObject();
 					break;
 				case S_ClosedConnection: break;
 				case S_ReadBody: break;

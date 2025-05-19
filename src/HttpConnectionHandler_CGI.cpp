@@ -53,6 +53,7 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	if (!n) {
 		if (cgiType == PHP) response = removePhpCgiHeaders(response);
 		std::string header = "HTTP/1.1 200 OK\r\n";
+    header += "Content-Type: text/html\r\n";
 		header += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
 		response.insert(0, header);
 		close(fromFd);
