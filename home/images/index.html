@@ -34,7 +34,6 @@
       max-width: 960px;
       margin: 0 auto;
     }
-    /* Gallery grid */
     .gallery {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -50,9 +49,9 @@
     }
     .image-item img {
       width: 100%;
-      display: block;
-      object-fit: cover;
       height: 150px;
+      object-fit: cover;
+      display: block;
     }
     .image-item a {
       display: block;
@@ -61,7 +60,6 @@
       color: var(--accent);
       font-size: 0.9rem;
     }
-    /* Upload form */
     .upload {
       background: white;
       padding: 1rem;
@@ -107,9 +105,7 @@
     <h1>Image Gallery</h1>
   </header>
   <main>
-    <section id="gallery" class="gallery">
-      <!-- Thumbnails will be injected here -->
-    </section>
+    <section id="gallery" class="gallery"></section>
     <section class="upload">
       <h2>Upload New Image</h2>
       <form id="uploadForm" action="/images/upload" method="post" enctype="multipart/form-data">
@@ -118,28 +114,39 @@
       </form>
     </section>
   </main>
-  <footer>
-    &copy; 2025 WebServ
-  </footer>
+  <footer>&copy; 2025 WebServ</footer>
   <script>
-    // Fetch list of images (expects a JSON array at /images/list.json)
     async function loadGallery() {
       try {
-        const res = await fetch('./list.json');
-        if (!res.ok) throw new Error('Could not fetch list');
-        const files = await res.json();
+        // Fetch the directory listing of this folder
+        const res = await fetch('./');
+        const html = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        // Extract image links (jpg, png, gif) not in uploads/ listing
+        let links = Array.from(doc.querySelectorAll('a'))
+          .map(a => a.getAttribute('href'))
+          .filter(href => href.match(/\.(jpe?g|png|gif)$/i));
+        // Also include uploads folder images
+        const resUp = await fetch('./uploads/');
+        const htmlUp = await resUp.text();
+        const docUp = parser.parseFromString(htmlUp, 'text/html');
+        const upLinks = Array.from(docUp.querySelectorAll('a'))
+          .map(a => 'uploads/' + a.getAttribute('href'))
+          .filter(href => href.match(/\.(jpe?g|png|gif)$/i));
+        links = links.concat(upLinks);
         const gallery = document.getElementById('gallery');
-        files.forEach(file => {
+        links.forEach(file => {
           const item = document.createElement('div');
           item.className = 'image-item';
           item.innerHTML = `
-            <img src="${encodeURI('./' + file)}" alt="${file}">
-            <a href="${encodeURI('./' + file)}" download>Download</a>
+            <img src="${file}" alt="${file}">
+            <a href="${file}" download>Download</a>
           `;
           gallery.appendChild(item);
         });
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error('Failed to load gallery:', e);
       }
     }
     document.addEventListener('DOMContentLoaded', loadGallery);
