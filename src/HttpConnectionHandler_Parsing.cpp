@@ -136,7 +136,7 @@ HandlerStatus	HttpConnectionHandler::parseRequest()
 		if (conf && chunkData.size() > conf->getMaxClientBodySize())
 		{
 			logError("Request Body size bigger than max client body size");
-			errorCode = 415;
+			errorCode = 413;
 			return S_Error;
 		}
 		HandlerStatus status = handleFirstChunks(chunkData);
