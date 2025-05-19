@@ -27,8 +27,8 @@ CgiTypes HttpConnectionHandler::checkCgi() {
 }
 
 HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
-	int CgiExitCode;
-	int CgiProcessStatus;
+	int CgiExitCode = 0;
+	int CgiProcessStatus = 0;
 	CgiProcessStatus = waitpid(cgiHandler.cgiPid, &CgiExitCode, WNOHANG);
 	if (CgiProcessStatus == 0)
 		return S_Again;
