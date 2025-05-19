@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/05/16 13:04:44 by copireyr         ###   ########.fr        #
+#    Updated: 2025/05/19 17:13:29 by jhirvone         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -53,7 +53,9 @@ test: all
 
 .PHONY: val
 val: all
-	valgrind -s --track-fds=yes ./$(NAME) complete.conf
+	rm valgrind.log
+	valgrind -s --leak-check=full --show-leak-kinds=all --track-fds=yes --log-file=valgrind.log ./webserv test.conf || true
+	cat valgrind.log
 
 .PHONY: pytest
 pytest: all

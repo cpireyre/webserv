@@ -158,6 +158,7 @@ class HttpConnectionHandler
 		const std::map<string, string>	&getHeaders() const { return headers; }
 
 		// Setters
+		void	setResponse(std::string newResponse) {response = newResponse;}
 		void	setClientSocket(int socket) { clientSocket = socket; }
 		void	setErrorCode(int err) { errorCode = err; }
 		void	setConfig(Configuration *config) { conf = config; }
