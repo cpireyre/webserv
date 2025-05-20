@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/05/16 15:05:06 by copireyr         ###   ########.fr        #
+#    Updated: 2025/05/20 13:56:31 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,8 +14,8 @@
 CC := c++
 CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
 CFLAGS += -Wimplicit-fallthrough -Wshadow -Wswitch-enum
-# debug := -O0 -DDEBUG -g3
-opt := -O2
+debug := -O0 -DDEBUG -g3
+# opt := -O2
 CPPFLAGS := -I./include/ $(debug) $(opt)
 NAME := webserv
 
@@ -53,11 +53,12 @@ test: all
 
 .PHONY: val
 val: all
-	valgrind -s --show-leak-kinds=all --leak-check=full --track-fds=yes ./$(NAME) complete.conf
+	rm valgrind.log
+	valgrind -s --leak-check=full --show-leak-kinds=all --track-fds=yes --log-file=valgrind.log ./webserv test.conf || true
+	cat valgrind.log
 
 .PHONY: pytest
 pytest: all
 	python3 -m pytest -v python_unit_tests.py
-
 
 -include $(obj:.o=.d)

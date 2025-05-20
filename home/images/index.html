@@ -34,7 +34,6 @@
       max-width: 960px;
       margin: 0 auto;
     }
-    /* Gallery grid */
     .gallery {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -42,6 +41,7 @@
       margin-bottom: 2rem;
     }
     .image-item {
+      position: relative;
       background: white;
       border-radius: var(--border-radius);
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -50,9 +50,9 @@
     }
     .image-item img {
       width: 100%;
-      display: block;
-      object-fit: cover;
       height: 150px;
+      object-fit: cover;
+      display: block;
     }
     .image-item a {
       display: block;
@@ -61,7 +61,20 @@
       color: var(--accent);
       font-size: 0.9rem;
     }
-    /* Upload form */
+    .delete-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(255,255,255,0.8);
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 24px;
+      text-align: center;
+    }
     .upload {
       background: white;
       padding: 1rem;
@@ -107,9 +120,7 @@
     <h1>Image Gallery</h1>
   </header>
   <main>
-    <section id="gallery" class="gallery">
-      <!-- Thumbnails will be injected here -->
-    </section>
+    <section id="gallery" class="gallery"></section>
     <section class="upload">
       <h2>Upload New Image</h2>
       <form id="uploadForm" action="/images/upload" method="post" enctype="multipart/form-data">
@@ -118,28 +129,50 @@
       </form>
     </section>
   </main>
-  <footer>
-    &copy; 2025 WebServ
-  </footer>
+  <footer>&copy; 2025 WebServ</footer>
   <script>
-    // Fetch list of images (expects a JSON array at /images/list.json)
     async function loadGallery() {
       try {
-        const res = await fetch('./list.json');
-        if (!res.ok) throw new Error('Could not fetch list');
-        const files = await res.json();
+        const parser = new DOMParser();
+        const results = [];
+        // Top-level images
+        let res = await fetch('./');
+        let html = await res.text();
+        let doc = parser.parseFromString(html, 'text/html');
+        let top = Array.from(doc.querySelectorAll('a')).map(a => a.href)
+          .filter(h => h.match(/\.(jpe?g|png|gif)$/i));
+        results.push(...top.map(h => new URL(h).pathname.replace(/^/, './')));
+        // Uploads folder
+        res = await fetch('./uploads/');
+        html = await res.text();
+        doc = parser.parseFromString(html, 'text/html');
+        let ups = Array.from(doc.querySelectorAll('a')).map(a => 'uploads/' + a.getAttribute('href'))
+          .filter(h => h.match(/\.(jpe?g|png|gif)$/i));
+        results.push(...ups);
         const gallery = document.getElementById('gallery');
-        files.forEach(file => {
+        results.forEach(file => {
           const item = document.createElement('div');
           item.className = 'image-item';
           item.innerHTML = `
-            <img src="${encodeURI('./' + file)}" alt="${file}">
-            <a href="${encodeURI('./' + file)}" download>Download</a>
+            <button class="delete-btn" data-file="${file}">&times;</button>
+            <img src="${file}" alt="${file}">
+            <a href="${file}" download>Download</a>
           `;
+          item.querySelector('.delete-btn').addEventListener('click', async e => {
+            e.stopPropagation();
+            if (!confirm('Delete this image?')) return;
+            const filePath = e.currentTarget.getAttribute('data-file');
+            try {
+              const del = await fetch(filePath, { method: 'DELETE' });
+              if (del.ok) item.remove(); else alert('Delete failed');
+            } catch {
+              alert('Error deleting');
+            }
+          });
           gallery.appendChild(item);
         });
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error(e);
       }
     }
     document.addEventListener('DOMContentLoaded', loadGallery);

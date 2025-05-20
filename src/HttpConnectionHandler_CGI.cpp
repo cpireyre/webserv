@@ -27,8 +27,16 @@ CgiTypes HttpConnectionHandler::checkCgi() {
 }
 
 HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
-	int status = waitpid(cgiHandler.cgiPid, &status, WNOHANG);
-	if (status == 0) return S_Again;
+	int CgiExitCode = 0;
+	int CgiProcessStatus = 0;
+	CgiProcessStatus = waitpid(cgiHandler.cgiPid, &CgiExitCode, WNOHANG);
+	if (CgiProcessStatus == 0)
+		return S_Again;
+	if (WEXITSTATUS(CgiExitCode) == EXIT_FAILURE)
+	{
+		close(cgiHandler.getPipeFromCgi()[0]);
+		return S_Error;
+	}
 	// cgiHandler.executeCgi();
 	int fromFd = cgiHandler.getPipeFromCgi()[0];
 	char buffer[8192];
@@ -49,6 +57,7 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	if (!n) {
 		if (cgiType == PHP) response = removePhpCgiHeaders(response);
 		std::string header = "HTTP/1.1 200 OK\r\n";
+    header += "Content-Type: text/html\r\n";
 		header += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
 		response.insert(0, header);
 		close(fromFd);

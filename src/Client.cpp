@@ -25,10 +25,24 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				/* depending on handler.getfileServ() we already have the whole response
 				 * or we are just sending everything but body */
 				logDebug("Error with %d", conn->sockfd);
-				std::string response = conn->handler
+
+				std::string response;
+				if (conn->handler.getResponse().empty()) {
+					response = conn->handler
 					.createErrorResponse(conn->handler.getErrorCode());
-				send(conn->sockfd, response.c_str(), response.size(), 0);
-				if (conn->handler.getFileServ()) //update time stamp?
+				}
+				else {
+					response = conn->handler.getResponse();
+				}
+				ssize_t sent = send(conn->sockfd, response.c_str(), response.size(), 0);
+				if (sent == -1) {
+					disconnectClient(conn, qfd);
+				}
+				else if(static_cast<size_t>(sent) != response.size()) {
+					conn->handler.setResponse(response.substr(sent));
+					break;
+				}
+				if (conn->handler.getFileServ())
 					conn->state = C_FILE_SERVE;
 				else
           conn->state = C_MARKED_FOR_DISCONNECTION;
@@ -36,7 +50,14 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 			else
 			{
 				conn->handler.handleRequest();
-				send(conn->sockfd, conn->handler.getResponse().c_str(), conn->handler.getResponse().size(), 0);
+				ssize_t sent = send(conn->sockfd, conn->handler.getResponse().c_str(), conn->handler.getResponse().size(), 0);
+				if (sent == -1) {
+					disconnectClient(conn, qfd);
+				}
+				else if(static_cast<size_t>(sent) != conn->handler.getResponse().size()) {
+					conn->handler.setResponse(conn->handler.getResponse().substr(sent));
+					break;
+				}
 				if (conn->handler.getFileServ()) {
 					conn->state = C_FILE_SERVE;
 					break;
@@ -68,14 +89,15 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 		case C_EXEC_CGI:
 			switch (conn->handler.serveCgi(conn->cgiHandler))
 			{
-				case S_Error: conn->state = C_MARKED_FOR_DISCONNECTION;
+				case S_Error: // disconnectClient(conn, qfd);
+					      conn->handler.setErrorCode(500);
+					      conn->handler.setResponse("");
+					      conn->state = C_SEND_RESPONSE;
 					 break;
 				case S_Again: break;
 
 				case S_Done:
-					write(conn->handler.getClientSocket(), conn->handler.getResponse().c_str(), conn->handler.getResponse().size());
-					watch(qfd, conn, READABLE);
-					conn->state = C_RECV_HEADER;
+					      conn->state = C_SEND_RESPONSE;
 					break;
 				case S_ClosedConnection: break;
 				case S_ReadBody: break;
