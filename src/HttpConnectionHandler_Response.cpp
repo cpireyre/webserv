@@ -145,28 +145,44 @@ bool	HttpConnectionHandler::checkLocation()
 
 HandlerStatus	HttpConnectionHandler::serveFile()
 {
-	logInfo("serving file");
+	logInfo("Serving file");
 	std::ifstream file(path, std::ios::binary);
 	if (!file.is_open()) {
 		//what to do if file serving fails middle of sending body
+		logError("Failed to open file");
 		return S_Error;
 	} 
 
-	char buffer[8192];
-	file.seekg(bSent); //error handling for reading out of scope
-	file.read(buffer, sizeof(buffer)); //how to error check?
-	/*if (file.bad() || file.fail())
-	{
-		logError("Reading error?");
-		return S_Error;
-	}*/
-	int sent = send(clientSocket, buffer, file.gcount(), 0);
-	if (sent < 0)
-		return S_Error;
-	bSent += sent;
-	//file.close();
-	if (file.eof())
+	//handle bsize out of scope error, dunno how it would happen
+	file.seekg(0, std::ios::end);
+	std::streamsize fileSize = file.tellg();
+	if (bSent >= fileSize) {
+		logInfo("File already fully sent");
 		return S_Done;
+	}
+
+	file.seekg(bSent);
+	if (!file) {
+		logError("File seek failed");
+		return S_Error;
+	}
+
+	char buffer[8192];
+    	file.read(buffer, sizeof(buffer));
+    	if (!file && !file.eof()) {
+        	logError("File read error");
+        	return S_Error;
+	}
+
+	ssize_t toSend = file.gcount();
+    	ssize_t sent = send(clientSocket, buffer, toSend, 0);
+    	if (sent < 0) {
+		logError("Send failed");
+		return S_Error;
+	}
+	bSent += sent;
+	if (bSent >= fileSize)
+        	return S_Done;
 	return S_Again;
 }
 
@@ -606,31 +622,9 @@ void	HttpConnectionHandler::findInitialConfig()
  */
 void	HttpConnectionHandler::handleRequest() 
 {
-  if (!response.empty())
-    return ;
-	/* originalPath = path; */
-	// if (!checkLocation()) {
-	// 	return;
-	// }
-	if (checkCgi() != NONE) {
-		// CgiHandler cgiHandler(*this);
-		// //cgiHandler.printCgiInfo(); // Comment out when not needed
-		// cgiHandler.executeCgi();
-		// char buffer[1024];
-		// memset(buffer, 0, 1024);
-		// int* pipeFromCgi = cgiHandler.getPipeFromCgi();
-		// int size = read(pipeFromCgi[0], buffer, 1024);
-		// if (size < 0)
-		// 	perror("read from cgi:");
-		// assert(size >= 0);
-		// write(1, buffer, size);
-		// std::string response = createHttpResponse(200, buffer, "text/html");
-		// logDebug("%s", response.c_str());
-		// send(clientSocket, response.c_str(), response.size(), 0);
-		// return;
-		//serveCgi();
+	if (!response.empty())
+		return ;
 
-	}
 	if (method == "GET") {
 		handleGetRequest();
 	}
