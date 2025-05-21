@@ -75,6 +75,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 					 watch(qfd, conn, READABLE);
 					 conn->state = C_RECV_HEADER;
 					 if (conn->handler.getErrorCode() != 0) conn->state = C_MARKED_FOR_DISCONNECTION;
+           else conn->handler.resetObject();
 					 break;
 
 				 case S_Error: conn->state = C_MARKED_FOR_DISCONNECTION;
@@ -97,6 +98,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				case S_Again: break;
 
 				case S_Done:
+                conn->cgiHandler.CgiResetObject();
 					      conn->state = C_SEND_RESPONSE;
 					break;
 				case S_ClosedConnection: break;
@@ -125,11 +127,10 @@ void	receiveHeader(Endpoint *client, int qfd)
 			client->state = C_SEND_RESPONSE;
 			if (client->handler.checkLocation() == true) {
 				if (client->handler.checkCgi() != NONE) {
-					client->cgiHandler = CgiHandler(client->handler);
+					client->cgiHandler.populate(client->handler);
           if (access(client->cgiHandler._pathToScript.c_str(), F_OK) == 0
               && access(client->cgiHandler._pathToScript.c_str(), R_OK) == 0)
           {
-            logDebug("We have all permissions");
             client->cgiHandler.executeCgi();
             client->state = C_EXEC_CGI;
           }
@@ -170,7 +171,7 @@ void	receiveBody(Endpoint *client, int qfd)
 			client->state = C_SEND_RESPONSE;
 			if (client->handler.checkLocation() == true && client->handler.checkCgi() != NONE)
             {
-                client->cgiHandler = CgiHandler(client->handler);
+                client->cgiHandler.populate(client->handler);
                 if (access(client->cgiHandler._pathToScript.c_str(), F_OK) == 0
                 && access(client->cgiHandler._pathToScript.c_str(), R_OK) == 0)
                 {
@@ -208,12 +209,7 @@ void	disconnectClient(Endpoint *client, int qfd)
 	client->last_heard_from_ms = 0;
 	client->handler.setClientSocket(-1);
 	client->handler.resetObject();
-	if (client->cgiHandler.cgiPid != 0)
-	{
-		kill(client->cgiHandler.cgiPid, SIGKILL);
-		logDebug("SIGKILL -> %d", client->cgiHandler.cgiPid);
-	}
-	client->cgiHandler = CgiHandler();
+	client->cgiHandler.CgiResetObject();
 }
 
 bool	isLiveClient(Endpoint *conn)

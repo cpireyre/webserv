@@ -145,7 +145,7 @@ bool	HttpConnectionHandler::checkLocation()
 
 HandlerStatus	HttpConnectionHandler::serveFile()
 {
-	logInfo("Serving file");
+	logInfo("Serving file: " + path);
 	std::ifstream file(path, std::ios::binary);
 	if (!file.is_open()) {
 		//what to do if file serving fails middle of sending body

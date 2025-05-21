@@ -11,7 +11,15 @@ std::string	CgiHandler::getPostData() { return _postData; };
 size_t		CgiHandler::getPostDataOffset() { return _postDataOffset; };
 int			CgiHandler::getWaitpidRes() { return _waitpidRes; };
 
-CgiHandler::CgiHandler() { cgiPid = 0; }
+CgiHandler::CgiHandler() {
+    for (int i = 0; i <= 1; i++) {
+      _pipeToCgi[i] = -1;
+      _pipeFromCgi[i] = -1;
+    }
+
+    cgiPid = 0;
+}
+
 CgiHandler::CgiHandler(const HttpConnectionHandler &conn) {
 	cgiPid = 0;
 	if (conn.getCgiType() == PYTHON)
@@ -132,7 +140,8 @@ void CgiHandler::executeCgi() {
 
         execve(_execveArgs[0], _execveArgs, _execveEnv);
         std::cerr << "execve error in child" << std::endl; // handle better
-        exit(EXIT_FAILURE);
+        throw(EXIT_FAILURE);
+        /* exit(EXIT_FAILURE); */
     } else {
         close(_pipeToCgi[0]);   // parent does not read from pipeToCgi.
 		_pipeToCgi[0] = -1;
@@ -176,4 +185,103 @@ void CgiHandler::executeCgi() {
 		/* int status; */
 		/* _waitpidRes = waitpid(cgiPid, &status, WNOHANG); */
     }
+}
+
+void CgiHandler::CgiResetObject(void)
+{
+		_contentLength.clear();
+		_contentType.clear();
+		_gatewayInterface.clear();
+		_pathInfo.clear();
+		_queryString.clear();
+		_remoteAddr.clear();
+		_requestMethod.clear();
+		_scriptFileName.clear();
+		_scriptName.clear();
+		_redirectStatus.clear();
+		_serverName.clear();
+		_serverPort.clear();
+		_serverProtocol.clear();
+		_pathToInterpreter.clear();
+		_postData.clear();
+
+    bzero(_execveArgs, sizeof(_execveArgs));
+    bzero(_execveEnv, sizeof(_execveEnv));
+
+    for (int i = 0; i <= 1; i++)
+    {
+      if (_pipeToCgi[i] != -1)
+      {
+        close(_pipeToCgi[i]);
+        _pipeToCgi[i] = -1;
+      }
+      if (_pipeFromCgi[i] != -1)
+      {
+        close(_pipeFromCgi[i]);
+        _pipeFromCgi[i] = -1;
+      }
+    }
+		_postDataOffset = 0; // How many bytes have been written so far
+		_waitpidRes = 0;
+    hasSentHeader = false;
+	if (cgiPid != 0)
+  {
+    kill(cgiPid, SIGKILL);
+    logDebug("Terminated CGI: %d", cgiPid);
+  }
+  cgiPid = 0;
+}
+
+void CgiHandler::populate(const HttpConnectionHandler &conn) {
+	cgiPid = 0;
+	if (conn.getCgiType() == PYTHON)
+		_pathToInterpreter = conn.getLocationBlock()->cgiPathPython + "/python3";
+	else if (conn.getCgiType() == PHP)
+		_pathToInterpreter = conn.getLocationBlock()->cgiPathPHP + "/php-cgi";
+
+	std::string currentPath = std::filesystem::current_path();
+	std::string root = "/" + conn.getConf()->getRootViaLocation("/");
+	_pathToScript = currentPath + root + conn.getFilePath();
+
+	_execveArgs[0] = (char * )_pathToInterpreter.c_str();
+	_execveArgs[1] = (char * )_pathToScript.c_str();
+	_execveArgs[2] = NULL;
+
+	_postData = conn.getBody();
+
+	const std::map<std::string, std::string>	&headerMap = conn.getHeaders();
+
+	_contentLength = "CONTENT_LENGTH=";
+	if (headerMap.find("Content-Length") != headerMap.end())
+		_contentLength += headerMap.at("Content-Length");
+	_contentType = "CONTENT_TYPE=";
+	if (headerMap.find("Content-Type") != headerMap.end())
+		_contentType += headerMap.at("Content-Type");
+	_queryString = "QUERY_STRING=" + conn.getQueryString();
+	_pathInfo = "PATH_INFO=" + _pathToScript;
+	_requestMethod = "REQUEST_METHOD=" + conn.getMethod();
+	//_scriptFileName = "SCRIPT_FILENAME=" + _pathToScript.substr(_pathToScript.find_last_of('/') + 1);
+	_scriptFileName = "SCRIPT_FILENAME=" + _pathToScript;
+	_scriptName = "SCRIPT_NAME=" + root + conn.getFilePath();
+	_redirectStatus = "REDIRECT_STATUS=200";
+	_serverProtocol = "SERVER_PROTOCOL=HTTP/1.1";
+	_gatewayInterface = "GATEWAY_INTERFACE=CGI/1.1";
+	_remoteAddr = "REMOTE_ADDR=" + conn.getConf()->getHost();
+	_serverName = "SERVER_NAME=" + conn.getConf()->getServerNames();
+	_serverPort = "SERVER_PORT=" + conn.getConf()->getPort();
+	
+	_execveEnv[0] = (char *) _contentLength.c_str();
+	_execveEnv[1] = (char *) _contentType.c_str();
+	_execveEnv[2] = (char *) _queryString.c_str();
+	_execveEnv[3] = (char *) _serverProtocol.c_str();
+	_execveEnv[4] = (char *) _gatewayInterface.c_str();
+	_execveEnv[5] = (char *) _pathInfo.c_str();
+	_execveEnv[6] = (char *) _requestMethod.c_str();
+	_execveEnv[7] = (char *) _scriptFileName.c_str();
+	_execveEnv[8] = (char *) _redirectStatus.c_str();
+	_execveEnv[9] = (char *) _scriptName.c_str();
+	_execveEnv[10] = (char *) _remoteAddr.c_str();
+	_execveEnv[11] = (char *) _serverName.c_str();
+	_execveEnv[12] = (char *) _serverPort.c_str();
+	_execveEnv[13] = NULL;
 }

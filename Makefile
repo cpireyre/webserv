@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/05/20 13:56:31 by copireyr         ###   ########.fr        #
+#    Updated: 2025/05/21 13:25:18 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -53,7 +53,7 @@ test: all
 
 .PHONY: val
 val: all
-	rm valgrind.log
+	rm -f valgrind.log
 	valgrind -s --leak-check=full --show-leak-kinds=all --track-fds=yes --log-file=valgrind.log ./webserv test.conf || true
 	cat valgrind.log
 

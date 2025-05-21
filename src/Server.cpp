@@ -48,9 +48,9 @@ int	run(const std::vector<Configuration> config)
 	queue_event events[QUEUE_MAX_EVENTS];
 	bzero(events, sizeof(events));
 
+  try {
 	while (!g_ShouldStop) {
 		assert(g_ShouldStop == false);
-
 		for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
       if (conn->state == C_MARKED_FOR_DISCONNECTION) {
         disconnectClient(conn, qfd);
@@ -93,13 +93,16 @@ int	run(const std::vector<Configuration> config)
 			}
 		}
 	}
+  }
+  catch (...) { error = EXIT_FAILURE; }
 
 cleanup:
-  logDebug("max client id: %d", max_client_id);
+  logDebug("⏼ Cleaning up...");
 	for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
     if (conn->kind == None) continue;
 		if (conn->kind == Server || conn->state != C_DISCONNECTED ) {
-			logDebug("Closing socket %s:%s (%d)", conn->IP, conn->port, conn->sockfd);
+      string kind = conn->kind == Server ? "server" : "client";
+			logDebug("Closing %s socket %s:%s (%d)", kind.c_str(), conn->IP, conn->port, conn->sockfd);
 			assert(conn->sockfd > 0);
 			close(conn->sockfd);
 		}
