@@ -86,105 +86,104 @@ void CgiHandler::printCgiInfo() {
 }
 
 void CgiHandler::executeCgi() {
-    // a pipe for sending data to CGI process (parent writes, child reads)
-    if (pipe(_pipeToCgi) == -1) {
-        std::cerr << "Error creating pipe to CGI" << std::endl;
-        return;
+  // a pipe for sending data to CGI process (parent writes, child reads)
+  if (pipe(_pipeToCgi) == -1) {
+    std::cerr << "Error creating pipe to CGI" << std::endl;
+    return;
+  }
+
+  // a pipe for recieving data from the CGI process (child writes, parent reads)
+  if (pipe(_pipeFromCgi) == -1) {
+    std::cerr << "Error creating pipe from CGI" << std::endl;
+    close(_pipeToCgi[0]);
+    _pipeToCgi[0] = -1;
+    close(_pipeToCgi[1]);
+    _pipeToCgi[1] = -1;
+    return;
+  }
+
+  cgiPid = fork();
+  if (cgiPid < 0) {
+    std::cerr << "Error forking process" << std::endl;
+    close(_pipeToCgi[0]);
+    _pipeToCgi[0] = -1;
+    close(_pipeToCgi[1]);
+    _pipeToCgi[1] = -1;
+    close(_pipeFromCgi[0]);
+    _pipeFromCgi[0] = -1;
+    close(_pipeFromCgi[1]);
+    _pipeFromCgi[1] = -1;
+    return;
+  }
+
+  if (cgiPid == 0) {
+    close(_pipeToCgi[1]);   // child doesn't write to pipeToCgi.
+    _pipeToCgi[1] = -1;
+    close(_pipeFromCgi[0]); // child doesn't read from pipeFromCgi.
+    _pipeFromCgi[0] = -1;
+
+    // redirect stdin to read from _pipeToCgi[0]
+    if (dup2(_pipeToCgi[0], STDIN_FILENO) == -1) {
+      std::cerr << "dup2 error for STDIN in child" << std::endl;
+      throw(EXIT_FAILURE);
     }
-
-    // a pipe for recieving data from the CGI process (child writes, parent reads)
-    if (pipe(_pipeFromCgi) == -1) {
-        std::cerr << "Error creating pipe from CGI" << std::endl;
-        close(_pipeToCgi[0]);
-		_pipeToCgi[0] = -1;
-        close(_pipeToCgi[1]);
-		_pipeToCgi[1] = -1;
-        return;
+    // redirect stdout to write to _pipeFromCgi[1]
+    if (dup2(_pipeFromCgi[1], STDOUT_FILENO) == -1) {
+      std::cerr << "dup2 error for STDOUT in child" << std::endl;
+      throw(EXIT_FAILURE);
     }
+    // we dupped them, so we can close them
+    close(_pipeToCgi[0]);
+    _pipeToCgi[0] = -1;
+    close(_pipeFromCgi[1]);
+    _pipeFromCgi[1] = -1;
 
-    cgiPid = fork();
-    if (cgiPid < 0) {
-        std::cerr << "Error forking process" << std::endl;
-        close(_pipeToCgi[0]);
-		_pipeToCgi[0] = -1;
-		close(_pipeToCgi[1]);
-		_pipeToCgi[1] = -1;
-        close(_pipeFromCgi[0]);
-		_pipeFromCgi[0] = -1;
-		close(_pipeFromCgi[1]);
-		_pipeFromCgi[1] = -1;
-        return;
-    }
+    execve(_execveArgs[0], _execveArgs, _execveEnv);
+    std::cerr << "execve error in child" << std::endl; // handle better
+    throw(EXIT_FAILURE);
+  } else {
+    close(_pipeToCgi[0]);   // parent does not read from pipeToCgi.
+    _pipeToCgi[0] = -1;
+    close(_pipeFromCgi[1]); // parent does not write to pipeFromCgi.
+    _pipeFromCgi[1] = -1;
 
-    if (cgiPid == 0) {
-        close(_pipeToCgi[1]);   // child doesn't write to pipeToCgi.
-		_pipeToCgi[1] = -1;
-        close(_pipeFromCgi[0]); // child doesn't read from pipeFromCgi.
-		_pipeFromCgi[0] = -1;
+    // set the parent's pipe file descriptors to non-blocking mode.
+    // chatgpt says this is how you do it:
+    int flags = fcntl(_pipeToCgi[1], F_GETFL, 0);
+    if (flags == -1)
+      flags = 0;
+    fcntl(_pipeToCgi[1], F_SETFL, flags | O_NONBLOCK);
 
-        // redirect stdin to read from _pipeToCgi[0]
-        if (dup2(_pipeToCgi[0], STDIN_FILENO) == -1) {
-            std::cerr << "dup2 error for STDIN in child" << std::endl;
-            exit(EXIT_FAILURE);
+    flags = fcntl(_pipeFromCgi[0], F_GETFL, 0);
+    if (flags == -1)
+      flags = 0;
+    fcntl(_pipeFromCgi[0], F_SETFL, flags | O_NONBLOCK);
+
+    // Attempt to write POST data (if any) to the CGI process in a non-blocking fashion.
+    if (!_postData.empty()) {
+      ssize_t written = write(_pipeToCgi[1],
+          _postData.c_str() + _postDataOffset,
+          _postData.size() - _postDataOffset);
+      if (written > 0) {
+        _postDataOffset += written;
+        if (_postDataOffset == _postData.size()) {
+          // all POST data has been written, close the write end to signal EOF.
+          close(_pipeToCgi[1]);
+          _pipeToCgi[1] = -1;
         }
-        // redirect stdout to write to _pipeFromCgi[1]
-        if (dup2(_pipeFromCgi[1], STDOUT_FILENO) == -1) {
-            std::cerr << "dup2 error for STDOUT in child" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-		// we dupped them, so we can close them
-        close(_pipeToCgi[0]);
-		_pipeToCgi[0] = -1;
-        close(_pipeFromCgi[1]);
-		_pipeFromCgi[1] = -1;
-
-        execve(_execveArgs[0], _execveArgs, _execveEnv);
-        std::cerr << "execve error in child" << std::endl; // handle better
-        throw(EXIT_FAILURE);
-        /* exit(EXIT_FAILURE); */
+      }
+      else {
+        // do something
+      }
     } else {
-        close(_pipeToCgi[0]);   // parent does not read from pipeToCgi.
-		_pipeToCgi[0] = -1;
-        close(_pipeFromCgi[1]); // parent does not write to pipeFromCgi.
-		_pipeFromCgi[1] = -1;
-
-        // set the parent's pipe file descriptors to non-blocking mode.
-		// chatgpt says this is how you do it:
-        int flags = fcntl(_pipeToCgi[1], F_GETFL, 0);
-        if (flags == -1)
-			flags = 0;
-        fcntl(_pipeToCgi[1], F_SETFL, flags | O_NONBLOCK);
-
-        flags = fcntl(_pipeFromCgi[0], F_GETFL, 0);
-        if (flags == -1)
-			flags = 0;
-        fcntl(_pipeFromCgi[0], F_SETFL, flags | O_NONBLOCK);
-
-        // Attempt to write POST data (if any) to the CGI process in a non-blocking fashion.
-        if (!_postData.empty()) {
-            ssize_t written = write(_pipeToCgi[1],
-                                    _postData.c_str() + _postDataOffset,
-                                    _postData.size() - _postDataOffset);
-            if (written > 0) {
-                _postDataOffset += written;
-                if (_postDataOffset == _postData.size()) {
-                    // all POST data has been written, close the write end to signal EOF.
-                    close(_pipeToCgi[1]);
-                    _pipeToCgi[1] = -1;
-                }
-            }
-            else {
-				// do something
-			}
-        } else {
-            // no POST data to send, close the write end.
-            close(_pipeToCgi[1]);
-            _pipeToCgi[1] = -1;
-        }
-
-		/* int status; */
-		/* _waitpidRes = waitpid(cgiPid, &status, WNOHANG); */
+      // no POST data to send, close the write end.
+      close(_pipeToCgi[1]);
+      _pipeToCgi[1] = -1;
     }
+
+    /* int status; */
+    /* _waitpidRes = waitpid(cgiPid, &status, WNOHANG); */
+  }
 }
 
 void CgiHandler::CgiResetObject(void)

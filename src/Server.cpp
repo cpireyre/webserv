@@ -100,6 +100,7 @@ cleanup:
   logDebug("⏼ Cleaning up...");
 	for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
     if (conn->kind == None) continue;
+    if (conn->kind == Client) { conn->cgiHandler.CgiResetObject(); }
 		if (conn->kind == Server || conn->state != C_DISCONNECTED ) {
       string kind = conn->kind == Server ? "server" : "client";
 			logDebug("Closing %s socket %s:%s (%d)", kind.c_str(), conn->IP, conn->port, conn->sockfd);

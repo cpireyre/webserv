@@ -91,6 +91,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 			switch (conn->handler.serveCgi(conn->cgiHandler))
 			{
 				case S_Error: // disconnectClient(conn, qfd);
+                conn->cgiHandler.CgiResetObject();
 					      conn->handler.setErrorCode(500);
 					      conn->handler.setResponse("");
 					      conn->state = C_SEND_RESPONSE;
