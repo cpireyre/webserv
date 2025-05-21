@@ -205,8 +205,8 @@ static bool	isTimedOut(Endpoint *conn, int qfd)
 	assert(conn->last_heard_from_ms != 0);
 
 	uint64_t idle_duration_ms = now_ms() - conn->last_heard_from_ms;
-  if (idle_duration_ms > 10 * 1000)
-    logDebug("%d idle for %zums, timing out soon", conn->sockfd, idle_duration_ms);
+  /* if (idle_duration_ms > 10 * 1000) */
+  /*   logDebug("%d idle for %zums, timing out soon", conn->sockfd, idle_duration_ms); */
 
 	if (conn->handler.getErrorCode() != 408
 			&&  idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS) {
