@@ -58,4 +58,6 @@ class CgiHandler
 		void executeCgi();
 		void printCgiInfo();
 		bool		hasSentHeader;
+    void CgiResetObject(void);
+    void populate(const HttpConnectionHandler &conn);
 };

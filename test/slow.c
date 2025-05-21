@@ -23,7 +23,7 @@ int	main(int argc, char **argv)
 	}
 
 	puts("Timeout test: should receive 408");
-	talk_slow(argv, 11);
+	talk_slow(argv, 16);
 	return (0);
 }
 
@@ -43,11 +43,11 @@ static void	*talk_slow(void *ctx, uint32_t sleep_delay_s)
 			perror("write");
 			break;
 		}
-		sleep(sleep_delay_s);
-		char	buf[1024];
-		int bytes_read = read(sockfd, buf, 1024);
+		char	buf[8192];
+		int bytes_read = read(sockfd, buf, 8192);
 		if (bytes_read > 0)
 			write(1, buf, bytes_read);
+		sleep(sleep_delay_s);
 	}
 	close(sockfd);
 	return (NULL);

@@ -48,10 +48,14 @@ int	run(const std::vector<Configuration> config)
 	queue_event events[QUEUE_MAX_EVENTS];
 	bzero(events, sizeof(events));
 
+  try {
 	while (!g_ShouldStop) {
 		assert(g_ShouldStop == false);
-
-		for (Endpoint *conn = endpoints; conn < endpoints + max_client_id; conn++) {
+		for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
+      if (conn->state == C_MARKED_FOR_DISCONNECTION) {
+        disconnectClient(conn, qfd);
+        continue;
+      }
 			if (isLiveClient(conn) && isTimedOut(conn, qfd)) {
 				conn->state = C_TIMED_OUT;
 				watch(qfd, conn, WRITABLE);
@@ -65,7 +69,7 @@ int	run(const std::vector<Configuration> config)
 			Endpoint *conn = (Endpoint*)queue_event_get_data(&events[id]);
 			assert(conn->sockfd > 0);
 
-			if (queue_event_is_error(&events[id])) disconnectClient(conn, qfd);
+			if (queue_event_is_error(&events[id])) conn->state = C_MARKED_FOR_DISCONNECTION;
 
 			queue_event_type event_type = queue_event_get_type(&events[id]);
 
@@ -89,13 +93,17 @@ int	run(const std::vector<Configuration> config)
 			}
 		}
 	}
+  }
+  catch (...) { error = EXIT_FAILURE; }
 
 cleanup:
-  logDebug("max client id: %d", max_client_id);
+  logDebug("⏼ Cleaning up...");
 	for (Endpoint *conn = endpoints; conn <= endpoints + max_client_id; conn++) {
     if (conn->kind == None) continue;
+    if (conn->kind == Client) { conn->cgiHandler.CgiResetObject(); }
 		if (conn->kind == Server || conn->state != C_DISCONNECTED ) {
-			logDebug("Closing socket %s:%s (%d)", conn->IP, conn->port, conn->sockfd);
+      string kind = conn->kind == Server ? "server" : "client";
+			logDebug("Closing %s socket %s:%s (%d)", kind.c_str(), conn->IP, conn->port, conn->sockfd);
 			assert(conn->sockfd > 0);
 			close(conn->sockfd);
 		}
@@ -197,6 +205,8 @@ static bool	isTimedOut(Endpoint *conn, int qfd)
 	assert(conn->last_heard_from_ms != 0);
 
 	uint64_t idle_duration_ms = now_ms() - conn->last_heard_from_ms;
+  if (idle_duration_ms > 10 * 1000)
+    logDebug("%d idle for %zums, timing out soon", conn->sockfd, idle_duration_ms);
 
 	if (conn->handler.getErrorCode() != 408
 			&&  idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS) {
