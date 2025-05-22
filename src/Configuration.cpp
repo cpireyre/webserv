@@ -216,7 +216,9 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 
 		if (std::regex_search(line, match, maxClientBodyRegex)) {
 			try {
-				_maxClientBodySize = std::stoul(match[1]);
+				unsigned int temp = std::stoul(match[1]);
+				if (temp < _maxClientBodySize)	
+					_maxClientBodySize = temp;
 			}
 			catch (const std::exception& e) {
 				std::cerr << "Invalid max_client_body_size value: " << match[1] << ". Using default value." << std::endl;
