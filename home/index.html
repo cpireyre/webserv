@@ -69,8 +69,14 @@
       margin: 0 0.5rem;
       font-weight: 600;
     }
-    .btn {
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
       margin-top: 2rem;
+    }
+    .btn {
       padding: 0.75rem 1.5rem;
       font-size: 1rem;
       background: var(--secondary);
@@ -100,12 +106,16 @@
   </header>
   <main>
     <div class="group-photos">
-		<img src="images/copireyr_intra.jpg"  alt="copireyr"  class="group-photo">
-		<img src="images/jhirvone_intra.jpg" alt="jhirvone" class="group-photo">
-		<img src="images/upolat_intra.jpg"   alt="upolat"   class="group-photo">
+      <img src="images/copireyr_intra.jpg"  alt="copireyr"  class="group-photo">
+      <img src="images/jhirvone_intra.jpg" alt="jhirvone" class="group-photo">
+      <img src="images/upolat_intra.jpg"   alt="upolat"   class="group-photo">
     </div>
     <p class="team">Created by <span>copireyr</span><span>jhirvone</span><span>upolat</span></p>
-    <a href="/images/" class="btn">Go to Images</a>
+    <div class="btn-group">
+      <a href="/images/" class="btn">Go to Images</a>
+      <a href="/default-cgis/python_test.py" class="btn">Test Python CGI</a>
+      <a href="/default-cgis/php_test.php" class="btn">Test PHP CGI</a>
+    </div>
   </main>
   <footer>
     &copy; 2025 copireyr, jhirvone &amp; upolat
