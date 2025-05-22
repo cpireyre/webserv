@@ -201,7 +201,7 @@ LocationBlock Configuration::handleLocationBlock(std::vector<std::string>& locat
 Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBlock(servBlck) {
 	createBarebonesBlock();
 
-	std::regex listenRegex(R"(^listen (\d+)\s*;$)");
+	std::regex listenRegex(R"(^listen (\d{1,5})\s*;$)");
 	std::regex hostRegex(R"(^host ([^\s]+)\s*;$)");
 	std::regex serverNamesRegex(R"(^server_name ([^\s;]+(?: [^\s;]+)*)\s*;$)");
 	std::regex maxClientBodyRegex(R"(^max_client_body_size (\d+)\s*;$)");
@@ -232,8 +232,11 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 				std::cerr << "Invalid max_client_header_size value: " << match[1] << ". Using default value." << std::endl;
 			}
 		}
-		else if (std::regex_search(line, match, listenRegex))
-			_port = match[1];
+		else if (std::regex_search(line, match, listenRegex)) {
+			unsigned int temp = std::stoul(match[1]);
+			if (temp <= 65535)
+				_port = match[1];
+		}
 		else if (std::regex_search(line, match, hostRegex))
 			_host = match[1];
 		else if (std::regex_search(line, match, serverNamesRegex))
