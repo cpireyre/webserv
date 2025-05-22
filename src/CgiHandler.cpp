@@ -3,6 +3,7 @@
 #include "Configuration.hpp"
 #include "Logger.hpp"
 #include <sys/wait.h>
+#include <signal.h>
 
 int*		CgiHandler::getPipeToCgi() { return _pipeToCgi; };
 int*		CgiHandler::getPipeFromCgi() { return _pipeFromCgi; };
