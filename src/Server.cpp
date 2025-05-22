@@ -209,8 +209,10 @@ static bool	isTimedOut(Endpoint *conn, int qfd)
   /*   logDebug("%d idle for %zums, timing out soon", conn->sockfd, idle_duration_ms); */
 
 	if (conn->handler.getErrorCode() != 408
+      && conn->handler.getErrorCode() != 500
 			&&  idle_duration_ms > CLIENT_TIMEOUT_THRESHOLD_MS) {
-		conn->handler.setErrorCode(408);
+		conn->handler.setErrorCode(
+        conn->cgiHandler.cgiPid == 0 ? 408 : 500);
 		logDebug("Soft timeout: %d", conn->sockfd);
 		return (true);
 	}
