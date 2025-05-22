@@ -26,6 +26,8 @@ CgiTypes HttpConnectionHandler::checkCgi() {
 	return cgiType;
 }
 
+static std::string	getPhpCgiHeaders(std::string cgiResponse);
+
 HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	int CgiExitCode = 0;
 	int CgiProcessStatus = 0;
@@ -55,15 +57,26 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	}
 	response.append(buffer, n);
 	if (!n) {
-		if (cgiType == PHP) response = removePhpCgiHeaders(response);
-		std::string header = "HTTP/1.1 200 OK\r\n";
-    header += "Content-Type: text/html\r\n";
-		header += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
-		response.insert(0, header);
+    string cgiHeaders = "HTTP/1.1 200 OK\r\n";
+    if (cgiType == PHP)
+    {
+      cgiHeaders += getPhpCgiHeaders(response);
+      response = removePhpCgiHeaders(response);
+    }
+    cgiHeaders += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
+		response.insert(0, cgiHeaders);
 		close(fromFd);
 		return S_Done;
 	}
 	return S_Again;
+}
+
+static std::string	getPhpCgiHeaders(std::string cgiResponse)
+{
+  const size_t sep = cgiResponse.find("\r\n\r\n");
+  if (sep == string::npos)
+    return (cgiResponse);
+  return cgiResponse.substr(0, sep + 2);
 }
 
 static std::string	removePhpCgiHeaders(std::string cgiResponse)
