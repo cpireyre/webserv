@@ -12,10 +12,10 @@ string HttpConnectionHandler::getCurrentHttpDate()
     return oss.str();
 }
 
-string HttpConnectionHandler::getDefaultErrorPage500()
-{
-	return createHttpErrorResponse(500);
-}
+/* string HttpConnectionHandler::getDefaultErrorPage500() */
+/* { */
+/* 	return createHttpErrorResponse(500); */
+/* } */
 
 string HttpConnectionHandler::getDefaultErrorPage400()
 {
@@ -204,8 +204,8 @@ string HttpConnectionHandler::createErrorResponse(int error)
 			std::streamsize conLen = file.tellg();
 			std::stringstream buffer;
 			buffer << "HTTP/1.1 " << error << " " << getReasonPhrase(error) << "\r\n";
-			for (const auto& [key, value] : headers)
-				buffer << key << ": " << value << "\r\n";
+			for (const auto& [key, value] : h)
+        buffer << key << ": " << value << "\r\n";
 			buffer << "Content-Length: " << conLen << "\r\n";
 			buffer << "\r\n";
 			path = errorPath;

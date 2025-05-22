@@ -111,7 +111,7 @@ bool	HttpConnectionHandler::checkLocation()
 	originalPath = path;
 	if (!block) {
 		logError("No locaton block matched (should't happen?)");
-		errorCode = 400; //?
+		errorCode = 404; //?
 		return false;
 	}
 	locBlock = block;
