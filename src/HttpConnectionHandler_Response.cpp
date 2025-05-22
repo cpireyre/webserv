@@ -111,7 +111,7 @@ bool	HttpConnectionHandler::checkLocation()
 	originalPath = path;
 	if (!block) {
 		logError("No locaton block matched (should't happen?)");
-		errorCode = 400; //?
+		errorCode = 404; //?
 		return false;
 	}
 	locBlock = block;
@@ -145,7 +145,7 @@ bool	HttpConnectionHandler::checkLocation()
 
 HandlerStatus	HttpConnectionHandler::serveFile()
 {
-	logInfo("Serving file");
+	logInfo("Serving file: " + path);
 	std::ifstream file(path, std::ios::binary);
 	if (!file.is_open()) {
 		//what to do if file serving fails middle of sending body

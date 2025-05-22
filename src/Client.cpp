@@ -45,7 +45,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				if (conn->handler.getFileServ())
 					conn->state = C_FILE_SERVE;
 				else
-					disconnectClient(conn, qfd);
+          conn->state = C_MARKED_FOR_DISCONNECTION;
 			}
 			else
 			{
@@ -74,11 +74,11 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				 case S_Done:
 					 watch(qfd, conn, READABLE);
 					 conn->state = C_RECV_HEADER;
-					 if (conn->handler.getErrorCode() != 0) disconnectClient(conn, qfd);
-					 conn->handler.resetObject();
+					 if (conn->handler.getErrorCode() != 0) conn->state = C_MARKED_FOR_DISCONNECTION;
+           else conn->handler.resetObject();
 					 break;
 
-				 case S_Error: disconnectClient(conn, qfd);
+				 case S_Error: conn->state = C_MARKED_FOR_DISCONNECTION;
 					 break;
 
 				 case S_Again: 						break;
@@ -91,6 +91,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 			switch (conn->handler.serveCgi(conn->cgiHandler))
 			{
 				case S_Error: // disconnectClient(conn, qfd);
+                conn->cgiHandler.CgiResetObject();
 					      conn->handler.setErrorCode(500);
 					      conn->handler.setResponse("");
 					      conn->state = C_SEND_RESPONSE;
@@ -98,6 +99,7 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 				case S_Again: break;
 
 				case S_Done:
+                conn->cgiHandler.CgiResetObject();
 					      conn->state = C_SEND_RESPONSE;
 					break;
 				case S_ClosedConnection: break;
@@ -107,6 +109,9 @@ void	serveConnection(Endpoint *conn, int qfd, queue_event_type event_type)
 
 		case C_DISCONNECTED:
 		  break;
+
+    case C_MARKED_FOR_DISCONNECTION:
+      break;
 	}
 }
 
@@ -123,11 +128,10 @@ void	receiveHeader(Endpoint *client, int qfd)
 			client->state = C_SEND_RESPONSE;
 			if (client->handler.checkLocation() == true) {
 				if (client->handler.checkCgi() != NONE) {
-					client->cgiHandler = CgiHandler(client->handler);
+					client->cgiHandler.populate(client->handler);
           if (access(client->cgiHandler._pathToScript.c_str(), F_OK) == 0
               && access(client->cgiHandler._pathToScript.c_str(), R_OK) == 0)
           {
-            logDebug("We have all permissions");
             client->cgiHandler.executeCgi();
             client->state = C_EXEC_CGI;
           }
@@ -140,7 +144,7 @@ void	receiveHeader(Endpoint *client, int qfd)
 			}
 			break;
 		case S_ClosedConnection:
-			disconnectClient(client, qfd);
+			client->state = C_MARKED_FOR_DISCONNECTION;
 			break;
 		case S_Error:
 			assert(watch(qfd, client, WRITABLE) == 0);
@@ -168,7 +172,7 @@ void	receiveBody(Endpoint *client, int qfd)
 			client->state = C_SEND_RESPONSE;
 			if (client->handler.checkLocation() == true && client->handler.checkCgi() != NONE)
             {
-                client->cgiHandler = CgiHandler(client->handler);
+                client->cgiHandler.populate(client->handler);
                 if (access(client->cgiHandler._pathToScript.c_str(), F_OK) == 0
                 && access(client->cgiHandler._pathToScript.c_str(), R_OK) == 0)
                 {
@@ -184,7 +188,7 @@ void	receiveBody(Endpoint *client, int qfd)
             }
 			break;
 		case S_ClosedConnection:
-			disconnectClient(client, qfd);
+			client->state = C_MARKED_FOR_DISCONNECTION;
 			break;
 		case S_ReadBody:
 			assert(false); /* Unreachable */
@@ -206,18 +210,10 @@ void	disconnectClient(Endpoint *client, int qfd)
 	client->last_heard_from_ms = 0;
 	client->handler.setClientSocket(-1);
 	client->handler.resetObject();
-	if (client->cgiHandler.cgiPid != 0)
-	{
-		kill(client->cgiHandler.cgiPid, SIGKILL);
-		logDebug("SIGKILL -> %d", client->cgiHandler.cgiPid);
-	}
-	client->cgiHandler = CgiHandler();
+	client->cgiHandler.CgiResetObject();
 }
 
 bool	isLiveClient(Endpoint *conn)
 {
-	bool	isServer = conn->kind == Server;
-	bool	isOffline = conn->state == C_DISCONNECTED;
-  
-	return (!isServer && !isOffline);
+  return (conn->kind == Client && conn->state != C_DISCONNECTED);
 }

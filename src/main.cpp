@@ -6,7 +6,7 @@
 /*   By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 10:09:58 by copireyr          #+#    #+#             */
-/*   Updated: 2025/05/16 13:21:30 by copireyr         ###   ########.fr       */
+/*   Updated: 2025/05/21 16:04:30 by jhirvone         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,14 +27,11 @@ int	main(int argc, char **argv)
 {
 	handlesignals(stop);
 
-	if (argc != 2)
-	{
-		std::cerr << "./webserv [configuration file]" << std::endl;
-		return (1);
-	}
+	string inputConf;
+	argc == 2 ? inputConf = argv[1] : inputConf = "complete.conf";
 
 	try {
-		serverMap = parser(argv[1]);
+		serverMap = parser(inputConf);
 	}
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;

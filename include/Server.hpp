@@ -9,7 +9,7 @@
 # include <csignal>
 
 #ifdef DEBUG
-constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 15 * 1000; // Ten (10) seconds
+constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 15 * 1000; // Fifteen (15) seconds
 constexpr uint64_t	RECV_HEADER_TIMEOUT_MS = 1 * 1000; // One (1) second
 #else
 constexpr uint64_t	CLIENT_TIMEOUT_THRESHOLD_MS = 60 * 1000; // One minute, like Nginx
@@ -34,7 +34,8 @@ enum ConnectionState {
 	C_FILE_SERVE,
 	C_RECV_BODY,
 	C_TIMED_OUT,
-	C_EXEC_CGI
+	C_EXEC_CGI,
+  C_MARKED_FOR_DISCONNECTION
 };
 
 constexpr int 		PORT_STRLEN = 12;
