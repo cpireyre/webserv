@@ -58,9 +58,12 @@ HandlerStatus HttpConnectionHandler::serveCgi(CgiHandler &cgiHandler) {
 	response.append(buffer, n);
 	if (!n) {
     string cgiHeaders = "HTTP/1.1 200 OK\r\n";
-    cgiHeaders += getPhpCgiHeaders(response);
-		response = removePhpCgiHeaders(response);
-		cgiHeaders += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
+    if (cgiType == PHP)
+    {
+      cgiHeaders += getPhpCgiHeaders(response);
+      response = removePhpCgiHeaders(response);
+    }
+    cgiHeaders += "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
 		response.insert(0, cgiHeaders);
 		close(fromFd);
 		return S_Done;
