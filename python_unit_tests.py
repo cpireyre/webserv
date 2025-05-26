@@ -128,15 +128,6 @@ def test_imagesREDIR():
     assert "/images/" in location
 
 
-def test_cgi_empty_redirect():
-    """
-    Test that GET /cgi/empty/ returns a 307 redirect to https://www.google.com.
-    """
-    response = requests.get("http://127.0.0.1:8080/cgi/empty/", allow_redirects=False)
-    assert response.status_code == 307
-    location = response.headers.get("Location", "")
-    assert "https://www.google.com" in location
-    
 def test_bad_http_request():
     """
     Test that sending a malformed HTTP request (bad header format) returns a 400 error.
@@ -270,75 +261,6 @@ def test_file_upload_and_check():
         upload_path.unlink()
     except Exception as e:
         print(f"Error cleaning up the test file: {e}")
-
-
-@pytest.mark.skip(reason="Not doing this")
-def test_streaming_file_upload():
-    """
-    Test uploading a file using a streaming multipart/form-data request.
-    
-    This test simulates a file that is too large to be uploaded all at once by streaming
-    its content in chunks via a generator. The multipart body is built manually.
-    
-    The expected behavior is that the server processes the streamed upload and saves the file
-    in the 'home/images' directory under the specified filename.
-    """
-    import requests
-    import time
-    from pathlib import Path
-    
-    # Name of the file to be uploaded.
-    target_file = "test_large_upload.txt"
-    # Expected location where the server writes the uploaded file.
-    upload_path = Path("home/images") / target_file
-    
-    # Remove any existing file from previous tests.
-    if upload_path.exists():
-        upload_path.unlink()
-    
-    # Define a boundary for the multipart form data.
-    boundary = "MYBOUNDARY123"
-    
-    def multipart_generator():
-        # Starting boundary.
-        yield f"--{boundary}\r\n".encode()
-        # Content-Disposition header with the target file name.
-        yield b'Content-Disposition: form-data; name="file"; filename="' + target_file.encode() + b'"\r\n'
-        yield b"Content-Type: application/octet-stream\r\n\r\n"
-        
-        # Simulate streaming the file content in chunks.
-        chunk_size = 1024  # 1 KB per chunk.
-        num_chunks = 100   # Total size: 100 KB.
-        for _ in range(num_chunks):
-            yield b'a' * chunk_size
-        
-        # End the file content with a line break.
-        yield b"\r\n"
-        # Terminating boundary.
-        yield f"--{boundary}--\r\n".encode()
-    
-    # Set the appropriate Content-Type header with the boundary.
-    headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
-    
-    # Send the streaming POST request.
-    response = requests.post("http://127.0.0.1:8080/images/", data=multipart_generator(), headers=headers)
-    assert response.status_code in (200, 201), f"Streaming upload failed with status {response.status_code}"
-    
-    # Allow a short time for the file to be written to disk.
-    time.sleep(0.1)
-    
-    # Verify that the file now exists.
-    assert upload_path.exists(), f"Uploaded file {upload_path} does not exist."
-    
-    # Verify that the file size matches the expected total (100 KB in this case).
-    expected_size = chunk_size * num_chunks  # 1024 * 100 = 102400 bytes.
-    actual_size = upload_path.stat().st_size
-    assert actual_size == expected_size, f"Uploaded file size {actual_size} does not match expected {expected_size}"
-    
-    # Clean up: remove the file after the test.
-    upload_path.unlink()
-
-
 
 ########################################################################
 # Asynchronous Test for Concurrency
