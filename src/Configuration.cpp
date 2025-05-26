@@ -226,7 +226,9 @@ Configuration::Configuration(std::vector<std::string> servBlck) : _rawServerBloc
 		}
 		else if (std::regex_search(line, match, maxClientHeaderRegex)) {
 			try {
-				_maxClientHeaderSize = std::stoul(match[1]);
+				unsigned int temp = std::stoul(match[1]);
+				if (temp < _maxClientHeaderSize)	
+					_maxClientHeaderSize = temp;
 			}
 			catch (const std::exception& e) {
 				std::cerr << "Invalid max_client_header_size value: " << match[1] << ". Using default value." << std::endl;
