@@ -358,43 +358,34 @@ bool	HttpConnectionHandler::validateUploadRights()
  */
 void	HttpConnectionHandler::handlePostRequest()
 {
-	if (body.empty()) {
-		logError("Empty body in POST request");
-		errorCode = 400;
-		return;
-	}
-	if (!validateUploadRights()) {
-		logError("No rights for upload");
-		errorCode = 500;
-		return;
-	}
+  if (body.empty()) {
+    logError("Empty body in POST request");
+    errorCode = 400;
+    return;
+  }
+  if (!validateUploadRights()) {
+    logError("No rights for upload");
+    errorCode = 500;
+    return;
+  }
 
-	std::string contentType = headers["Content-Type"];
-	std::string responseBody;
+  std::string contentType = headers["Content-Type"];
+  std::string responseBody;
 
-	// if form data (application/x-www-form-urlencoded)
-	if (contentType == "application/x-www-form-urlencoded") {
-		responseBody = "<h1>Received Form Data:</h1><p>" + body + "</p>";
-	}
-	// if JSON data (application/json)
-	else if (contentType == "application/json") {
-		responseBody = "<h1>Received JSON:</h1><p>" + body + "</p>";
-	}
-	// handle file uploads
-	else if (contentType.find("multipart/form-data") != std::string::npos) {
-		if (!handleFileUpload()) {
-			errorCode = 400;
-			return;
-		}
-		return ;
-	}
-    	// Unknown content type / for now atleast
-	else {
-		responseBody = "<h1>415 Unsupported Media Type</h1>";
-		errorCode = 415;
-		return;
-	}
-	response = createHttpResponse(200, responseBody, "text/html");
+  if (contentType.find("multipart/form-data") != std::string::npos) {
+    if (!handleFileUpload()) {
+      errorCode = 400;
+      return;
+    }
+    return ;
+  }
+  // Unknown content type / for now atleast
+  else {
+    responseBody = "<h1>415 Unsupported Media Type</h1>";
+    errorCode = 415;
+    return;
+  }
+  response = createHttpResponse(200, responseBody, "text/html");
 }
 
 /* handles DELETE request on /diretory or /directory/
