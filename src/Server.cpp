@@ -125,7 +125,10 @@ static int	start_servers(const std::vector<Configuration> servers,
 		const std::string host = servers[i].getHost();
 		const std::string port = servers[i].getPort();
 		if (endpointAlreadyBound(endpoints, i, host, port))
-			continue;
+    {
+      servers[i].printCompact();
+      continue;
+    }
 		int	sockfd = make_server_socket(host.data(), port.data());
 		if (sockfd <= 0)
 			return (-1);
