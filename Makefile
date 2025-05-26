@@ -6,7 +6,7 @@
 #    By: upolat <upolat@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/19 10:16:05 by copireyr          #+#    #+#              #
-#    Updated: 2025/05/21 13:25:18 by copireyr         ###   ########.fr        #
+#    Updated: 2025/05/26 14:56:33 by copireyr         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,8 +14,8 @@
 CC := c++
 CFLAGS := -Wall -Wextra -Werror -MMD -MP -std=c++20
 CFLAGS += -Wimplicit-fallthrough -Wshadow -Wswitch-enum
-debug := -O0 -DDEBUG -g3
-# opt := -O2
+# debug := -O0 -DDEBUG -g3
+opt := -O2
 CPPFLAGS := -I./include/ $(debug) $(opt)
 NAME := webserv
 
