@@ -15,7 +15,7 @@
 # define DEFAULT_COLOR		"\033[0m"
 
 const std::vector<std::string> DEFAULT_METHODS = {"GET"};
-const std::string DEFAULT_LISTEN = "80";
+const std::string DEFAULT_LISTEN = "8080";
 const std::string DEFAULT_CGI_PYTHON = "/usr/bin";
 const std::string DEFAULT_CGI_PHP = "/usr/bin";
 
