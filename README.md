@@ -1,3 +1,6 @@
+## 🔥 Our Amazing Team 
+[Colin Pireyre](https://github.com/cpireyre) | [Uygar Polat](https://github.com/uygarpolat) | [Jere Hirvonen](https://github.com/Jerehirvonenn)
+
 # Webserv – *"This is when you finally understand why a URL starts with HTTP"*
 
 This project is a deep dive into the fundamentals of web communication. The goal is to build a functional, non-blocking **HTTP server** from the ground up in C++.
